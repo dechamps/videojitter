@@ -69,13 +69,42 @@ def check_bogus_offset(cross_correlation, offset, sample_rate, fps):
         )
 
 
+# https://stackoverflow.com/questions/23289976/how-to-find-zero-crossings-with-hysteresis
+def hysterisis(values, low_threshold, high_threshold):
+    value_is_high = values > high_threshold
+    value_is_low = values < low_threshold
+    value_is_outside = np.logical_or(value_is_high, value_is_low)
+    outside_value_indices = np.nonzero(value_is_outside)[0]
+
+    # `previous_outside_values_count - 1` are *de facto* indices into
+    # `outside_value_indices`.
+    # When an outside value is encountered, `previous_outside_values_count` is
+    # incremented, and therefore points to the next `outside_value_indices`
+    # element. In contrast, if an inside value is encountered,
+    # `previous_outside_values_count` is *not* incremented, and therefore keeps
+    # pointing to the same element in `outside_value_indices`, "latching on" to
+    # the last outside value.
+    previous_outside_values_count = np.cumsum(value_is_outside)
+
+    return np.where(
+        previous_outside_values_count > 0,
+        value_is_high[outside_value_indices[previous_outside_values_count - 1]],
+        # Typically the first few values are inside because the signal is in
+        # steady-state, which shows up as zero in AC-coupled recording setups
+        # (e.g. sound card ADC). Picking the opposite of the first outside value
+        # ensures we record a transition as soon as we pull out of steady state.
+        np.logical_not(value_is_high[outside_value_indices[0]]),
+    )
+
+
 def analyze_recording():
     args = parse_arguments()
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    reference_duration_seconds = len(spec["frames"]) / nominal_fps
+    frames = spec["frames"]
+    reference_duration_seconds = len(frames) / nominal_fps
     print(
-        f"Successfully loaded spec file describing {len(spec['frames'])} frames at {nominal_fps} FPS ({reference_duration_seconds} seconds)",
+        f"Successfully loaded spec file describing {len(frames)} frames at {nominal_fps} FPS ({reference_duration_seconds} seconds)",
         file=sys.stderr,
     )
 
@@ -93,7 +122,7 @@ def analyze_recording():
     ), f"Recording is shorter than expected - test video is {reference_duration_seconds} seconds long, but recording is only {recording_duration_seconds} seconds long"
 
     reference_samples = generate_reference_samples(
-        spec["fps"]["den"], spec["fps"]["num"], spec["frames"], recording_sample_rate
+        spec["fps"]["den"], spec["fps"]["num"], frames, recording_sample_rate
     )
 
     cross_correlation = scipy.signal.correlate(
@@ -116,6 +145,26 @@ def analyze_recording():
 
     check_bogus_offset(
         cross_correlation, recording_offset, recording_sample_rate, nominal_fps
+    )
+
+    recording_samples = recording_samples[
+        recording_offset : recording_offset + reference_samples.size
+    ]
+    recording_approx_min = np.quantile(recording_samples, 0.01)
+    recording_approx_max = np.quantile(recording_samples, 0.99)
+    print(
+        f"Approximate signal range: [{recording_approx_min}, {recording_approx_max}]",
+        file=sys.stderr,
+    )
+    recording_black_threshold = recording_approx_min / 2
+    recording_white_threshold = recording_approx_max / 2
+    print(
+        f"Assuming that video is transitioning to black when signal dips below {recording_black_threshold} and to white above {recording_white_threshold}",
+        file=sys.stderr,
+    )
+
+    frame_is_white = hysterisis(
+        recording_samples, recording_black_threshold, recording_white_threshold
     )
 
 
