@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import altair as alt
 import argparse
 import numpy as np
 import json
@@ -16,6 +17,11 @@ def parse_arguments():
         help="Path to the input spec file",
         required=True,
         type=argparse.FileType(),
+    )
+    argument_parser.add_argument(
+        "--output-file",
+        help="Path to the output file where the summary will be written. Format is determined from the file extension. Recommended format is HTML. Information on other formats is available at https://altair-viz.github.io/user_guide/saving_charts.html",
+        required=True,
     )
     return argument_parser.parse_args()
 
@@ -62,10 +68,16 @@ def generate_report():
 
     # TODO: try harder to make this work when there are more or fewer
     # transitions than expected. reindex(method="nearest") might help.
-    error_seconds = pd.Series(
-        transitions.index - reference_transitions.index, index=transitions.index
+    transitions = transitions.to_frame()
+    transitions.loc[:, "error_seconds"] = (
+        transitions.index - reference_transitions.index
     )
-    print(error_seconds)
+    transitions.loc[:, "error_seconds"] -= transitions.loc[:, "error_seconds"].mean()
+    alt.Chart(transitions.reset_index()).mark_point().encode(
+        alt.X("recording_timestamp_seconds").scale(zero=False),
+        alt.Y("error_seconds").scale(zero=False),
+        alt.Color("frame"),
+    ).properties(width=1000, height=250).save(args.output_file)
 
 
 generate_report()
