@@ -24,6 +24,26 @@ def parse_arguments():
         required=True,
         type=argparse.FileType(mode="rb"),
     )
+    argument_parser.add_argument(
+        "--output-reference-signal-file",
+        help="(Only useful for debugging) Write the reference signal as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-cross-correlation-file",
+        help="(Only useful for debugging) Write the cross-correlation of the recording against the reference signal as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-post-processed-recording-file",
+        help="(Only useful for debugging) Write the post-processed (trimmed and possibly inverted) recording as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-frames-file",
+        help="(Only useful for debugging) Write the estimated frames as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
     return argument_parser.parse_args()
 
 
@@ -117,6 +137,11 @@ def analyze_recording():
         file=sys.stderr,
     )
 
+    def maybe_write_wavfile(file, samples):
+        if not file:
+            return
+        scipy.io.wavfile.write(file, recording_sample_rate, samples.astype(np.float32))
+
     assert (
         recording_duration_seconds > reference_duration_seconds
     ), f"Recording is shorter than expected - test video is {reference_duration_seconds} seconds long, but recording is only {recording_duration_seconds} seconds long"
@@ -124,11 +149,13 @@ def analyze_recording():
     reference_samples = generate_reference_samples(
         spec["fps"]["den"], spec["fps"]["num"], frames, recording_sample_rate
     )
+    maybe_write_wavfile(args.output_reference_signal_file, reference_samples)
 
     cross_correlation = scipy.signal.correlate(
         recording_samples, reference_samples, mode="valid"
     )
     cross_correlation = cross_correlation / np.max(np.abs(cross_correlation))
+    maybe_write_wavfile(args.output_cross_correlation_file, cross_correlation)
 
     recording_offset, inverted = find_recording_offset(cross_correlation)
 
@@ -150,6 +177,7 @@ def analyze_recording():
     recording_samples = recording_samples[
         recording_offset : recording_offset + reference_samples.size
     ]
+    maybe_write_wavfile(args.output_post_processed_recording_file, recording_samples)
     recording_approx_min = np.quantile(recording_samples, 0.01)
     recording_approx_max = np.quantile(recording_samples, 0.99)
     print(
@@ -166,6 +194,7 @@ def analyze_recording():
     frame_is_white = hysterisis(
         recording_samples, recording_black_threshold, recording_white_threshold
     )
+    maybe_write_wavfile(args.output_frames_file, frame_is_white)
 
 
 analyze_recording()
