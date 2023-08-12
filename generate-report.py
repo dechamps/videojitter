@@ -89,10 +89,24 @@ def generate_report():
         )
     transitions.loc[:, "error_seconds"] -= linear_regression(transitions.index)
 
+    transitions.loc[:, "frame_and_last_duration"] = (
+        transitions.loc[:, "frame"]
+        + " after "
+        + np.insert(
+            np.round(
+                reference_transitions.index[1:] - reference_transitions.index[0:-1], 4
+            )
+            * 1000,
+            0,
+            [np.nan],
+        ).astype(str)
+        + " ms"
+    )
+
     alt.Chart(transitions.reset_index()).mark_point().encode(
         alt.X("recording_timestamp_seconds").scale(zero=False),
         alt.Y("error_seconds").scale(zero=False),
-        alt.Color("frame"),
+        alt.Color("frame_and_last_duration"),
     ).properties(width=1000, height=250).save(args.output_file)
 
 
