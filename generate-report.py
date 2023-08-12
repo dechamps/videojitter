@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+
+import argparse
+import numpy as np
+import json
+import pandas as pd
+import sys
+
+
+def parse_arguments():
+    argument_parser = argparse.ArgumentParser(
+        description="Given a spec file, and recording analysis results passed in stdin, produces a summary of the results."
+    )
+    argument_parser.add_argument(
+        "--spec-file",
+        help="Path to the input spec file",
+        required=True,
+        type=argparse.FileType(),
+    )
+    return argument_parser.parse_args()
+
+
+def interval(series):
+    return pd.Interval(series.min(), series.max())
+
+
+def generate_report():
+    args = parse_arguments()
+
+    spec = json.load(args.spec_file)
+    nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
+    frame_duration = spec["fps"]["den"] / spec["fps"]["num"]
+    reference_frames = 1 * np.array(spec["frames"])
+    reference_transitions = pd.Series(
+        reference_frames[1:] - reference_frames[0:-1],
+        index=np.arange(1, reference_frames.size) * frame_duration,
+    )
+    reference_transitions = reference_transitions[reference_transitions != 0]
+    reference_transitions_interval_seconds = interval(reference_transitions.index)
+    print(
+        f"Successfully loaded spec file containing {reference_transitions.size} frame transitions at {nominal_fps} FPS, with first transition at {reference_transitions_interval_seconds.left} seconds and last transition at {reference_transitions_interval_seconds.right} seconds for a total of {reference_transitions_interval_seconds.length} seconds",
+        file=sys.stderr,
+    )
+
+    transitions = pd.read_csv(
+        sys.stdin,
+        index_col="recording_timestamp_seconds",
+        usecols=["recording_timestamp_seconds", "frame"],
+    ).squeeze()
+    transitions_interval_seconds = interval(transitions.index)
+    print(
+        f"Recording analysis contains {transitions.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
+        file=sys.stderr,
+    )
+    if transitions.size == reference_transitions.size:
+        print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
+    else:
+        print(
+            "WARNING: number of recorded transitions is inconsistent with the spec. Expect garbage results.",
+            file=sys.stderr,
+        )
+
+    # TODO: try harder to make this work when there are more or fewer
+    # transitions than expected. reindex(method="nearest") might help.
+    error_seconds = pd.Series(
+        transitions.index - reference_transitions.index, index=transitions.index
+    )
+    print(error_seconds)
+
+
+generate_report()
