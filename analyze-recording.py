@@ -44,6 +44,11 @@ def parse_arguments():
         help="(Only useful for debugging) Write the estimated frames as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
+    argument_parser.add_argument(
+        "--output-frame-transitions-file",
+        help="(Only useful for debugging) Write the estimated frame transitions as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
     return argument_parser.parse_args()
 
 
@@ -195,6 +200,9 @@ def analyze_recording():
         recording_samples, recording_black_threshold, recording_white_threshold
     )
     maybe_write_wavfile(args.output_frames_file, frame_is_white)
+
+    frame_transitions = (1 * frame_is_white[1:]) - (1 * frame_is_white[0:-1])
+    maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
 
 
 analyze_recording()
