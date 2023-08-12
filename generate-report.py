@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 import json
 import pandas as pd
+import scipy.signal
 import sys
 
 
@@ -72,7 +73,22 @@ def generate_report():
     transitions.loc[:, "error_seconds"] = (
         transitions.index - reference_transitions.index
     )
-    transitions.loc[:, "error_seconds"] -= transitions.loc[:, "error_seconds"].mean()
+    linear_regression = np.polynomial.Polynomial.fit(
+        transitions.index, transitions.loc[:, "error_seconds"], deg=1
+    )
+    clock_skew = 1 + linear_regression.coef[1]
+    if abs(linear_regression.coef[1]) > 0.10:
+        print(
+            f"WARNING: abnormally large clock skew detected - recording is {clock_skew}x longer than expected.",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"Recording is {clock_skew}x longer than expected. This is usually due to benign clock skew. Scaling timestamps to compensate.",
+            file=sys.stderr,
+        )
+    transitions.loc[:, "error_seconds"] -= linear_regression(transitions.index)
+
     alt.Chart(transitions.reset_index()).mark_point().encode(
         alt.X("recording_timestamp_seconds").scale(zero=False),
         alt.Y("error_seconds").scale(zero=False),
