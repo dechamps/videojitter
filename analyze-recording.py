@@ -143,6 +143,13 @@ def analyze_recording():
         file=sys.stderr,
     )
 
+    # TODO: it might be a good idea to aggressively downsample the recording,
+    # e.g. to only 4x the frame rate or so, to throw away high frequency noise
+    # that can only mess up the results. It will also likely make
+    # cross-correlation much faster. Then we can upsample back before looking
+    # for transitions to improve the accuracy of the transition timestamp
+    # estimate.
+
     def maybe_write_wavfile(file, samples):
         if not file:
             return
