@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import json
+import pandas as pd
 import scipy.io
 import scipy.signal
 import sys
@@ -10,7 +11,7 @@ import sys
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout."
+        description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format."
     )
     argument_parser.add_argument(
         "--spec-file",
@@ -203,6 +204,15 @@ def analyze_recording():
 
     frame_transitions = (1 * frame_is_white[1:]) - (1 * frame_is_white[0:-1])
     maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
+    nonzero_frame_transitions = np.nonzero(frame_transitions)[0]
+
+    pd.Series(
+        np.array(["BLACK", "WHITE"])[
+            (frame_transitions[nonzero_frame_transitions] > 0) * 1
+        ],
+        index=(nonzero_frame_transitions + recording_offset) / recording_sample_rate,
+        name="frame",
+    ).rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
 
 
 analyze_recording()
