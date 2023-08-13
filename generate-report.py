@@ -104,7 +104,7 @@ def generate_report():
         alt.X("recording_timestamp_seconds").scale(zero=False),
         alt.Y("error_seconds").scale(zero=False),
         alt.Color("frame_and_last_duration"),
-    ).properties(width=1000, height=250).save(args.output_file)
+    ).properties(width=1000, height=750).save(args.output_file)
 
 
 generate_report()
