@@ -205,7 +205,7 @@ def analyze_recording():
     maybe_write_wavfile(args.output_post_processed_recording_file, recording_samples)
 
     recording_slope = np.diff(recording_samples)
-    maybe_write_wavfile(args.output_recording_slope_file, recording_samples)
+    maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
 
     recording_slope_approx_min = np.quantile(recording_slope, 0.01)
     recording_slope_approx_max = np.quantile(recording_slope, 0.99)
