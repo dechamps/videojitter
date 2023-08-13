@@ -9,6 +9,9 @@ import scipy.signal
 import sys
 
 
+DOWNSAMPLE_TO_FPS_TIMES = 4
+
+
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format."
@@ -26,6 +29,22 @@ def parse_arguments():
         type=argparse.FileType(mode="rb"),
     )
     argument_parser.add_argument(
+        "--downsampling-ratio",
+        help=f"Downsampling ratio for preprocessing. Downsampling makes cross-correlation faster and reduces the likelihood that the analyzer will choke on high-frequency noise. Default is to downsample down to just above {DOWNSAMPLE_TO_FPS_TIMES}x video FPS.",
+        type=int,
+    )
+    argument_parser.add_argument(
+        "--timing-minimum-sample-rate-hz",
+        help="What rate to upsample the recording to (at least) before estimating frame transition timestamps. Frame transition timestamps have to land on a sample boundary, so higher sample rates make the timestamp more accurate, at the price of making analysis slower.",
+        type=float,
+        default=100000,
+    )
+    argument_parser.add_argument(
+        "--output-downsampled-recording-file",
+        help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
         "--output-reference-signal-file",
         help="(Only useful for debugging) Write the reference signal as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -38,6 +57,11 @@ def parse_arguments():
     argument_parser.add_argument(
         "--output-post-processed-recording-file",
         help="(Only useful for debugging) Write the post-processed (trimmed and possibly inverted) recording as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-upsampled-recording-file",
+        help="(Only useful for debugging) Write the upsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -55,10 +79,10 @@ def parse_arguments():
 
 def generate_reference_samples(fps_den, fps_num, frames, sample_rate):
     frame_numbers = (
-        np.arange(len(frames) * fps_den * sample_rate // fps_num)
+        np.arange(np.ceil(len(frames) * fps_den * sample_rate / fps_num))
         * fps_num
-        // (sample_rate * fps_den)
-    )
+        / (sample_rate * fps_den)
+    ).astype(int)
     return (np.array(frames) * 2 - 1)[frame_numbers]
 
 
@@ -143,21 +167,31 @@ def analyze_recording():
         file=sys.stderr,
     )
 
-    # TODO: it might be a good idea to aggressively downsample the recording,
-    # e.g. to only 4x the frame rate or so, to throw away high frequency noise
-    # that can only mess up the results. It will also likely make
-    # cross-correlation much faster. Then we can upsample back before looking
-    # for transitions to improve the accuracy of the transition timestamp
-    # estimate.
-
     def maybe_write_wavfile(file, samples):
         if not file:
             return
-        scipy.io.wavfile.write(file, recording_sample_rate, samples.astype(np.float32))
+        scipy.io.wavfile.write(
+            file, int(recording_sample_rate), samples.astype(np.float32)
+        )
 
     assert (
         recording_duration_seconds > reference_duration_seconds
     ), f"Recording is shorter than expected - test video is {reference_duration_seconds} seconds long, but recording is only {recording_duration_seconds} seconds long"
+
+    downsampling_ratio = args.downsampling_ratio
+    if downsampling_ratio is None:
+        downsampling_ratio = np.floor(
+            recording_sample_rate / (nominal_fps * DOWNSAMPLE_TO_FPS_TIMES)
+        )
+    recording_sample_rate /= downsampling_ratio
+    print(
+        f"Downsampling recording by {downsampling_ratio}x (to {recording_sample_rate} Hz)",
+        file=sys.stderr,
+    )
+    recording_samples = scipy.signal.resample_poly(
+        recording_samples, up=1, down=downsampling_ratio
+    )
+    maybe_write_wavfile(args.output_downsampled_recording_file, recording_samples)
 
     reference_samples = generate_reference_samples(
         spec["fps"]["den"], spec["fps"]["num"], frames, recording_sample_rate
@@ -203,6 +237,20 @@ def analyze_recording():
         f"Assuming that video is transitioning to black when signal dips below {recording_black_threshold} and to white above {recording_white_threshold}",
         file=sys.stderr,
     )
+
+    upsampling_ratio = np.ceil(
+        args.timing_minimum_sample_rate_hz / recording_sample_rate
+    )
+    recording_sample_rate *= upsampling_ratio
+    recording_offset *= upsampling_ratio
+    print(
+        f"Upsampling recording by {upsampling_ratio}x to {recording_sample_rate} Hz",
+        file=sys.stderr,
+    )
+    recording_samples = scipy.signal.resample_poly(
+        recording_samples, up=upsampling_ratio, down=1
+    )
+    maybe_write_wavfile(args.output_upsampled_recording_file, recording_samples)
 
     frame_is_white = hysterisis(
         recording_samples, recording_black_threshold, recording_white_threshold
