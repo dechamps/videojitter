@@ -60,8 +60,13 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-upsampled-recording-file",
-        help="(Only useful for debugging) Write the upsampled recording as a WAV file to the given path",
+        "--output-recording-slope-file",
+        help="(Only useful for debugging) Write the recording slope as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-upsampled-recording-slope-file",
+        help="(Only useful for debugging) Write the upsampled recording slope as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -225,16 +230,20 @@ def analyze_recording():
         recording_offset : recording_offset + reference_samples.size
     ]
     maybe_write_wavfile(args.output_post_processed_recording_file, recording_samples)
-    recording_approx_min = np.quantile(recording_samples, 0.01)
-    recording_approx_max = np.quantile(recording_samples, 0.99)
+
+    recording_slope = recording_samples[1:] - recording_samples[0:-1]
+    maybe_write_wavfile(args.output_recording_slope_file, recording_samples)
+
+    recording_approx_min = np.quantile(recording_slope, 0.01)
+    recording_approx_max = np.quantile(recording_slope, 0.99)
     print(
-        f"Approximate signal range: [{recording_approx_min}, {recording_approx_max}]",
+        f"Approximate recording slope range: [{recording_approx_min}, {recording_approx_max}]",
         file=sys.stderr,
     )
-    recording_black_threshold = recording_approx_min / 2
-    recording_white_threshold = recording_approx_max / 2
+    recording_slope_black_threshold = recording_approx_min / 2
+    recording_slope_white_threshold = recording_approx_max / 2
     print(
-        f"Assuming that video is transitioning to black when signal dips below {recording_black_threshold} and to white above {recording_white_threshold}",
+        f"Assuming that video is transitioning to black when recording slope dips below {recording_slope_black_threshold} and to white above {recording_slope_white_threshold}",
         file=sys.stderr,
     )
 
@@ -244,16 +253,18 @@ def analyze_recording():
     recording_sample_rate *= upsampling_ratio
     recording_offset *= upsampling_ratio
     print(
-        f"Upsampling recording by {upsampling_ratio}x to {recording_sample_rate} Hz",
+        f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
         file=sys.stderr,
     )
-    recording_samples = scipy.signal.resample_poly(
-        recording_samples, up=upsampling_ratio, down=1
+    recording_slope = scipy.signal.resample_poly(
+        recording_slope, up=upsampling_ratio, down=1
     )
-    maybe_write_wavfile(args.output_upsampled_recording_file, recording_samples)
+    maybe_write_wavfile(args.output_upsampled_recording_slope_file, recording_slope)
 
     frame_is_white = hysterisis(
-        recording_samples, recording_black_threshold, recording_white_threshold
+        recording_slope,
+        recording_slope_black_threshold,
+        recording_slope_white_threshold,
     )
     maybe_write_wavfile(args.output_frames_file, frame_is_white)
 
