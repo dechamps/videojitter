@@ -39,7 +39,7 @@ def generate_report():
     frame_duration = spec["fps"]["den"] / spec["fps"]["num"]
     reference_frames = 1 * np.array(spec["frames"])
     reference_transitions = pd.Series(
-        reference_frames[1:] - reference_frames[0:-1],
+        np.diff(reference_frames),
         index=np.arange(1, reference_frames.size) * frame_duration,
     )
     reference_transitions = reference_transitions[reference_transitions != 0]
@@ -93,10 +93,7 @@ def generate_report():
         transitions.loc[:, "frame"]
         + " after "
         + np.insert(
-            np.round(
-                reference_transitions.index[1:] - reference_transitions.index[0:-1], 4
-            )
-            * 1000,
+            np.round(np.diff(reference_transitions.index), 4) * 1000,
             0,
             [np.nan],
         ).astype(str)
