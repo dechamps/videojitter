@@ -70,11 +70,6 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-frames-file",
-        help="(Only useful for debugging) Write the estimated frames as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
         "--output-frame-transitions-file",
         help="(Only useful for debugging) Write the estimated frame transitions as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -122,34 +117,6 @@ def check_bogus_offset(cross_correlation, offset, sample_rate, fps):
             f"WARNING: detected offset may be bogus, as there is another candidate at {best_alternative_offset} ({best_alternative_offset / sample_rate} seconds). This suggests the recording may be corrupted, or the video that was played was generated from a different spec, or was playing so badly that the original frame sequence is unrecognizable. Expect garbage results.",
             file=sys.stderr,
         )
-
-
-# https://stackoverflow.com/questions/23289976/how-to-find-zero-crossings-with-hysteresis
-def hysterisis(values, low_threshold, high_threshold):
-    value_is_high = values > high_threshold
-    value_is_low = values < low_threshold
-    value_is_outside = np.logical_or(value_is_high, value_is_low)
-    outside_value_indices = np.nonzero(value_is_outside)[0]
-
-    # `previous_outside_values_count - 1` are *de facto* indices into
-    # `outside_value_indices`.
-    # When an outside value is encountered, `previous_outside_values_count` is
-    # incremented, and therefore points to the next `outside_value_indices`
-    # element. In contrast, if an inside value is encountered,
-    # `previous_outside_values_count` is *not* incremented, and therefore keeps
-    # pointing to the same element in `outside_value_indices`, "latching on" to
-    # the last outside value.
-    previous_outside_values_count = np.cumsum(value_is_outside)
-
-    return np.where(
-        previous_outside_values_count > 0,
-        value_is_high[outside_value_indices[previous_outside_values_count - 1]],
-        # Typically the first few values are inside because the signal is in
-        # steady-state, which shows up as zero in AC-coupled recording setups
-        # (e.g. sound card ADC). Picking the opposite of the first outside value
-        # ensures we record a transition as soon as we pull out of steady state.
-        np.logical_not(value_is_high[outside_value_indices[0]]),
-    )
 
 
 def analyze_recording():
@@ -261,24 +228,35 @@ def analyze_recording():
     )
     maybe_write_wavfile(args.output_upsampled_recording_slope_file, recording_slope)
 
-    frame_is_white = hysterisis(
+    transitions_to_white = scipy.signal.find_peaks(
         recording_slope,
-        recording_slope_black_threshold,
-        recording_slope_white_threshold,
-    )
-    maybe_write_wavfile(args.output_frames_file, frame_is_white)
+        height=recording_slope_white_threshold,
+    )[0]
+    transitions_to_black = scipy.signal.find_peaks(
+        -recording_slope,
+        height=-recording_slope_black_threshold,
+    )[0]
 
-    frame_transitions = (1 * frame_is_white[1:]) - (1 * frame_is_white[0:-1])
-    maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
-    nonzero_frame_transitions = np.nonzero(frame_transitions)[0]
+    if args.output_frame_transitions_file:
+        frame_transitions = np.zeros(recording_slope.size)
+        frame_transitions[transitions_to_white] = 1
+        frame_transitions[transitions_to_black] = -1
+        maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
 
     pd.Series(
-        np.array(["BLACK", "WHITE"])[
-            (frame_transitions[nonzero_frame_transitions] > 0) * 1
-        ],
-        index=(nonzero_frame_transitions + recording_offset) / recording_sample_rate,
+        np.concatenate(
+            [
+                np.repeat("WHITE", transitions_to_white.size),
+                np.repeat("BLACK", transitions_to_black.size),
+            ]
+        ),
+        index=(
+            np.concatenate([transitions_to_white, transitions_to_black])
+            + recording_offset
+        )
+        / recording_sample_rate,
         name="frame",
-    ).rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
+    ).sort_index().rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
 
 
 analyze_recording()
