@@ -201,14 +201,14 @@ def analyze_recording():
     recording_slope = recording_samples[1:] - recording_samples[0:-1]
     maybe_write_wavfile(args.output_recording_slope_file, recording_samples)
 
-    recording_approx_min = np.quantile(recording_slope, 0.01)
-    recording_approx_max = np.quantile(recording_slope, 0.99)
+    recording_slope_approx_min = np.quantile(recording_slope, 0.01)
+    recording_slope_approx_max = np.quantile(recording_slope, 0.99)
     print(
-        f"Approximate recording slope range: [{recording_approx_min}, {recording_approx_max}]",
+        f"Approximate recording slope range: [{recording_slope_approx_min}, {recording_slope_approx_max}]",
         file=sys.stderr,
     )
-    recording_slope_black_threshold = recording_approx_min / 2
-    recording_slope_white_threshold = recording_approx_max / 2
+    recording_slope_black_threshold = recording_slope_approx_min / 2
+    recording_slope_white_threshold = recording_slope_approx_max / 2
     print(
         f"Assuming that video is transitioning to black when recording slope dips below {recording_slope_black_threshold} and to white above {recording_slope_white_threshold}",
         file=sys.stderr,
