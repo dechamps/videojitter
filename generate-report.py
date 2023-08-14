@@ -130,6 +130,11 @@ def generate_report():
         transitions.loc[:, "frame"] == "WHITE", "error_seconds"
     ] -= white_offset
 
+    print(
+        f"Error standard deviation: {transitions.loc[:, 'error_seconds'].std()} seconds",
+        file=sys.stderr,
+    )
+
     alt.Chart(transitions.reset_index()).transform_calculate(
         label="Transition to "
         + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
