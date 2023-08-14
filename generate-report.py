@@ -113,6 +113,23 @@ def generate_report():
         )
     transitions.loc[:, "error_seconds"] -= linear_regression(transitions.index)
 
+    black_offset = transitions.loc[
+        transitions.loc[:, "frame"] == "BLACK", "error_seconds"
+    ].mean()
+    white_offset = transitions.loc[
+        transitions.loc[:, "frame"] == "WHITE", "error_seconds"
+    ].mean()
+    print(
+        f"Offsets black: {white_offset} seconds white: {black_offset} seconds",
+        file=sys.stderr,
+    )
+    transitions.loc[
+        transitions.loc[:, "frame"] == "BLACK", "error_seconds"
+    ] -= black_offset
+    transitions.loc[
+        transitions.loc[:, "frame"] == "WHITE", "error_seconds"
+    ] -= white_offset
+
     alt.Chart(transitions.reset_index()).transform_calculate(
         label="Transition to "
         + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
