@@ -27,6 +27,12 @@ def parse_arguments():
         required=True,
         default=argparse.SUPPRESS,
     )
+    argument_parser.add_argument(
+        "--compensate-clock-skew",
+        help="Calculate and compensate for clock skew, i.e. the difference in speed between the recording clock and the video clock that would otherwise result in a sloped/tilted graph. Note that the clock skew estimate can be incorrect (e.g. for recordings where the overall mean error undergoes sudden changes), leading to odd results.",
+        action="store_true",
+        default=False,
+    )
     return argument_parser.parse_args()
 
 
@@ -100,20 +106,28 @@ def generate_report():
     transitions.loc[:, "error_seconds"] = (
         transitions.loc[:, "recording_timestamp_seconds"] - transitions.index
     )
+    # TODO: find a better way to calculate clock skew so that we can enable
+    # clock skew compensation by default. The current method produces
+    # nonsensical results in some cases; for example the slope part of the
+    # linear regression breaks down if the mean suddenly changes in the middle
+    # of the recording.
     linear_regression = np.polynomial.Polynomial.fit(
-        transitions.index, transitions.loc[:, "error_seconds"], deg=1
+        transitions.index,
+        transitions.loc[:, "error_seconds"],
+        deg=1 if args.compensate_clock_skew else 0,
     )
-    clock_skew = 1 + linear_regression.coef[1]
-    if abs(linear_regression.coef[1]) > 0.10:
-        print(
-            f"WARNING: abnormally large clock skew detected - recording is {clock_skew}x longer than expected.",
-            file=sys.stderr,
-        )
-    else:
-        print(
-            f"Recording is {clock_skew}x longer than expected. This is usually due to benign clock skew. Scaling timestamps to compensate.",
-            file=sys.stderr,
-        )
+    if args.compensate_clock_skew:
+        clock_skew = 1 + linear_regression.coef[1]
+        if abs(linear_regression.coef[1]) > 0.10:
+            print(
+                f"WARNING: abnormally large clock skew detected - recording is {clock_skew}x longer than expected.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"Recording is {clock_skew}x longer than expected. This is usually due to benign clock skew. Scaling timestamps to compensate.",
+                file=sys.stderr,
+            )
     transitions.loc[:, "error_seconds"] -= linear_regression(transitions.index)
 
     black_offset = transitions.loc[
