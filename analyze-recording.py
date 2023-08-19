@@ -19,24 +19,28 @@ DOWNSAMPLE_TO_FPS_TIMES = 128
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format."
+        description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
         "--spec-file",
         help="Path to the input spec file",
         required=True,
         type=argparse.FileType(),
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--recording-file",
         help="Path to the input recording file",
         required=True,
         type=argparse.FileType(mode="rb"),
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--downsampling-ratio",
-        help=f"Downsampling ratio for preprocessing. Downsampling makes cross-correlation faster and reduces the likelihood that the analyzer will choke on high-frequency noise. Default is to downsample down to just above {DOWNSAMPLE_TO_FPS_TIMES}x video FPS.",
+        help=f"Downsampling ratio for preprocessing. Downsampling makes cross-correlation faster and reduces the likelihood that the analyzer will choke on high-frequency noise. (default: downsample down to just above {DOWNSAMPLE_TO_FPS_TIMES}x video FPS)",
         type=int,
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--timing-minimum-sample-rate-hz",
@@ -155,11 +159,11 @@ def analyze_recording():
         recording_duration_seconds > reference_duration_seconds
     ), f"Recording is shorter than expected - test video is {reference_duration_seconds} seconds long, but recording is only {recording_duration_seconds} seconds long"
 
-    downsampling_ratio = args.downsampling_ratio
-    if downsampling_ratio is None:
-        downsampling_ratio = np.floor(
-            recording_sample_rate / (nominal_fps * DOWNSAMPLE_TO_FPS_TIMES)
-        )
+    downsampling_ratio = getattr(
+        args,
+        "downsampling_ratio",
+        np.floor(recording_sample_rate / (nominal_fps * DOWNSAMPLE_TO_FPS_TIMES)),
+    )
     recording_sample_rate /= downsampling_ratio
     print(
         f"Downsampling recording by {downsampling_ratio}x (to {recording_sample_rate} Hz)",

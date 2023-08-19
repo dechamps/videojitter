@@ -8,10 +8,14 @@ import sys
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Generates a jitter test video from a spec file passed in stdin."
+        description="Generates a jitter test video from a spec file passed in stdin.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
-        "--output-file", help="Path to the output video file", required=True
+        "--output-file",
+        help="Path to the output video file",
+        required=True,
+        default=argparse.SUPPRESS,
     )
     return argument_parser.parse_args()
 

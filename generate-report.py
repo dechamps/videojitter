@@ -11,18 +11,21 @@ import sys
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file, and recording analysis results passed in stdin, produces a summary of the results."
+        description="Given a spec file, and recording analysis results passed in stdin, produces a summary of the results.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
         "--spec-file",
         help="Path to the input spec file",
         required=True,
         type=argparse.FileType(),
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--output-file",
         help="Path to the output file where the summary will be written. Format is determined from the file extension. Recommended format is HTML. Information on other formats is available at https://altair-viz.github.io/user_guide/saving_charts.html",
         required=True,
+        default=argparse.SUPPRESS,
     )
     return argument_parser.parse_args()
 

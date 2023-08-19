@@ -8,7 +8,8 @@ import sys
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Generates a spec file for video jitter testing."
+        description="Generates a spec file for video jitter testing.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
         "--fps-num", help="FPS fraction numerator", default=24000, type=int
