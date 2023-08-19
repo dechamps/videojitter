@@ -9,11 +9,11 @@ import scipy.signal
 import sys
 
 
-# TODO: tweak this. There is evidence that this value has a dramatic effect on
-# dispersion, and it's likely we can improve this further if we make the
-# analyzer more resilient to ambiguous peaks. timing-minimum-sample-rate-hz
-# might also benefit from some tweaking. It could also be that switching to
-# float64 might provide noticeable benefits at some point.
+# TODO: decreasing this increases dispersion. Increasing also results in
+# increased dispersion, *and* also makes it harder to find peaks (due to what
+# looks like high frequency noise). It's not clear what causes this. It's
+# possible we might be able to tighten dispersion even further if we manage to
+# get an understanding of these issues.
 DOWNSAMPLE_TO_FPS_TIMES = 128
 
 
@@ -42,7 +42,6 @@ def parse_arguments():
         "--timing-minimum-sample-rate-hz",
         help="What rate to upsample the recording to (at least) before estimating frame transition timestamps. Frame transition timestamps have to land on a sample boundary, so higher sample rates make the timestamp more accurate, at the price of making analysis slower.",
         type=float,
-        # TODO: this is probably overkill?
         default=100000,
     )
     argument_parser.add_argument(
