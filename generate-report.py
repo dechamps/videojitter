@@ -188,17 +188,7 @@ def generate_report():
         file=sys.stderr,
     )
 
-    chart = (
-        alt.Chart(transitions)
-        .properties(width=1000, height=750)
-        .transform_calculate(
-            estimated_recording_timestamp_seconds=alt.expr.if_(
-                alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-                alt.datum["recording_timestamp_seconds"],
-                alt.datum["expected_recording_timestamp_seconds"],
-            )
-        )
-    )
+    chart = alt.Chart(transitions)
     chart_samples = (
         chart.transform_calculate(
             label="Transition to "
@@ -240,9 +230,21 @@ def generate_report():
             ),
         )
     )
-    (chart_anomalies + chart_samples).resolve_scale(
+    (chart_anomalies + chart_samples).properties(
+        width=1000, height=750
+    ).transform_calculate(
+        estimated_recording_timestamp_seconds=alt.expr.if_(
+            alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+            alt.datum["recording_timestamp_seconds"],
+            alt.datum["expected_recording_timestamp_seconds"],
+        )
+    ).resolve_scale(
         color="independent"
-    ).configure_legend(labelLimit=0).save(args.output_file)
+    ).configure_legend(
+        labelLimit=0
+    ).save(
+        args.output_file
+    )
 
 
 generate_report()
