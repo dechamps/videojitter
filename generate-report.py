@@ -143,109 +143,106 @@ def error_linear_regression(transitions, deg):
 
 def generate_chart(transitions, maximum_absolute_error_seconds):
     chart = alt.Chart(transitions)
-    chart_samples = (
-        chart.transform_calculate(
-            reference_frame_label=alt.expr.if_(
-                alt.datum["reference_frame"], "white", "black"
-            ),
-            duplicate_label=alt.expr.if_(alt.datum["duplicate"], "yes", "no"),
-            label="Transition to "
-            + alt.datum["reference_frame_label"]
-            + " (after "
-            + alt.datum["reference_previous_frame_count"]
-            + " "
-            + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
-            + " frames)",
-            shape=alt.expr.if_(
-                alt.datum["error_seconds"] < -maximum_absolute_error_seconds,
-                "triangle-down",
-                alt.expr.if_(
-                    alt.datum["error_seconds"] > maximum_absolute_error_seconds,
-                    "triangle-up",
-                    "circle",
-                ),
-            ),
-        )
-        .mark_point(filled=True)
-        .encode(
-            alt.X("estimated_recording_timestamp_seconds", type="quantitative")
-            .scale(zero=False)
-            .axis(
-                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
-                title="Recording timestamp",
-            ),
-            alt.Y("error_seconds")
-            .scale(
-                zero=False,
-                domain=[
-                    -maximum_absolute_error_seconds,
-                    maximum_absolute_error_seconds,
-                ],
-                clamp=True,
-            )
-            .axis(
-                labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
-                title="Transition timing error",
-            ),
-            alt.Color("label", type="nominal", title=None),
-            alt.Shape("shape", type="nominal", scale=None),
-            tooltip=[
-                alt.Tooltip("transition_index", title="Recorded transition #"),
-                alt.Tooltip(
-                    "reference_transition_index", title="Reference transition #"
-                ),
-                alt.Tooltip("reference_frame_index", title="Reference frame #"),
-                alt.Tooltip(
-                    "reference_frame_label", type="nominal", title="Transition to"
-                ),
-                alt.Tooltip(
-                    "reference_previous_frame_count",
-                    type="nominal",
-                    title="Frames since last transition",
-                ),
-                alt.Tooltip(
-                    "duplicate_label", type="nominal", title="Duplicate transition"
-                ),
-                alt.Tooltip(
-                    "reference_timestamp_seconds",
-                    title="Reference time (seconds)",
-                    format="~s",
-                ),
-                alt.Tooltip(
-                    "recording_timestamp_seconds",
-                    title="Recording time (seconds)",
-                    format="~s",
-                ),
-                alt.Tooltip(
-                    "error_seconds", title="Timing error (seconds)", format="+~s"
-                ),
-            ],
-        )
-    )
-    chart_anomalies = (
-        chart.transform_calculate(
-            anomaly=alt.expr.if_(
-                alt.datum["duplicate"],
-                "Duplicate transition",
-                alt.expr.if_(
-                    alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-                    None,
-                    "Missing transition",
-                ),
-            ),
-        )
-        .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
-        .mark_rule(strokeWidth=2)
-        .encode(
-            alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
-            alt.Color("anomaly", type="nominal", title=None).scale(
-                domain=["Missing transition", "Duplicate transition"],
-                range=["orangered", "orange"],
-            ),
-        )
-    )
     return (
-        (chart_anomalies + chart_samples)
+        (
+            chart.transform_calculate(
+                anomaly=alt.expr.if_(
+                    alt.datum["duplicate"],
+                    "Duplicate transition",
+                    alt.expr.if_(
+                        alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+                        None,
+                        "Missing transition",
+                    ),
+                ),
+            )
+            .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
+            .mark_rule(strokeWidth=2)
+            .encode(
+                alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
+                alt.Color("anomaly", type="nominal", title=None).scale(
+                    domain=["Missing transition", "Duplicate transition"],
+                    range=["orangered", "orange"],
+                ),
+            )
+            + chart.transform_calculate(
+                reference_frame_label=alt.expr.if_(
+                    alt.datum["reference_frame"], "white", "black"
+                ),
+                duplicate_label=alt.expr.if_(alt.datum["duplicate"], "yes", "no"),
+                label="Transition to "
+                + alt.datum["reference_frame_label"]
+                + " (after "
+                + alt.datum["reference_previous_frame_count"]
+                + " "
+                + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
+                + " frames)",
+                shape=alt.expr.if_(
+                    alt.datum["error_seconds"] < -maximum_absolute_error_seconds,
+                    "triangle-down",
+                    alt.expr.if_(
+                        alt.datum["error_seconds"] > maximum_absolute_error_seconds,
+                        "triangle-up",
+                        "circle",
+                    ),
+                ),
+            )
+            .mark_point(filled=True)
+            .encode(
+                alt.X("estimated_recording_timestamp_seconds", type="quantitative")
+                .scale(zero=False)
+                .axis(
+                    labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                    title="Recording timestamp",
+                ),
+                alt.Y("error_seconds")
+                .scale(
+                    zero=False,
+                    domain=[
+                        -maximum_absolute_error_seconds,
+                        maximum_absolute_error_seconds,
+                    ],
+                    clamp=True,
+                )
+                .axis(
+                    labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
+                    title="Transition timing error",
+                ),
+                alt.Color("label", type="nominal", title=None),
+                alt.Shape("shape", type="nominal", scale=None),
+                tooltip=[
+                    alt.Tooltip("transition_index", title="Recorded transition #"),
+                    alt.Tooltip(
+                        "reference_transition_index", title="Reference transition #"
+                    ),
+                    alt.Tooltip("reference_frame_index", title="Reference frame #"),
+                    alt.Tooltip(
+                        "reference_frame_label", type="nominal", title="Transition to"
+                    ),
+                    alt.Tooltip(
+                        "reference_previous_frame_count",
+                        type="nominal",
+                        title="Frames since last transition",
+                    ),
+                    alt.Tooltip(
+                        "duplicate_label", type="nominal", title="Duplicate transition"
+                    ),
+                    alt.Tooltip(
+                        "reference_timestamp_seconds",
+                        title="Reference time (seconds)",
+                        format="~s",
+                    ),
+                    alt.Tooltip(
+                        "recording_timestamp_seconds",
+                        title="Recording time (seconds)",
+                        format="~s",
+                    ),
+                    alt.Tooltip(
+                        "error_seconds", title="Timing error (seconds)", format="+~s"
+                    ),
+                ],
+            )
+        )
         .properties(width=1000, height=750)
         .transform_calculate(
             estimated_recording_timestamp_seconds=alt.expr.if_(
