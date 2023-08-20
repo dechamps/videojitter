@@ -166,22 +166,14 @@ def generate_report():
         transitions.loc[:, "recording_timestamp_seconds"]
     )
 
-    black_offset = transitions.loc[
-        transitions.loc[:, "frame"] == "BLACK", "error_seconds"
-    ].mean()
-    white_offset = transitions.loc[
-        transitions.loc[:, "frame"] == "WHITE", "error_seconds"
-    ].mean()
+    black_offset = transitions.loc[~transitions.loc[:, "frame"], "error_seconds"].mean()
+    white_offset = transitions.loc[transitions.loc[:, "frame"], "error_seconds"].mean()
     print(
         f"Offsets black: {white_offset} seconds white: {black_offset} seconds",
         file=sys.stderr,
     )
-    transitions.loc[
-        transitions.loc[:, "frame"] == "BLACK", "error_seconds"
-    ] -= black_offset
-    transitions.loc[
-        transitions.loc[:, "frame"] == "WHITE", "error_seconds"
-    ] -= white_offset
+    transitions.loc[~transitions.loc[:, "frame"], "error_seconds"] -= black_offset
+    transitions.loc[transitions.loc[:, "frame"], "error_seconds"] -= white_offset
 
     print(
         f"Error standard deviation: {transitions.loc[:, 'error_seconds'].std()} seconds",

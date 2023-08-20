@@ -152,6 +152,38 @@ def check_bogus_offset(cross_correlation, offset, sample_rate, fps):
         )
 
 
+def find_transitions(
+    slope,
+    black_threshold,
+    white_threshold,
+    minimum_black_distance,
+    minimum_white_distance,
+):
+    """Looks for black/white transitions in the recording slope signal.
+
+    Returns a Series whose index is the offset into `slope` and whose values
+    are booleans indicating a transition to black (False) or to white (True).
+    """
+    transitions_to_black = scipy.signal.find_peaks(
+        -slope, height=-black_threshold, distance=minimum_black_distance
+    )[0]
+    transitions_to_white = scipy.signal.find_peaks(
+        slope, height=white_threshold, distance=minimum_white_distance
+    )[0]
+    return pd.Series(
+        np.concatenate(
+            [
+                np.repeat(True, transitions_to_white.size),
+                np.repeat(False, transitions_to_black.size),
+            ]
+        ),
+        index=pd.Index(
+            np.concatenate([transitions_to_white, transitions_to_black]), name="offset"
+        ),
+        name="frame",
+    ).sort_index()
+
+
 def analyze_recording():
     args = parse_arguments()
     spec = json.load(args.spec_file)
@@ -265,37 +297,21 @@ def analyze_recording():
     )
     maybe_write_wavfile(args.output_upsampled_recording_slope_file, recording_slope)
 
-    transitions_to_white = scipy.signal.find_peaks(
+    transitions = find_transitions(
         recording_slope,
-        height=recording_slope_white_threshold,
-        distance=args.minimum_white_transition_distance_seconds * recording_sample_rate,
-    )[0]
-    transitions_to_black = scipy.signal.find_peaks(
-        -recording_slope,
-        height=-recording_slope_black_threshold,
-        distance=args.minimum_black_transition_distance_seconds * recording_sample_rate,
-    )[0]
+        recording_slope_black_threshold,
+        recording_slope_white_threshold,
+        args.minimum_black_transition_distance_seconds * recording_sample_rate,
+        args.minimum_white_transition_distance_seconds * recording_sample_rate,
+    )
 
     if args.output_frame_transitions_file:
         frame_transitions = np.zeros(recording_slope.size)
-        frame_transitions[transitions_to_white] = 1
-        frame_transitions[transitions_to_black] = -1
+        frame_transitions[transitions.index] = transitions * 2 - 1
         maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
 
-    pd.Series(
-        np.concatenate(
-            [
-                np.repeat("WHITE", transitions_to_white.size),
-                np.repeat("BLACK", transitions_to_black.size),
-            ]
-        ),
-        index=(
-            np.concatenate([transitions_to_white, transitions_to_black])
-            + recording_offset
-        )
-        / recording_sample_rate,
-        name="frame",
-    ).sort_index().rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
+    transitions.index = (transitions.index + recording_offset) / recording_sample_rate
+    transitions.rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
 
 
 analyze_recording()
