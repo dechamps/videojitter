@@ -38,9 +38,20 @@ def generate_video():
             start_mode="clone",
             stop_mode="clone",
         )
-        # TODO: make the output look more similar to a typical video (i.e. typical
-        # resolution, color space, audio etc)
-        .output(args.output_file)
+        # TODO: add audio (important for video player clocking)
+        .output(
+            args.output_file,
+            **{
+                "s": "hd1080",
+                "pix_fmt": "yuv420p",
+                "profile:v": "baseline",
+                "preset": "ultrafast",
+                "color_primaries": "bt709",
+                "color_trc": "bt709",
+                "colorspace": "bt709",
+                "color_range": "tv",
+            },
+        )
         .overwrite_output()
         .run_async(pipe_stdin=True)
     )
