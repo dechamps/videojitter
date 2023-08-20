@@ -105,19 +105,30 @@ def generate_report():
         name="scaled_recording_timestamp_seconds",
     )
     # TODO: check that the black/white frames match
-    transitions = pd.merge_asof(
-        transitions,
-        reference_transitions.reset_index().rename(
+    transitions = pd.merge(
+        left=reference_transitions.rename(
             lambda column_name: "reference_" + column_name, axis="columns"
         ),
         left_index=True,
+        right=pd.merge_asof(
+            left=transitions,
+            left_index=True,
+            right=reference_transitions.index.to_series().rename(
+                "reference_timestamp_seconds"
+            ),
+            right_index=True,
+            direction="nearest",
+        ),
         right_on="reference_timestamp_seconds",
-        direction="nearest",
+        how="outer",
     )
-    transitions.loc[:, "anomalous"] = transitions.loc[
+    transitions.loc[:, "repeated"] = transitions.loc[
         :, "reference_timestamp_seconds"
     ].duplicated(keep=False)
-    print(transitions)
+    transitions.loc[:, "expected_recording_timestamp_seconds"] = rescale(
+        transitions.loc[:, "reference_timestamp_seconds"],
+        interval(transitions.loc[:, "recording_timestamp_seconds"]),
+    )
     transitions.loc[:, "error_seconds"] = (
         transitions.loc[:, "recording_timestamp_seconds"]
         - transitions.loc[:, "reference_timestamp_seconds"]
@@ -127,9 +138,16 @@ def generate_report():
     # nonsensical results in some cases; for example the slope part of the
     # linear regression breaks down if the mean suddenly changes in the middle
     # of the recording.
+    valid_transitions = transitions.loc[
+        ~(
+            pd.isna(transitions.loc[:, "recording_timestamp_seconds"])
+            | transitions.loc[:, "repeated"]
+        ),
+        :,
+    ]
     linear_regression = np.polynomial.Polynomial.fit(
-        transitions.loc[:, "recording_timestamp_seconds"],
-        transitions.loc[:, "error_seconds"],
+        valid_transitions.loc[:, "recording_timestamp_seconds"],
+        valid_transitions.loc[:, "error_seconds"],
         deg=1 if args.compensate_clock_skew else 0,
     )
     if args.compensate_clock_skew:
@@ -170,7 +188,17 @@ def generate_report():
         file=sys.stderr,
     )
 
-    chart = alt.Chart(transitions.reset_index()).properties(width=1000, height=750)
+    chart = (
+        alt.Chart(transitions)
+        .properties(width=1000, height=750)
+        .transform_calculate(
+            estimated_recording_timestamp_seconds=alt.expr.if_(
+                alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+                alt.datum["recording_timestamp_seconds"],
+                alt.datum["expected_recording_timestamp_seconds"],
+            )
+        )
+    )
     chart_samples = (
         chart.transform_calculate(
             label="Transition to "
@@ -183,19 +211,38 @@ def generate_report():
         )
         .mark_point()
         .encode(
-            alt.X("recording_timestamp_seconds").scale(zero=False),
+            alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
+                zero=False
+            ),
             alt.Y("error_seconds").scale(zero=False),
             alt.Color("label", type="nominal", title=None),
         )
     )
     chart_anomalies = (
-        chart.transform_filter(alt.datum["anomalous"])
-        .mark_rule(color="red", strokeWidth=3)
-        .encode(alt.X("recording_timestamp_seconds"))
+        chart.transform_calculate(
+            anomaly=alt.expr.if_(
+                alt.datum["repeated"],
+                "Repeated transition",
+                alt.expr.if_(
+                    alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+                    None,
+                    "Missing transition",
+                ),
+            ),
+        )
+        .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
+        .mark_rule(strokeWidth=2)
+        .encode(
+            alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
+            alt.Color("anomaly", type="nominal", title=None).scale(
+                domain=["Missing transition", "Repeated transition"],
+                range=["orangered", "orange"],
+            ),
+        )
     )
-    (chart_anomalies + chart_samples).configure_legend(labelLimit=0).save(
-        args.output_file
-    )
+    (chart_anomalies + chart_samples).resolve_scale(
+        color="independent"
+    ).configure_legend(labelLimit=0).save(args.output_file)
 
 
 generate_report()
