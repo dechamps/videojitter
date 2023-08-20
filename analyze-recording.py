@@ -61,6 +61,18 @@ def parse_arguments():
         default=0.7,
     )
     argument_parser.add_argument(
+        "--minimum-black-transition-distance-seconds",
+        help="When two transitions to black are less than this many seconds apart, remove the transition with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
+        type=float,
+        default=0.002,
+    )
+    argument_parser.add_argument(
+        "--minimum-white-transition-distance-seconds",
+        help="When two transitions to white are less than this many seconds apart, remove the transition with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
+        type=float,
+        default=0.002,
+    )
+    argument_parser.add_argument(
         "--output-downsampled-recording-file",
         help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -256,10 +268,12 @@ def analyze_recording():
     transitions_to_white = scipy.signal.find_peaks(
         recording_slope,
         height=recording_slope_white_threshold,
+        distance=args.minimum_white_transition_distance_seconds * recording_sample_rate,
     )[0]
     transitions_to_black = scipy.signal.find_peaks(
         -recording_slope,
         height=-recording_slope_black_threshold,
+        distance=args.minimum_black_transition_distance_seconds * recording_sample_rate,
     )[0]
 
     if args.output_frame_transitions_file:
