@@ -7,6 +7,7 @@ import json
 import pandas as pd
 import scipy.signal
 import sys
+from si_prefix import si_format
 
 
 def parse_arguments():
@@ -141,9 +142,9 @@ def error_linear_regression(transitions, deg):
     )
 
 
-def generate_chart(transitions, maximum_absolute_error_seconds):
+def generate_chart(transitions, maximum_absolute_error_seconds, fine_print):
     chart = alt.Chart(transitions)
-    return (
+    return alt.vconcat(
         (
             chart.transform_calculate(
                 anomaly=alt.expr.if_(
@@ -208,7 +209,9 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
                     labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
                     title="Transition timing error",
                 ),
-                alt.Color("label", type="nominal", title=None),
+                alt.Color(
+                    "label", type="nominal", title=None, legend=alt.Legend(labelLimit=0)
+                ),
                 alt.Shape("shape", type="nominal", scale=None),
                 tooltip=[
                     alt.Tooltip("transition_index", title="Recorded transition #"),
@@ -217,7 +220,9 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
                     ),
                     alt.Tooltip("reference_frame_index", title="Reference frame #"),
                     alt.Tooltip(
-                        "reference_frame_label", type="nominal", title="Transition to"
+                        "reference_frame_label",
+                        type="nominal",
+                        title="Transition to",
                     ),
                     alt.Tooltip(
                         "reference_previous_frame_count",
@@ -225,7 +230,9 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
                         title="Frames since last transition",
                     ),
                     alt.Tooltip(
-                        "duplicate_label", type="nominal", title="Duplicate transition"
+                        "duplicate_label",
+                        type="nominal",
+                        title="Duplicate transition",
                     ),
                     alt.Tooltip(
                         "reference_timestamp_seconds",
@@ -238,12 +245,13 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
                         format="~s",
                     ),
                     alt.Tooltip(
-                        "error_seconds", title="Timing error (seconds)", format="+~s"
+                        "error_seconds",
+                        title="Timing error (seconds)",
+                        format="+~s",
                     ),
                 ],
             )
         )
-        .properties(width=1000, height=750)
         .transform_calculate(
             estimated_recording_timestamp_seconds=alt.expr.if_(
                 alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
@@ -252,7 +260,16 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
             )
         )
         .resolve_scale(color="independent")
-        .configure_legend(labelLimit=0)
+        .properties(width=1000, height=750),
+        alt.Chart(
+            title=alt.TitleParams(
+                fine_print,
+                fontSize=10,
+                fontWeight="lighter",
+                color="gray",
+                anchor="start",
+            )
+        ).mark_text(),
     )
 
 
@@ -344,14 +361,29 @@ def generate_report():
     transitions.loc[~frames, "error_seconds"] -= black_offset
     transitions.loc[frames, "error_seconds"] -= white_offset
 
+    error_standard_deviation = transitions.loc[:, "error_seconds"].std()
     print(
-        f"Error standard deviation: {transitions.loc[:, 'error_seconds'].std()} seconds",
+        f"Error standard deviation: {error_standard_deviation} seconds",
         file=sys.stderr,
     )
 
-    generate_chart(transitions, args.display_maximum_absolute_error_seconds).save(
-        args.output_file
-    )
+    error_minimum_index = transitions.loc[:, "error_seconds"].idxmin()
+    error_maximum_index = transitions.loc[:, "error_seconds"].idxmax()
+    generate_chart(
+        transitions,
+        args.display_maximum_absolute_error_seconds,
+        fine_print=[
+            f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
+            f"First transition reference timestamp is {si_format(reference_transitions_interval_seconds.left, 3)}s; last: {si_format(reference_transitions_interval_seconds.right, 3)}s; length: {si_format(reference_transitions_interval_seconds.length, 3)}s",
+            f"Recorded {int(transitions.loc[:, 'transition_index'].max())+1} transitions; expected {int(transitions.loc[:, 'reference_transition_index'].max())+1} reference transitions across {int(transitions.loc[:, 'reference_frame_index'].max())+1} frames",
+            f"Detected {transitions.loc[:, 'duplicate'].sum()} duplicate transitions and {pd.isna(transitions.loc[:, 'recording_timestamp_seconds']).sum()} missing transitions",
+            f"Compensating for estimated recording clock skew of {clock_skew:.8}x"
+            if args.compensate_clock_skew
+            else "Recording clock skew compensation is disabled",
+            f"Timing error range: {si_format(transitions.loc[error_minimum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_minimum_index, 'recording_timestamp_seconds'], 3)}s) to {si_format(transitions.loc[error_maximum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_maximum_index, 'recording_timestamp_seconds'], 3)}s) - standard deviation: {si_format(error_standard_deviation, 3)}s - 99% of transitions are between {si_format(transitions.loc[:, 'error_seconds'].quantile(0.005), 3)}s and {si_format(transitions.loc[:, 'error_seconds'].quantile(0.995), 3)}s",
+            "Generated by videojitter",
+        ],
+    ).save(args.output_file)
 
 
 generate_report()
