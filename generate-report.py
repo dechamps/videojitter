@@ -166,16 +166,24 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
         )
         .mark_point(filled=True)
         .encode(
-            alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
-                zero=False
+            alt.X("estimated_recording_timestamp_seconds", type="quantitative")
+            .scale(zero=False)
+            .axis(
+                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                title="Recording timestamp",
             ),
-            alt.Y("error_seconds").scale(
+            alt.Y("error_seconds")
+            .scale(
                 zero=False,
                 domain=[
                     -maximum_absolute_error_seconds,
                     maximum_absolute_error_seconds,
                 ],
                 clamp=True,
+            )
+            .axis(
+                labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
+                title="Transition timing error",
             ),
             alt.Color("label", type="nominal", title=None),
             alt.Shape("shape", type="nominal", scale=None),
