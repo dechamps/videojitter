@@ -33,6 +33,12 @@ def parse_arguments():
         action="store_true",
         default=False,
     )
+    argument_parser.add_argument(
+        "--display-maximum-absolute-error-seconds",
+        help="The maximum absolute error that will be shown on the graph before the points are clamped",
+        type=float,
+        default=0.050,
+    )
     return argument_parser.parse_args()
 
 
@@ -135,7 +141,7 @@ def error_linear_regression(transitions, deg):
     )
 
 
-def generate_chart(transitions):
+def generate_chart(transitions, maximum_absolute_error_seconds):
     chart = alt.Chart(transitions)
     chart_samples = (
         chart.transform_calculate(
@@ -147,13 +153,32 @@ def generate_chart(transitions):
             + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
             + " frames)"
         )
+        .transform_calculate(
+            shape=alt.expr.if_(
+                alt.datum["error_seconds"] < -maximum_absolute_error_seconds,
+                "triangle-down",
+                alt.expr.if_(
+                    alt.datum["error_seconds"] > maximum_absolute_error_seconds,
+                    "triangle-up",
+                    "circle",
+                ),
+            )
+        )
         .mark_point(filled=True)
         .encode(
             alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
                 zero=False
             ),
-            alt.Y("error_seconds").scale(zero=False),
+            alt.Y("error_seconds").scale(
+                zero=False,
+                domain=[
+                    -maximum_absolute_error_seconds,
+                    maximum_absolute_error_seconds,
+                ],
+                clamp=True,
+            ),
             alt.Color("label", type="nominal", title=None),
+            alt.Shape("shape", type="nominal", scale=None),
         )
     )
     chart_anomalies = (
@@ -282,7 +307,9 @@ def generate_report():
         file=sys.stderr,
     )
 
-    generate_chart(transitions).save(args.output_file)
+    generate_chart(transitions, args.display_maximum_absolute_error_seconds).save(
+        args.output_file
+    )
 
 
 generate_report()
