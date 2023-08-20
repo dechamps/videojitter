@@ -122,6 +122,64 @@ def error_linear_regression(transitions, deg):
     )
 
 
+def generate_chart(transitions):
+    chart = alt.Chart(transitions)
+    chart_samples = (
+        chart.transform_calculate(
+            label="Transition to "
+            + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
+            + " (after "
+            + alt.datum["reference_previous_frame_count"]
+            + " "
+            + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
+            + " frames)"
+        )
+        .mark_point()
+        .encode(
+            alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
+                zero=False
+            ),
+            alt.Y("error_seconds").scale(zero=False),
+            alt.Color("label", type="nominal", title=None),
+        )
+    )
+    chart_anomalies = (
+        chart.transform_calculate(
+            anomaly=alt.expr.if_(
+                alt.datum["duplicate"],
+                "Duplicate transition",
+                alt.expr.if_(
+                    alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+                    None,
+                    "Missing transition",
+                ),
+            ),
+        )
+        .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
+        .mark_rule(strokeWidth=2)
+        .encode(
+            alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
+            alt.Color("anomaly", type="nominal", title=None).scale(
+                domain=["Missing transition", "Duplicate transition"],
+                range=["orangered", "orange"],
+            ),
+        )
+    )
+    return (
+        (chart_anomalies + chart_samples)
+        .properties(width=1000, height=750)
+        .transform_calculate(
+            estimated_recording_timestamp_seconds=alt.expr.if_(
+                alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
+                alt.datum["recording_timestamp_seconds"],
+                alt.datum["expected_recording_timestamp_seconds"],
+            )
+        )
+        .resolve_scale(color="independent")
+        .configure_legend(labelLimit=0)
+    )
+
+
 def generate_report():
     args = parse_arguments()
 
@@ -210,63 +268,7 @@ def generate_report():
         file=sys.stderr,
     )
 
-    chart = alt.Chart(transitions)
-    chart_samples = (
-        chart.transform_calculate(
-            label="Transition to "
-            + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
-            + " (after "
-            + alt.datum["reference_previous_frame_count"]
-            + " "
-            + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
-            + " frames)"
-        )
-        .mark_point()
-        .encode(
-            alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
-                zero=False
-            ),
-            alt.Y("error_seconds").scale(zero=False),
-            alt.Color("label", type="nominal", title=None),
-        )
-    )
-    chart_anomalies = (
-        chart.transform_calculate(
-            anomaly=alt.expr.if_(
-                alt.datum["duplicate"],
-                "Duplicate transition",
-                alt.expr.if_(
-                    alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-                    None,
-                    "Missing transition",
-                ),
-            ),
-        )
-        .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
-        .mark_rule(strokeWidth=2)
-        .encode(
-            alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
-            alt.Color("anomaly", type="nominal", title=None).scale(
-                domain=["Missing transition", "Duplicate transition"],
-                range=["orangered", "orange"],
-            ),
-        )
-    )
-    (chart_anomalies + chart_samples).properties(
-        width=1000, height=750
-    ).transform_calculate(
-        estimated_recording_timestamp_seconds=alt.expr.if_(
-            alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-            alt.datum["recording_timestamp_seconds"],
-            alt.datum["expected_recording_timestamp_seconds"],
-        )
-    ).resolve_scale(
-        color="independent"
-    ).configure_legend(
-        labelLimit=0
-    ).save(
-        args.output_file
-    )
+    generate_chart(transitions).save(args.output_file)
 
 
 generate_report()
