@@ -47,6 +47,61 @@ def rescale(series, target_range):
     ) / original_range.length * target_range.length + target_range.left
 
 
+def match_transitions(transitions, reference_transitions):
+    """Join actual transitions in `transitions` against expected transitions in
+    `reference_transitions`.
+
+    The join is done based on proximity of normalized timestamps. Columns in
+    `reference_transitions` will be prefixed with `reference_`.
+
+    If a given reference transition is the best match for multiple actual
+    transitions, the reference transition information is duplicated into all
+    matching rows and the `duplicate` column is set to True for all these rows.
+
+    If a given reference transition is not the best match for any actual
+    transition, the reference transition information is inserted into a new row
+    where all actual transition information is set to NaN/NA.
+
+    The return value also includes a `expected_recording_timestamp_seconds`
+    column which indicates where we would have expected to find the transition
+    in a "perfect" recording. This is useful to locate missing transitions.
+    """
+    transitions = transitions.reset_index()
+    transitions.index = pd.Index(
+        rescale(
+            transitions.loc[:, "recording_timestamp_seconds"],
+            interval(reference_transitions.index),
+        ),
+        name="scaled_recording_timestamp_seconds",
+    )
+    # TODO: check that the black/white frames match
+    transitions = pd.merge(
+        left=reference_transitions.rename(
+            lambda column_name: "reference_" + column_name, axis="columns"
+        ),
+        left_index=True,
+        right=pd.merge_asof(
+            left=transitions,
+            left_index=True,
+            right=reference_transitions.index.to_series().rename(
+                "reference_timestamp_seconds"
+            ),
+            right_index=True,
+            direction="nearest",
+        ),
+        right_on="reference_timestamp_seconds",
+        how="outer",
+    )
+    transitions.loc[:, "duplicate"] = transitions.loc[
+        :, "reference_timestamp_seconds"
+    ].duplicated(keep=False)
+    transitions.loc[:, "expected_recording_timestamp_seconds"] = rescale(
+        transitions.loc[:, "reference_timestamp_seconds"],
+        interval(transitions.loc[:, "recording_timestamp_seconds"]),
+    )
+    return transitions
+
+
 def generate_report():
     args = parse_arguments()
 
@@ -92,43 +147,12 @@ def generate_report():
         print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
     else:
         print(
-            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/repeated some transitions entirely.",
+            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/duplicate some transitions entirely.",
             file=sys.stderr,
         )
 
-    transitions.reset_index(inplace=True)
-    transitions.index = pd.Index(
-        rescale(
-            transitions.loc[:, "recording_timestamp_seconds"],
-            interval(reference_transitions.index),
-        ),
-        name="scaled_recording_timestamp_seconds",
-    )
-    # TODO: check that the black/white frames match
-    transitions = pd.merge(
-        left=reference_transitions.rename(
-            lambda column_name: "reference_" + column_name, axis="columns"
-        ),
-        left_index=True,
-        right=pd.merge_asof(
-            left=transitions,
-            left_index=True,
-            right=reference_transitions.index.to_series().rename(
-                "reference_timestamp_seconds"
-            ),
-            right_index=True,
-            direction="nearest",
-        ),
-        right_on="reference_timestamp_seconds",
-        how="outer",
-    )
-    transitions.loc[:, "repeated"] = transitions.loc[
-        :, "reference_timestamp_seconds"
-    ].duplicated(keep=False)
-    transitions.loc[:, "expected_recording_timestamp_seconds"] = rescale(
-        transitions.loc[:, "reference_timestamp_seconds"],
-        interval(transitions.loc[:, "recording_timestamp_seconds"]),
-    )
+    transitions = match_transitions(transitions, reference_transitions)
+
     transitions.loc[:, "error_seconds"] = (
         transitions.loc[:, "recording_timestamp_seconds"]
         - transitions.loc[:, "reference_timestamp_seconds"]
@@ -141,7 +165,7 @@ def generate_report():
     valid_transitions = transitions.loc[
         ~(
             pd.isna(transitions.loc[:, "recording_timestamp_seconds"])
-            | transitions.loc[:, "repeated"]
+            | transitions.loc[:, "duplicate"]
         ),
         :,
     ]
@@ -203,8 +227,8 @@ def generate_report():
     chart_anomalies = (
         chart.transform_calculate(
             anomaly=alt.expr.if_(
-                alt.datum["repeated"],
-                "Repeated transition",
+                alt.datum["duplicate"],
+                "Duplicate transition",
                 alt.expr.if_(
                     alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
                     None,
@@ -217,7 +241,7 @@ def generate_report():
         .encode(
             alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
             alt.Color("anomaly", type="nominal", title=None).scale(
-                domain=["Missing transition", "Repeated transition"],
+                domain=["Missing transition", "Duplicate transition"],
                 range=["orangered", "orange"],
             ),
         )
