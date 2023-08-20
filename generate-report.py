@@ -190,6 +190,11 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
             alt.Color("label", type="nominal", title=None),
             alt.Shape("shape", type="nominal", scale=None),
             tooltip=[
+                alt.Tooltip("transition_index", title="Recorded transition #"),
+                alt.Tooltip(
+                    "reference_transition_index", title="Reference transition #"
+                ),
+                alt.Tooltip("reference_frame_index", title="Reference frame #"),
                 alt.Tooltip(
                     "reference_frame_label", type="nominal", title="Transition to"
                 ),
@@ -261,7 +266,7 @@ def generate_report():
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     frame_duration = spec["fps"]["den"] / spec["fps"]["num"]
     reference_transitions = pd.DataFrame(
-        {"frame": spec["frames"]},
+        {"frame": spec["frames"], "frame_index": np.arange(0, len(spec["frames"]))},
         index=pd.Index(
             np.arange(0, len(spec["frames"])) * frame_duration,
             name="timestamp_seconds",
@@ -279,6 +284,9 @@ def generate_report():
         + 1
     )
     reference_transitions = reference_transitions[reference_transitions_diff]
+    reference_transitions.loc[:, "transition_index"] = np.arange(
+        0, reference_transitions.index.size
+    )
     reference_transitions_interval_seconds = interval(reference_transitions.index)
     print(
         f"Successfully loaded spec file containing {reference_transitions.size} frame transitions at {nominal_fps} FPS, with first transition at {reference_transitions_interval_seconds.left} seconds and last transition at {reference_transitions_interval_seconds.right} seconds for a total of {reference_transitions_interval_seconds.length} seconds",
@@ -290,6 +298,7 @@ def generate_report():
         index_col="recording_timestamp_seconds",
         usecols=["recording_timestamp_seconds", "frame"],
     )
+    transitions.loc[:, "transition_index"] = np.arange(0, transitions.size)
     transitions_interval_seconds = interval(transitions.index)
     print(
         f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
