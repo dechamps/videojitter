@@ -161,10 +161,12 @@ def generate_chart(transitions, maximum_absolute_error_seconds, fine_print):
             .mark_rule(strokeWidth=2)
             .encode(
                 alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
-                alt.Color("anomaly", type="nominal", title=None).scale(
+                alt.Color("anomaly", type="nominal", title=None)
+                .scale(
                     domain=["Missing transition", "Duplicate transition"],
                     range=["orangered", "orange"],
-                ),
+                )
+                .legend(orient="bottom", columns=2, labelLimit=0, symbolStrokeWidth=3),
             )
             + chart.transform_calculate(
                 reference_frame_label=alt.expr.if_(
@@ -210,8 +212,10 @@ def generate_chart(transitions, maximum_absolute_error_seconds, fine_print):
                     title="Transition timing error",
                 ),
                 alt.Color(
-                    "label", type="nominal", title=None, legend=alt.Legend(labelLimit=0)
-                ),
+                    "label",
+                    type="nominal",
+                    title=None,
+                ).legend(orient="bottom", columns=2, labelLimit=0),
                 alt.Shape("shape", type="nominal", scale=None),
                 tooltip=[
                     alt.Tooltip("transition_index", title="Recorded transition #"),
