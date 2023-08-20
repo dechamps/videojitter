@@ -51,8 +51,9 @@ def match_transitions(transitions, reference_transitions):
     """Join actual transitions in `transitions` against expected transitions in
     `reference_transitions`.
 
-    The join is done based on proximity of normalized timestamps. Columns in
-    `reference_transitions` will be prefixed with `reference_`.
+    The join is done based on frame (black or white) and proximity of normalized
+    timestamps. Columns in `reference_transitions` will be prefixed with
+    `reference_`.
 
     If a given reference transition is the best match for multiple actual
     transitions, the reference transition information is duplicated into all
@@ -74,24 +75,36 @@ def match_transitions(transitions, reference_transitions):
         ),
         name="scaled_recording_timestamp_seconds",
     )
-    # TODO: check that the black/white frames match
-    transitions = pd.merge(
-        left=reference_transitions.rename(
-            lambda column_name: "reference_" + column_name, axis="columns"
-        ),
-        left_index=True,
-        right=pd.merge_asof(
-            left=transitions,
-            left_index=True,
-            right=reference_transitions.index.to_series().rename(
-                "reference_timestamp_seconds"
+
+    def filter_frame(transitions_to_filter, frame):
+        return transitions_to_filter.loc[
+            transitions_to_filter.loc[:, "frame"] == frame, :
+        ]
+
+    def match_transitions_for_frame(frame):
+        reference_transitions_for_merge = filter_frame(reference_transitions, frame)
+        return pd.merge(
+            left=reference_transitions_for_merge.rename(
+                lambda column_name: "reference_" + column_name, axis="columns"
             ),
-            right_index=True,
-            direction="nearest",
-        ),
-        right_on="reference_timestamp_seconds",
-        how="outer",
+            left_index=True,
+            right=pd.merge_asof(
+                left=filter_frame(transitions, frame),
+                left_index=True,
+                right=reference_transitions_for_merge.index.to_series().rename(
+                    "reference_timestamp_seconds"
+                ),
+                right_index=True,
+                direction="nearest",
+            ),
+            right_on="reference_timestamp_seconds",
+            how="outer",
+        )
+
+    transitions = pd.concat(
+        [match_transitions_for_frame(frame) for frame in [False, True]]
     )
+
     transitions.loc[:, "duplicate"] = transitions.loc[
         :, "reference_timestamp_seconds"
     ].duplicated(keep=False)
