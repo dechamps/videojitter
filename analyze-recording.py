@@ -49,6 +49,18 @@ def parse_arguments():
         default=100000,
     )
     argument_parser.add_argument(
+        "--black-threshold-ratio",
+        help="The recording slope level below which a transition to black is deemed to have occurred, relative to the overall maximum negative slope.",
+        type=float,
+        default=0.8,
+    )
+    argument_parser.add_argument(
+        "--white-threshold-ratio",
+        help="The recording slope level above which a transition to white is deemed to have occurred, relative to the overall maximum positive slope.",
+        type=float,
+        default=0.8,
+    )
+    argument_parser.add_argument(
         "--output-downsampled-recording-file",
         help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -216,8 +228,12 @@ def analyze_recording():
         f"Approximate recording slope range: [{recording_slope_approx_min}, {recording_slope_approx_max}]",
         file=sys.stderr,
     )
-    recording_slope_black_threshold = recording_slope_approx_min / 1.2
-    recording_slope_white_threshold = recording_slope_approx_max / 1.2
+    recording_slope_black_threshold = (
+        recording_slope_approx_min * args.black_threshold_ratio
+    )
+    recording_slope_white_threshold = (
+        recording_slope_approx_max * args.white_threshold_ratio
+    )
     print(
         f"Assuming that video is transitioning to black when recording slope dips below {recording_slope_black_threshold} and to white above {recording_slope_white_threshold}",
         file=sys.stderr,
