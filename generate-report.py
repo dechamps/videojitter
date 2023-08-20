@@ -102,6 +102,26 @@ def match_transitions(transitions, reference_transitions):
     return transitions
 
 
+def error_linear_regression(transitions, deg):
+    # TODO: find a better way to calculate clock skew so that we can enable
+    # clock skew compensation by default. The current method produces
+    # nonsensical results in some cases; for example the slope part of the
+    # linear regression breaks down if the mean suddenly changes in the middle
+    # of the recording.
+    valid_transitions = transitions.loc[
+        ~(
+            pd.isna(transitions.loc[:, "recording_timestamp_seconds"])
+            | transitions.loc[:, "duplicate"]
+        ),
+        :,
+    ]
+    return np.polynomial.Polynomial.fit(
+        valid_transitions.loc[:, "recording_timestamp_seconds"],
+        valid_transitions.loc[:, "error_seconds"],
+        deg=deg,
+    )
+
+
 def generate_report():
     args = parse_arguments()
 
@@ -157,22 +177,8 @@ def generate_report():
         transitions.loc[:, "recording_timestamp_seconds"]
         - transitions.loc[:, "reference_timestamp_seconds"]
     )
-    # TODO: find a better way to calculate clock skew so that we can enable
-    # clock skew compensation by default. The current method produces
-    # nonsensical results in some cases; for example the slope part of the
-    # linear regression breaks down if the mean suddenly changes in the middle
-    # of the recording.
-    valid_transitions = transitions.loc[
-        ~(
-            pd.isna(transitions.loc[:, "recording_timestamp_seconds"])
-            | transitions.loc[:, "duplicate"]
-        ),
-        :,
-    ]
-    linear_regression = np.polynomial.Polynomial.fit(
-        valid_transitions.loc[:, "recording_timestamp_seconds"],
-        valid_transitions.loc[:, "error_seconds"],
-        deg=1 if args.compensate_clock_skew else 0,
+    linear_regression = error_linear_regression(
+        transitions, deg=1 if args.compensate_clock_skew else 0
     )
     if args.compensate_clock_skew:
         clock_skew = 1 + linear_regression.coef[1]
