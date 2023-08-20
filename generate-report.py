@@ -147,7 +147,7 @@ def generate_chart(transitions):
             + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
             + " frames)"
         )
-        .mark_point()
+        .mark_point(filled=True)
         .encode(
             alt.X("estimated_recording_timestamp_seconds", type="quantitative").scale(
                 zero=False
