@@ -52,13 +52,13 @@ def parse_arguments():
         "--black-threshold-ratio",
         help="The recording slope level below which a transition to black is deemed to have occurred, relative to the overall maximum negative slope.",
         type=float,
-        default=0.8,
+        default=0.7,
     )
     argument_parser.add_argument(
         "--white-threshold-ratio",
         help="The recording slope level above which a transition to white is deemed to have occurred, relative to the overall maximum positive slope.",
         type=float,
-        default=0.8,
+        default=0.7,
     )
     argument_parser.add_argument(
         "--output-downsampled-recording-file",
@@ -222,10 +222,10 @@ def analyze_recording():
     recording_slope = np.diff(recording_samples)
     maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
 
-    recording_slope_approx_min = np.quantile(recording_slope, 0.01)
-    recording_slope_approx_max = np.quantile(recording_slope, 0.99)
+    recording_slope_approx_min = recording_slope.min()
+    recording_slope_approx_max = recording_slope.max()
     print(
-        f"Approximate recording slope range: [{recording_slope_approx_min}, {recording_slope_approx_max}]",
+        f"Recording slope range: [{recording_slope_approx_min}, {recording_slope_approx_max}]",
         file=sys.stderr,
     )
     recording_slope_black_threshold = (
