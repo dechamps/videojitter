@@ -40,6 +40,13 @@ def interval(series):
     return pd.Interval(series.min(), series.max())
 
 
+def rescale(series, target_range):
+    original_range = interval(series)
+    return (
+        series - original_range.left
+    ) / original_range.length * target_range.length + target_range.left
+
+
 def generate_report():
     args = parse_arguments()
 
@@ -50,7 +57,7 @@ def generate_report():
         {"frame": spec["frames"]},
         index=pd.Index(
             np.arange(0, len(spec["frames"])) * frame_duration,
-            name="reference_timestamp_seconds",
+            name="timestamp_seconds",
         ),
     )
     reference_transitions_diff = (
@@ -85,26 +92,35 @@ def generate_report():
         print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
     else:
         print(
-            "WARNING: number of recorded transitions is inconsistent with the spec. Expect garbage results.",
+            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/repeated some transitions entirely.",
             file=sys.stderr,
         )
 
-    # TODO: try harder to make this work when there are more or fewer
-    # transitions than expected. reindex(method="nearest") might help.
     transitions.reset_index(inplace=True)
-    transitions.index = reference_transitions.index
-    # TODO: check that the black/white frames match
-    transitions = pd.concat(
-        [
-            transitions,
-            reference_transitions.rename(
-                lambda column_name: "reference_" + column_name, axis="columns"
-            ),
-        ],
-        axis="columns",
+    transitions.index = pd.Index(
+        rescale(
+            transitions.loc[:, "recording_timestamp_seconds"],
+            interval(reference_transitions.index),
+        ),
+        name="scaled_recording_timestamp_seconds",
     )
+    # TODO: check that the black/white frames match
+    transitions = pd.merge_asof(
+        transitions,
+        reference_transitions.reset_index().rename(
+            lambda column_name: "reference_" + column_name, axis="columns"
+        ),
+        left_index=True,
+        right_on="reference_timestamp_seconds",
+        direction="nearest",
+    )
+    transitions.loc[:, "anomalous"] = transitions.loc[
+        :, "reference_timestamp_seconds"
+    ].duplicated(keep=False)
+    print(transitions)
     transitions.loc[:, "error_seconds"] = (
-        transitions.loc[:, "recording_timestamp_seconds"] - transitions.index
+        transitions.loc[:, "recording_timestamp_seconds"]
+        - transitions.loc[:, "reference_timestamp_seconds"]
     )
     # TODO: find a better way to calculate clock skew so that we can enable
     # clock skew compensation by default. The current method produces
@@ -112,7 +128,7 @@ def generate_report():
     # linear regression breaks down if the mean suddenly changes in the middle
     # of the recording.
     linear_regression = np.polynomial.Polynomial.fit(
-        transitions.index,
+        transitions.loc[:, "recording_timestamp_seconds"],
         transitions.loc[:, "error_seconds"],
         deg=1 if args.compensate_clock_skew else 0,
     )
@@ -128,7 +144,9 @@ def generate_report():
                 f"Recording is {clock_skew}x longer than expected. This is usually due to benign clock skew. Scaling timestamps to compensate.",
                 file=sys.stderr,
             )
-    transitions.loc[:, "error_seconds"] -= linear_regression(transitions.index)
+    transitions.loc[:, "error_seconds"] -= linear_regression(
+        transitions.loc[:, "recording_timestamp_seconds"]
+    )
 
     black_offset = transitions.loc[
         transitions.loc[:, "frame"] == "BLACK", "error_seconds"
@@ -152,23 +170,30 @@ def generate_report():
         file=sys.stderr,
     )
 
-    alt.Chart(transitions.reset_index()).transform_calculate(
-        label="Transition to "
-        + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
-        + " (after "
-        + alt.datum["reference_previous_frame_count"]
-        + " "
-        + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
-        + " frames)"
-    ).mark_point().encode(
-        alt.X("recording_timestamp_seconds").scale(zero=False),
-        alt.Y("error_seconds").scale(zero=False),
-        alt.Color("label", type="nominal", title=None),
-    ).configure_legend(
-        labelLimit=0
-    ).properties(
-        width=1000, height=750
-    ).save(
+    chart = alt.Chart(transitions.reset_index()).properties(width=1000, height=750)
+    chart_samples = (
+        chart.transform_calculate(
+            label="Transition to "
+            + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
+            + " (after "
+            + alt.datum["reference_previous_frame_count"]
+            + " "
+            + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
+            + " frames)"
+        )
+        .mark_point()
+        .encode(
+            alt.X("recording_timestamp_seconds").scale(zero=False),
+            alt.Y("error_seconds").scale(zero=False),
+            alt.Color("label", type="nominal", title=None),
+        )
+    )
+    chart_anomalies = (
+        chart.transform_filter(alt.datum["anomalous"])
+        .mark_rule(color="red", strokeWidth=3)
+        .encode(alt.X("recording_timestamp_seconds"))
+    )
+    (chart_anomalies + chart_samples).configure_legend(labelLimit=0).save(
         args.output_file
     )
 
