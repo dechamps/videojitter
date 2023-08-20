@@ -17,6 +17,16 @@ def parse_arguments():
         required=True,
         default=argparse.SUPPRESS,
     )
+    argument_parser.add_argument(
+        "--begin-padding",
+        help="How long to hold the first frame at the beginning of the video, in ffmpeg time format",
+        default="5",
+    )
+    argument_parser.add_argument(
+        "--end-padding",
+        help="How long to hold the last frame at the end of the video, in ffmpeg time format",
+        default="5",
+    )
     return argument_parser.parse_args()
 
 
@@ -33,8 +43,8 @@ def generate_video():
         )
         .filter(
             "tpad",
-            start_duration=5,
-            stop_duration=5,
+            start_duration=args.begin_padding,
+            stop_duration=args.end_padding,
             start_mode="clone",
             stop_mode="clone",
         )
