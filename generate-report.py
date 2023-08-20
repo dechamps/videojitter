@@ -145,15 +145,17 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
     chart = alt.Chart(transitions)
     chart_samples = (
         chart.transform_calculate(
+            reference_frame_label=alt.expr.if_(
+                alt.datum["reference_frame"], "white", "black"
+            ),
+            duplicate_label=alt.expr.if_(alt.datum["duplicate"], "yes", "no"),
             label="Transition to "
-            + alt.expr.if_(alt.datum["reference_frame"], "white", "black")
+            + alt.datum["reference_frame_label"]
             + " (after "
             + alt.datum["reference_previous_frame_count"]
             + " "
             + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
-            + " frames)"
-        )
-        .transform_calculate(
+            + " frames)",
             shape=alt.expr.if_(
                 alt.datum["error_seconds"] < -maximum_absolute_error_seconds,
                 "triangle-down",
@@ -162,7 +164,7 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
                     "triangle-up",
                     "circle",
                 ),
-            )
+            ),
         )
         .mark_point(filled=True)
         .encode(
@@ -187,6 +189,32 @@ def generate_chart(transitions, maximum_absolute_error_seconds):
             ),
             alt.Color("label", type="nominal", title=None),
             alt.Shape("shape", type="nominal", scale=None),
+            tooltip=[
+                alt.Tooltip(
+                    "reference_frame_label", type="nominal", title="Transition to"
+                ),
+                alt.Tooltip(
+                    "reference_previous_frame_count",
+                    type="nominal",
+                    title="Frames since last transition",
+                ),
+                alt.Tooltip(
+                    "duplicate_label", type="nominal", title="Duplicate transition"
+                ),
+                alt.Tooltip(
+                    "reference_timestamp_seconds",
+                    title="Reference time (seconds)",
+                    format="~s",
+                ),
+                alt.Tooltip(
+                    "recording_timestamp_seconds",
+                    title="Recording time (seconds)",
+                    format="~s",
+                ),
+                alt.Tooltip(
+                    "error_seconds", title="Timing error (seconds)", format="+~s"
+                ),
+            ],
         )
     )
     chart_anomalies = (
