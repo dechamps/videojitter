@@ -111,7 +111,7 @@ def match_transitions(transitions, reference_transitions):
     transitions = pd.concat(
         [match_transitions_for_frame(frame) for frame in [False, True]]
     )
-
+    transitions.sort_index(inplace=True)
     transitions.loc[:, "duplicate"] = transitions.loc[
         :, "reference_timestamp_seconds"
     ].duplicated(keep=False)
