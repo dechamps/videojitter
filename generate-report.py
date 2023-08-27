@@ -280,6 +280,15 @@ def generate_chart(transitions, title, maximum_absolute_error_seconds, fine_prin
                 anchor="start",
             )
         ).mark_text(),
+    ).properties(
+        usermeta={
+            "embedOptions": {
+                "downloadFileName": "videojitter",
+                # Sets the Vega-Embed PNG export scale factor to provide higher-quality
+                # exports. See https://github.com/vega/vega-embed/issues/492
+                "scaleFactor": 2,
+            }
+        }
     )
 
 
