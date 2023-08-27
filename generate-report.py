@@ -147,15 +147,11 @@ def error_linear_regression(transitions, deg):
     )
 
 
-def generate_chart(
-    transitions, nominal_fps, maximum_absolute_error_seconds, fine_print
-):
+def generate_chart(transitions, title, maximum_absolute_error_seconds, fine_print):
     chart = alt.Chart(transitions)
     return alt.vconcat(
         (
-            chart.properties(
-                title=f"{int(transitions.loc[:, 'transition_index'].max())+1} transitions at {nominal_fps:.3f} nominal FPS"
-            )
+            chart.properties(title=title)
             .transform_calculate(
                 anomaly=alt.expr.if_(
                     alt.datum["duplicate"],
@@ -394,7 +390,7 @@ def generate_report():
         error_maximum_index = transitions.loc[:, "error_seconds"].idxmax()
         generate_chart(
             transitions,
-            nominal_fps,
+            f"{int(transitions.loc[:, 'transition_index'].max())+1} transitions at {nominal_fps:.3f} nominal FPS",
             args.display_maximum_absolute_error_seconds,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
