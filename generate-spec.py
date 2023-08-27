@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import numpy as np
 import random
 import sys
 
@@ -21,35 +22,33 @@ def parse_arguments():
         "--duration-seconds", help="Test duration in seconds", default=60, type=float
     )
     argument_parser.add_argument(
-        "--repeat-probability",
-        help="Probability that a frame will be repeated",
+        "--frame-repeat-ratio",
+        help="Ratio of transitions that will trigger a frame repeat",
         default=0.5,
         type=float,
     )
     return argument_parser.parse_args()
 
 
-def generate_frames(count, repeat_probability):
+def generate_frames(count, frame_repeat_ratio, rng):
     """Generate n frames alternating between black and white.
 
     Some frames are repeated at random; however a given frame will never appear
     more than twice in a row, and the first and last frames can never be part
     of a repeat."""
-    last_frames = []
-    for frame_index in range(0, count):
-        if not last_frames:
-            frame = random.random() > 0.5
-        else:
-            frame = last_frames[-1]
-            if (
-                len(last_frames) < 2
-                or last_frames[0] == last_frames[1]
-                or frame_index == count - 1
-                or random.random() > repeat_probability
-            ):
-                frame = not frame
-        yield frame
-        last_frames = last_frames[0 if len(last_frames) < 2 else -1 :] + [frame]
+    transition_count = int(np.ceil(count / (1 + frame_repeat_ratio)))
+    transition_frame_counts = np.ones(transition_count, dtype=int)
+    transition_frame_counts[
+        rng.choice(
+            transition_frame_counts.size - 2, count - transition_count, replace=False
+        )
+        + 1
+    ] = 2
+    return (
+        ((np.arange(transition_frame_counts.size) + rng.choice([0, 1])) % 2)
+        .astype(bool)
+        .repeat(transition_frame_counts)
+    )
 
 
 def generate_spec():
@@ -63,7 +62,9 @@ def generate_spec():
     json.dump(
         {
             "fps": {"num": args.fps_num, "den": args.fps_den},
-            "frames": list(generate_frames(frame_count, args.repeat_probability)),
+            "frames": generate_frames(
+                frame_count, args.frame_repeat_ratio, np.random.default_rng()
+            ).tolist(),
         },
         sys.stdout,
     )
