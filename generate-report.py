@@ -387,7 +387,7 @@ def generate_report():
             f"First transition reference timestamp is {si_format(reference_transitions_interval_seconds.left, 3)}s; last: {si_format(reference_transitions_interval_seconds.right, 3)}s; length: {si_format(reference_transitions_interval_seconds.length, 3)}s",
             f"Recorded {int(transitions.loc[:, 'transition_index'].max())+1} transitions; expected {int(transitions.loc[:, 'reference_transition_index'].max())+1} reference transitions across {int(transitions.loc[:, 'reference_frame_index'].max())+1} frames",
             f"Detected {transitions.loc[:, 'duplicate'].sum()} duplicate transitions and {pd.isna(transitions.loc[:, 'recording_timestamp_seconds']).sum()} missing transitions",
-            f"Compensating for estimated recording clock skew of {clock_skew:.8}x"
+            f"Compensating for estimated recording clock skew of ~{clock_skew:.6f}x"
             if args.compensate_clock_skew
             else "Recording clock skew compensation is disabled",
             f"Timing error range: {si_format(transitions.loc[error_minimum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_minimum_index, 'recording_timestamp_seconds'], 3)}s) to {si_format(transitions.loc[error_maximum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_maximum_index, 'recording_timestamp_seconds'], 3)}s) - standard deviation: {si_format(error_standard_deviation, 3)}s - 99% of transitions are between {si_format(transitions.loc[:, 'error_seconds'].quantile(0.005), 3)}s and {si_format(transitions.loc[:, 'error_seconds'].quantile(0.995), 3)}s",
