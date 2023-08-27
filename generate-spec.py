@@ -24,7 +24,7 @@ def parse_arguments():
     argument_parser.add_argument(
         "--frame-repeat-ratio",
         help="Ratio of transitions that will trigger a frame repeat",
-        default=0.5,
+        default=0.1,
         type=float,
     )
     return argument_parser.parse_args()
