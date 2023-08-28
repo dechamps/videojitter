@@ -101,7 +101,7 @@ def generate_chart(
                     clamp=True,
                 )
                 .axis(
-                    labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
+                    labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
                     title="Time since previous transition",
                 ),
                 alt.Color(
