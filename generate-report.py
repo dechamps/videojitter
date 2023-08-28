@@ -116,7 +116,7 @@ def generate_chart(
                 "label",
                 type="nominal",
                 title=None,
-            ).legend(orient="bottom", columns=1, labelLimit=0),
+            ).legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
             alt.Shape("shape", type="nominal", scale=None),
             tooltip=[
                 alt.Tooltip(
@@ -152,7 +152,7 @@ def generate_chart(
         chart = chart.encode(
             alt.Opacity("delayed_label", type="nominal", title=None)
             .scale(range=alt.FieldRange("opacity"))
-            .legend(orient="bottom", columns=1, labelLimit=0),
+            .legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
         )
     return (
         alt.vconcat(
