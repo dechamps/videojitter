@@ -32,7 +32,6 @@ def parse_arguments():
         "--output-csv",
         help="Output the results as CSV to standard output",
         action="store_true",
-        default=False,
     )
     argument_parser.add_argument(
         "--chart-minimum-time-between-transitions-seconds",
