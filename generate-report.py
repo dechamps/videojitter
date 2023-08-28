@@ -5,10 +5,8 @@ import argparse
 import numpy as np
 import json
 import pandas as pd
-import scipy.signal
 import sys
 from si_prefix import si_format
-import videojitter.util
 
 
 def parse_arguments():
