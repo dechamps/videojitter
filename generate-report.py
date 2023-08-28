@@ -304,35 +304,30 @@ def generate_report():
 
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    frame_duration = spec["fps"]["den"] / spec["fps"]["num"]
-    reference_frames = videojitter.util.generate_frames(
-        spec["transition_count"], spec["delayed_transitions"]
-    )
     reference_transitions = pd.DataFrame(
-        {"frame": reference_frames, "frame_index": np.arange(0, len(reference_frames))},
-        index=pd.Index(
-            np.arange(0, len(reference_frames)) * frame_duration,
-            name="timestamp_seconds",
-        ),
+        {"transition_index": np.arange(spec["transition_count"], dtype=int)}
     )
-    reference_transitions_diff = (
-        reference_transitions.loc[:, "frame"]
-        != reference_transitions.loc[:, "frame"].shift()
+    reference_transitions.loc[:, "frame"] = ~(
+        reference_transitions.loc[:, "transition_index"] % 2
+    ).astype(bool)
+    reference_transitions.loc[:, "previous_frame_count"] = 1
+    reference_transitions.loc[
+        # TODO: why -1? Looks like the output of generate_frames() may be off by
+        # one
+        np.array(spec["delayed_transitions"]) - 1,
+        "previous_frame_count",
+    ] = 2
+    reference_transitions.loc[:, "frame_index"] = reference_transitions.loc[
+        :, "previous_frame_count"
+    ].cumsum()
+    reference_transitions.index = pd.Index(
+        reference_transitions.loc[:, "frame_index"] / nominal_fps,
+        name="timestamp_seconds",
     )
-    reference_transitions_diff[0] = False
-    reference_transitions.loc[:, "previous_frame_count"] = (
-        reference_transitions.groupby(reference_transitions_diff.cumsum())
-        .cumcount()
-        .shift()
-        + 1
-    )
-    reference_transitions = reference_transitions[reference_transitions_diff]
-    reference_transitions.loc[:, "transition_index"] = np.arange(
-        0, reference_transitions.index.size
-    )
+
     reference_transitions_interval_seconds = interval(reference_transitions.index)
     print(
-        f"Successfully loaded spec file containing {reference_transitions.size} frame transitions at {nominal_fps} FPS, with first transition at {reference_transitions_interval_seconds.left} seconds and last transition at {reference_transitions_interval_seconds.right} seconds for a total of {reference_transitions_interval_seconds.length} seconds",
+        f"Successfully loaded spec file containing {reference_transitions.index.size} frame transitions at {nominal_fps} FPS, with first transition at {reference_transitions_interval_seconds.left} seconds and last transition at {reference_transitions_interval_seconds.right} seconds for a total of {reference_transitions_interval_seconds.length} seconds",
         file=sys.stderr,
     )
 
