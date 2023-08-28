@@ -72,11 +72,11 @@ def generate_chart(
                 frame_label=alt.expr.if_(alt.datum["frame"], "white", "black"),
                 label="Transition to " + alt.datum["frame_label"],
                 shape=alt.expr.if_(
-                    alt.datum["error_seconds"]
+                    alt.datum["time_since_previous_transition_seconds"]
                     < -minimum_time_between_transitions_seconds,
                     "triangle-down",
                     alt.expr.if_(
-                        alt.datum["error_seconds"]
+                        alt.datum["time_since_previous_transition_seconds"]
                         > maximum_time_between_transitions_seconds,
                         "triangle-up",
                         "circle",
