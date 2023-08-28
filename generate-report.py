@@ -62,94 +62,101 @@ def generate_chart(
     title,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
+    has_delayed_transitions,
     fine_print,
 ):
+    chart = (
+        alt.Chart(transitions.reset_index(), title=title)
+        .transform_window(transition_count="row_number()")
+        .transform_calculate(
+            transition_index=alt.expr.datum["transition_count"] - 1,
+            frame_label=alt.expr.if_(alt.datum["frame"], "white", "black"),
+            label="Transition to " + alt.datum["frame_label"],
+            opacity=alt.expr.if_(alt.datum["delayed"], 0.4, 1),
+            delayed_label=alt.expr.if_(
+                alt.datum["delayed"],
+                "Intentionally delayed transition (ignore)",
+                "Normal transition",
+            ),
+            delayed_tooltip_label=alt.expr.if_(alt.datum["delayed"], "yes", "no"),
+            shape=alt.expr.if_(
+                alt.datum["time_since_previous_transition_seconds"]
+                < -minimum_time_between_transitions_seconds,
+                "triangle-down",
+                alt.expr.if_(
+                    alt.datum["time_since_previous_transition_seconds"]
+                    > maximum_time_between_transitions_seconds,
+                    "triangle-up",
+                    "circle",
+                ),
+            ),
+        )
+        .mark_point(filled=True)
+        .encode(
+            alt.X("recording_timestamp_seconds", type="quantitative")
+            .scale(zero=False)
+            .axis(
+                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                title="Recording timestamp",
+            ),
+            alt.Y("time_since_previous_transition_seconds")
+            .scale(
+                zero=False,
+                domain=[
+                    -minimum_time_between_transitions_seconds,
+                    maximum_time_between_transitions_seconds,
+                ],
+                clamp=True,
+            )
+            .axis(
+                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                title="Time since previous transition",
+            ),
+            alt.Color(
+                "label",
+                type="nominal",
+                title=None,
+            ).legend(orient="bottom", columns=1, labelLimit=0),
+            alt.Shape("shape", type="nominal", scale=None),
+            tooltip=[
+                alt.Tooltip(
+                    "transition_index",
+                    type="quantitative",
+                    title="Recorded transition #",
+                ),
+                alt.Tooltip(
+                    "frame_label",
+                    type="nominal",
+                    title="Transition to",
+                ),
+                alt.Tooltip(
+                    "recording_timestamp_seconds",
+                    title="Recording time (s)",
+                    format="~s",
+                ),
+                alt.Tooltip(
+                    "time_since_previous_transition_seconds",
+                    title="Time since last transition (s)",
+                    format="~s",
+                ),
+                alt.Tooltip(
+                    "delayed_tooltip_label",
+                    type="nominal",
+                    title="Intentionally delayed",
+                ),
+            ],
+        )
+        .properties(width=1000, height=750)
+    )
+    if has_delayed_transitions:
+        chart = chart.encode(
+            alt.Opacity("delayed_label", type="nominal", title=None)
+            .scale(range=alt.FieldRange("opacity"))
+            .legend(orient="bottom", columns=1, labelLimit=0),
+        )
     return (
         alt.vconcat(
-            alt.Chart(transitions.reset_index(), title=title)
-            .transform_window(transition_count="row_number()")
-            .transform_calculate(
-                transition_index=alt.expr.datum["transition_count"] - 1,
-                frame_label=alt.expr.if_(alt.datum["frame"], "white", "black"),
-                label="Transition to " + alt.datum["frame_label"],
-                opacity=alt.expr.if_(alt.datum["delayed"], 0.4, 1),
-                delayed_label=alt.expr.if_(
-                    alt.datum["delayed"],
-                    "Intentionally delayed transition (ignore)",
-                    "Normal transition",
-                ),
-                delayed_tooltip_label=alt.expr.if_(alt.datum["delayed"], "yes", "no"),
-                shape=alt.expr.if_(
-                    alt.datum["time_since_previous_transition_seconds"]
-                    < -minimum_time_between_transitions_seconds,
-                    "triangle-down",
-                    alt.expr.if_(
-                        alt.datum["time_since_previous_transition_seconds"]
-                        > maximum_time_between_transitions_seconds,
-                        "triangle-up",
-                        "circle",
-                    ),
-                ),
-            )
-            .mark_point(filled=True)
-            .encode(
-                alt.X("recording_timestamp_seconds", type="quantitative")
-                .scale(zero=False)
-                .axis(
-                    labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
-                    title="Recording timestamp",
-                ),
-                alt.Y("time_since_previous_transition_seconds")
-                .scale(
-                    zero=False,
-                    domain=[
-                        -minimum_time_between_transitions_seconds,
-                        maximum_time_between_transitions_seconds,
-                    ],
-                    clamp=True,
-                )
-                .axis(
-                    labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
-                    title="Time since previous transition",
-                ),
-                alt.Color(
-                    "label",
-                    type="nominal",
-                    title=None,
-                ).legend(orient="bottom", columns=1, labelLimit=0),
-                alt.Opacity("delayed_label", type="nominal", title=None)
-                .scale(range=alt.FieldRange("opacity"))
-                .legend(orient="bottom", columns=1, labelLimit=0),
-                alt.Shape("shape", type="nominal", scale=None),
-                tooltip=[
-                    alt.Tooltip(
-                        "transition_index",
-                        type="quantitative",
-                        title="Recorded transition #",
-                    ),
-                    alt.Tooltip(
-                        "frame_label",
-                        type="nominal",
-                        title="Transition to",
-                    ),
-                    alt.Tooltip(
-                        "recording_timestamp_seconds",
-                        title="Recording time (s)",
-                        format="~s",
-                    ),
-                    alt.Tooltip(
-                        "time_since_previous_transition_seconds",
-                        title="Time since last transition (s)",
-                        format="~s",
-                    ),
-                    alt.Tooltip(
-                        "delayed_tooltip_label",
-                        type="nominal",
-                        title="Intentionally delayed",
-                    ),
-                ],
-            )
-            .properties(width=1000, height=750),
+            chart,
             alt.Chart(
                 title=alt.TitleParams(
                     fine_print,
@@ -280,6 +287,7 @@ def generate_report():
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
+            has_delayed_transitions=delayed_transitions,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
