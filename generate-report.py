@@ -45,6 +45,11 @@ def parse_arguments():
         default=0.100,
     )
     argument_parser.add_argument(
+        "--keep-delayed-transitions",
+        help="Do not attempt to find and remove delayed transitions from the recording. Not recommended, as the delayed transitions will then show up as potentially misleading outliers.",
+        action="store_true",
+    )
+    argument_parser.add_argument(
         "--black-white-offset-compensation",
         help="Compensate for consistent timing differences between transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
         action=argparse.BooleanOptionalAction,
@@ -217,6 +222,20 @@ def generate_report():
         "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
+    delayed_transitions = spec["delayed_transitions"]
+    if not delayed_transitions:
+        delayed_transitions_fineprint = "Spec did not specify any delayed transitions"
+    elif args.keep_delayed_transitions:
+        delayed_transitions_fineprint = f"{len(delayed_transitions)} delayed transitions were NOT removed, and are likely to show up as outliers"
+    else:
+        # TODO: this won't work if the transition count doesn't match the spec.
+        transitions.loc[
+            transitions.index[spec["delayed_transitions"]], "time_since_previous_transition_seconds"
+        ] = None
+        delayed_transitions_fineprint = (
+            f"{len(delayed_transitions)} delayed transitions are not shown"
+        )
+
     time_between_transitions_standard_deviation_seconds = (
         transitions.time_since_previous_transition_seconds.std()
     )
@@ -225,7 +244,7 @@ def generate_report():
         file=sys.stderr,
     )
 
-    if getattr(args, "black_white_offset_compensation", spec["delayed_transitions"]):
+    if getattr(args, "black_white_offset_compensation", delayed_transitions):
         black_lag_seconds = estimate_black_lag_seconds(transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
@@ -261,6 +280,7 @@ def generate_report():
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
                 black_white_offset_fineprint,
+                delayed_transitions_fineprint,
                 f"Transition interval range: {si_format(transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions.time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions.time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
                 f"{(np.abs(stats.zscore(transitions.loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
