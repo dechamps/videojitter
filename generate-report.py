@@ -162,6 +162,17 @@ def mean_without_outliers(x):
     return x[np.abs(stats.zscore(x, nan_policy="omit")) < 3].mean()
 
 
+def estimate_black_lag_seconds(transitions):
+    # We don't use the mean to prevent an outlier from biasing all
+    # transitions of the same color, nor the median to prevent odd results
+    # when dealing with pattern changes.
+    return mean_without_outliers(
+        transitions.loc[~transitions.frame, "time_since_previous_transition_seconds"]
+    ) - mean_without_outliers(
+        transitions.loc[transitions.frame, "time_since_previous_transition_seconds"]
+    )
+
+
 def si_format_plus(value, *kargs, **kwargs):
     return ("+" if value >= 0 else "") + si_format(value, *kargs, **kwargs)
 
@@ -217,16 +228,7 @@ def generate_report():
     if args.no_black_white_offset_compensation:
         black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
     else:
-        # We don't use the mean to prevent an outlier from biasing all
-        # transitions of the same color, nor the median to prevent odd results
-        # when dealing with pattern changes.
-        black_lag_seconds = mean_without_outliers(
-            transitions.loc[
-                ~transitions.frame, "time_since_previous_transition_seconds"
-            ]
-        ) - mean_without_outliers(
-            transitions.loc[transitions.frame, "time_since_previous_transition_seconds"]
-        )
+        black_lag_seconds = estimate_black_lag_seconds(transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
         black_white_offset_fineprint = f"Time since last transition includes {si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
