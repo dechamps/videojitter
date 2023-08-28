@@ -201,13 +201,13 @@ def generate_report():
             file=sys.stderr,
         )
 
-    transitions.loc[
-        :, "time_since_previous_transition_seconds"
+    transitions[
+        "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
-    time_between_transitions_standard_deviation_seconds = transitions.loc[
-        :, "time_since_previous_transition_seconds"
-    ].std()
+    time_between_transitions_standard_deviation_seconds = (
+        transitions.time_since_previous_transition_seconds.std()
+    )
     print(
         f"Transition interval standard deviation: {time_between_transitions_standard_deviation_seconds} seconds",
         file=sys.stderr,
@@ -222,35 +222,33 @@ def generate_report():
         # when dealing with pattern changes.
         black_lag_seconds = mean_without_outliers(
             transitions.loc[
-                ~transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
+                ~transitions.frame, "time_since_previous_transition_seconds"
             ]
         ) - mean_without_outliers(
-            transitions.loc[
-                transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
-            ]
+            transitions.loc[transitions.frame, "time_since_previous_transition_seconds"]
         )
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
         black_white_offset_fineprint = f"Time since last transition includes {si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
         transitions.loc[
-            ~transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
+            ~transitions.frame, "time_since_previous_transition_seconds"
         ] += black_offset_seconds
         transitions.loc[
-            transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
+            transitions.frame, "time_since_previous_transition_seconds"
         ] += white_offset_seconds
 
     if output_csv:
         transitions.to_csv(sys.stdout)
     if output_chart_file:
-        minimum_time_between_transitions_index = transitions.loc[
-            :, "time_since_previous_transition_seconds"
-        ].idxmin()
-        maximum_time_between_transitions_index = transitions.loc[
-            :, "time_since_previous_transition_seconds"
-        ].idxmax()
-        mean_time_between_transitions = transitions.loc[
-            :, "time_since_previous_transition_seconds"
-        ].mean()
+        minimum_time_between_transitions_index = (
+            transitions.time_since_previous_transition_seconds.idxmin()
+        )
+        maximum_time_between_transitions_index = (
+            transitions.time_since_previous_transition_seconds.idxmax()
+        )
+        mean_time_between_transitions = (
+            transitions.time_since_previous_transition_seconds.mean()
+        )
         mean_fps = 1 / mean_time_between_transitions
         generate_chart(
             transitions,
@@ -261,7 +259,7 @@ def generate_report():
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
                 black_white_offset_fineprint,
-                f"Transition interval range: {si_format(transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions.loc[:, 'time_since_previous_transition_seconds'].quantile(0.005), 3)}s and {si_format(transitions.loc[:, 'time_since_previous_transition_seconds'].quantile(0.995), 3)}s",
+                f"Transition interval range: {si_format(transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions.time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions.time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
                 f"{(np.abs(stats.zscore(transitions.loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
                 "Generated by videojitter",
