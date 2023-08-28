@@ -69,22 +69,22 @@ def generate_chart(
         alt.Chart(transitions.reset_index(), title=title)
         .transform_window(transition_count="row_number()")
         .transform_calculate(
-            transition_index=alt.expr.datum["transition_count"] - 1,
-            frame_label=alt.expr.if_(alt.datum["frame"], "white", "black"),
-            label="Transition to " + alt.datum["frame_label"],
-            opacity=alt.expr.if_(alt.datum["delayed"], 0.4, 1),
+            transition_index=alt.expr.datum.transition_count - 1,
+            frame_label=alt.expr.if_(alt.datum.frame, "white", "black"),
+            label="Transition to " + alt.datum.frame_label,
+            opacity=alt.expr.if_(alt.datum.delayed, 0.4, 1),
             delayed_label=alt.expr.if_(
-                alt.datum["delayed"],
+                alt.datum.delayed,
                 "Intentionally delayed transition (ignore)",
                 "Normal transition",
             ),
-            delayed_tooltip_label=alt.expr.if_(alt.datum["delayed"], "yes", "no"),
+            delayed_tooltip_label=alt.expr.if_(alt.datum.delayed, "yes", "no"),
             shape=alt.expr.if_(
-                alt.datum["time_since_previous_transition_seconds"]
+                alt.datum.time_since_previous_transition_seconds
                 < -minimum_time_between_transitions_seconds,
                 "triangle-down",
                 alt.expr.if_(
-                    alt.datum["time_since_previous_transition_seconds"]
+                    alt.datum.time_since_previous_transition_seconds
                     > maximum_time_between_transitions_seconds,
                     "triangle-up",
                     "circle",
@@ -96,7 +96,7 @@ def generate_chart(
             alt.X("recording_timestamp_seconds", type="quantitative")
             .scale(zero=False)
             .axis(
-                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
                 title="Recording timestamp",
             ),
             alt.Y("time_since_previous_transition_seconds")
@@ -109,7 +109,7 @@ def generate_chart(
                 clamp=True,
             )
             .axis(
-                labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
+                labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
                 title="Time since previous transition",
             ),
             alt.Color(
