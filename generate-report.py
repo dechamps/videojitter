@@ -35,16 +35,16 @@ def parse_arguments():
         default=False,
     )
     argument_parser.add_argument(
-        "--compensate-clock-skew",
-        help="Calculate and compensate for clock skew, i.e. the difference in speed between the recording clock and the video clock that would otherwise result in a sloped/tilted graph. Note that the clock skew estimate can be incorrect (e.g. for recordings where the overall mean error undergoes sudden changes), leading to odd results.",
-        action="store_true",
-        default=False,
+        "--chart-minimum-time-between-transitions-seconds",
+        help="The minimum time since previous transition that will be shown on the chart before the points are clamped",
+        type=float,
+        default=0.000,
     )
     argument_parser.add_argument(
-        "--display-maximum-absolute-error-seconds",
-        help="The maximum absolute error that will be shown on the graph before the points are clamped",
+        "--chart-maximum-time-between-transitions-seconds",
+        help="The maximum time since previous transition that will be shown on the chart before the points are clamped",
         type=float,
-        default=0.050,
+        default=0.100,
     )
     return argument_parser.parse_args()
 
@@ -53,145 +53,28 @@ def interval(series):
     return pd.Interval(series.min(), series.max())
 
 
-def rescale(series, target_range):
-    original_range = interval(series)
+def generate_chart(
+    transitions,
+    title,
+    minimum_time_between_transitions_seconds,
+    maximum_time_between_transitions_seconds,
+    fine_print,
+):
     return (
-        series - original_range.left
-    ) / original_range.length * target_range.length + target_range.left
-
-
-def match_transitions(transitions, reference_transitions):
-    """Join actual transitions in `transitions` against expected transitions in
-    `reference_transitions`.
-
-    The join is done based on frame (black or white) and proximity of normalized
-    timestamps. Columns in `reference_transitions` will be prefixed with
-    `reference_`.
-
-    If a given reference transition is the best match for multiple actual
-    transitions, the reference transition information is duplicated into all
-    matching rows and the `duplicate` column is set to True for all these rows.
-
-    If a given reference transition is not the best match for any actual
-    transition, the reference transition information is inserted into a new row
-    where all actual transition information is set to NaN/NA.
-
-    The return value also includes a `expected_recording_timestamp_seconds`
-    column which indicates where we would have expected to find the transition
-    in a "perfect" recording. This is useful to locate missing transitions.
-    """
-    transitions = transitions.reset_index()
-    transitions.index = pd.Index(
-        rescale(
-            transitions.loc[:, "recording_timestamp_seconds"],
-            interval(reference_transitions.index),
-        ),
-        name="scaled_recording_timestamp_seconds",
-    )
-
-    def filter_frame(transitions_to_filter, frame):
-        return transitions_to_filter.loc[
-            transitions_to_filter.loc[:, "frame"] == frame, :
-        ]
-
-    def match_transitions_for_frame(frame):
-        reference_transitions_for_merge = filter_frame(reference_transitions, frame)
-        return pd.merge(
-            left=reference_transitions_for_merge.rename(
-                lambda column_name: "reference_" + column_name, axis="columns"
-            ),
-            left_index=True,
-            right=pd.merge_asof(
-                left=filter_frame(transitions, frame),
-                left_index=True,
-                right=reference_transitions_for_merge.index.to_series().rename(
-                    "reference_timestamp_seconds"
-                ),
-                right_index=True,
-                direction="nearest",
-            ),
-            right_on="reference_timestamp_seconds",
-            how="outer",
-        )
-
-    transitions = pd.concat(
-        [match_transitions_for_frame(frame) for frame in [False, True]]
-    )
-    transitions.sort_index(inplace=True)
-    transitions.loc[:, "duplicate"] = transitions.loc[
-        :, "reference_timestamp_seconds"
-    ].duplicated(keep=False)
-    transitions.loc[:, "expected_recording_timestamp_seconds"] = rescale(
-        transitions.loc[:, "reference_timestamp_seconds"],
-        interval(transitions.loc[:, "recording_timestamp_seconds"]),
-    )
-    return transitions
-
-
-def error_linear_regression(transitions, deg):
-    # TODO: find a better way to calculate clock skew so that we can enable
-    # clock skew compensation by default. The current method produces
-    # nonsensical results in some cases; for example the slope part of the
-    # linear regression breaks down if the mean suddenly changes in the middle
-    # of the recording.
-    valid_transitions = transitions.loc[
-        ~(
-            pd.isna(transitions.loc[:, "recording_timestamp_seconds"])
-            | transitions.loc[:, "duplicate"]
-        ),
-        :,
-    ]
-    return np.polynomial.Polynomial.fit(
-        valid_transitions.loc[:, "recording_timestamp_seconds"],
-        valid_transitions.loc[:, "error_seconds"],
-        deg=deg,
-    )
-
-
-def generate_chart(transitions, title, maximum_absolute_error_seconds, fine_print):
-    chart = alt.Chart(transitions)
-    return alt.vconcat(
-        (
-            chart.properties(title=title)
+        alt.vconcat(
+            alt.Chart(transitions.reset_index(), title=title)
+            .transform_window(transition_count="row_number()")
             .transform_calculate(
-                anomaly=alt.expr.if_(
-                    alt.datum["duplicate"],
-                    "Duplicate transition",
-                    alt.expr.if_(
-                        alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-                        None,
-                        "Missing transition",
-                    ),
-                ),
-            )
-            .transform_filter(alt.expr.isValid(alt.datum["anomaly"]))
-            .mark_rule(strokeWidth=2)
-            .encode(
-                alt.X("estimated_recording_timestamp_seconds", type="quantitative"),
-                alt.Color("anomaly", type="nominal", title=None)
-                .scale(
-                    domain=["Missing transition", "Duplicate transition"],
-                    range=["orangered", "orange"],
-                )
-                .legend(orient="bottom", columns=2, labelLimit=0, symbolStrokeWidth=3),
-            )
-            + chart.transform_calculate(
-                reference_frame_label=alt.expr.if_(
-                    alt.datum["reference_frame"], "white", "black"
-                ),
-                duplicate_label=alt.expr.if_(alt.datum["duplicate"], "yes", "no"),
-                label="Transition to "
-                + alt.datum["reference_frame_label"]
-                + " (after "
-                + alt.datum["reference_previous_frame_count"]
-                + " "
-                + alt.expr.if_(alt.datum["reference_frame"], "black", "white")
-                + " frames)",
+                transition_index=alt.expr.datum["transition_count"] - 1,
+                frame_label=alt.expr.if_(alt.datum["frame"], "white", "black"),
+                label="Transition to " + alt.datum["frame_label"],
                 shape=alt.expr.if_(
-                    alt.datum["error_seconds"] < -maximum_absolute_error_seconds,
+                    alt.datum["error_seconds"]
+                    < -minimum_time_between_transitions_seconds,
                     "triangle-down",
                     alt.expr.if_(
-                        alt.datum["error_seconds"] > maximum_absolute_error_seconds,
+                        alt.datum["error_seconds"]
+                        > maximum_time_between_transitions_seconds,
                         "triangle-up",
                         "circle",
                     ),
@@ -199,24 +82,24 @@ def generate_chart(transitions, title, maximum_absolute_error_seconds, fine_prin
             )
             .mark_point(filled=True)
             .encode(
-                alt.X("estimated_recording_timestamp_seconds", type="quantitative")
+                alt.X("recording_timestamp_seconds", type="quantitative")
                 .scale(zero=False)
                 .axis(
                     labelExpr=alt.expr.format(alt.datum["value"], "~s") + "s",
                     title="Recording timestamp",
                 ),
-                alt.Y("error_seconds")
+                alt.Y("time_since_previous_transition_seconds")
                 .scale(
                     zero=False,
                     domain=[
-                        -maximum_absolute_error_seconds,
-                        maximum_absolute_error_seconds,
+                        -minimum_time_between_transitions_seconds,
+                        maximum_time_between_transitions_seconds,
                     ],
                     clamp=True,
                 )
                 .axis(
                     labelExpr=alt.expr.format(alt.datum["value"], "+~s") + "s",
-                    title="Transition timing error",
+                    title="Time since previous transition",
                 ),
                 alt.Color(
                     "label",
@@ -225,71 +108,50 @@ def generate_chart(transitions, title, maximum_absolute_error_seconds, fine_prin
                 ).legend(orient="bottom", columns=2, labelLimit=0),
                 alt.Shape("shape", type="nominal", scale=None),
                 tooltip=[
-                    alt.Tooltip("transition_index", title="Recorded transition #"),
                     alt.Tooltip(
-                        "reference_transition_index", title="Reference transition #"
+                        "transition_index",
+                        type="quantitative",
+                        title="Recorded transition #",
                     ),
-                    alt.Tooltip("reference_frame_index", title="Reference frame #"),
                     alt.Tooltip(
-                        "reference_frame_label",
+                        "frame_label",
                         type="nominal",
                         title="Transition to",
                     ),
                     alt.Tooltip(
-                        "reference_previous_frame_count",
-                        type="nominal",
-                        title="Frames since last transition",
-                    ),
-                    alt.Tooltip(
-                        "duplicate_label",
-                        type="nominal",
-                        title="Duplicate transition",
-                    ),
-                    alt.Tooltip(
-                        "reference_timestamp_seconds",
-                        title="Reference time (seconds)",
-                        format="~s",
-                    ),
-                    alt.Tooltip(
                         "recording_timestamp_seconds",
-                        title="Recording time (seconds)",
+                        title="Recording time (s)",
                         format="~s",
                     ),
                     alt.Tooltip(
-                        "error_seconds",
-                        title="Timing error (seconds)",
-                        format="+~s",
+                        "time_since_previous_transition_seconds",
+                        title="Time since last transition (s)",
+                        format="~s",
                     ),
                 ],
             )
-        )
-        .transform_calculate(
-            estimated_recording_timestamp_seconds=alt.expr.if_(
-                alt.expr.isValid(alt.datum["recording_timestamp_seconds"]),
-                alt.datum["recording_timestamp_seconds"],
-                alt.datum["expected_recording_timestamp_seconds"],
-            )
+            .properties(width=1000, height=750),
+            alt.Chart(
+                title=alt.TitleParams(
+                    fine_print,
+                    fontSize=10,
+                    fontWeight="lighter",
+                    color="gray",
+                    anchor="start",
+                )
+            ).mark_text(),
         )
         .resolve_scale(color="independent")
-        .properties(width=1000, height=750),
-        alt.Chart(
-            title=alt.TitleParams(
-                fine_print,
-                fontSize=10,
-                fontWeight="lighter",
-                color="gray",
-                anchor="start",
-            )
-        ).mark_text(),
-    ).properties(
-        usermeta={
-            "embedOptions": {
-                "downloadFileName": "videojitter",
-                # Sets the Vega-Embed PNG export scale factor to provide higher-quality
-                # exports. See https://github.com/vega/vega-embed/issues/492
-                "scaleFactor": 2,
+        .properties(
+            usermeta={
+                "embedOptions": {
+                    "downloadFileName": "videojitter",
+                    # Sets the Vega-Embed PNG export scale factor to provide higher-quality
+                    # exports. See https://github.com/vega/vega-embed/issues/492
+                    "scaleFactor": 2,
+                }
             }
-        }
+        )
     )
 
 
@@ -304,28 +166,9 @@ def generate_report():
 
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    reference_transitions = pd.DataFrame(
-        {"transition_index": np.arange(spec["transition_count"], dtype=int)}
-    )
-    reference_transitions.loc[:, "frame"] = ~(
-        reference_transitions.loc[:, "transition_index"] % 2
-    ).astype(bool)
-    reference_transitions.loc[:, "previous_frame_count"] = 1
-    reference_transitions.loc[
-        np.array(spec["delayed_transitions"]),
-        "previous_frame_count",
-    ] = 2
-    reference_transitions.loc[:, "frame_index"] = reference_transitions.loc[
-        :, "previous_frame_count"
-    ].cumsum()
-    reference_transitions.index = pd.Index(
-        reference_transitions.loc[:, "frame_index"] / nominal_fps,
-        name="timestamp_seconds",
-    )
-
-    reference_transitions_interval_seconds = interval(reference_transitions.index)
+    transition_count = spec["transition_count"]
     print(
-        f"Successfully loaded spec file containing {reference_transitions.index.size} frame transitions at {nominal_fps} FPS, with first transition at {reference_transitions_interval_seconds.left} seconds and last transition at {reference_transitions_interval_seconds.right} seconds for a total of {reference_transitions_interval_seconds.length} seconds",
+        f"Successfully loaded spec file containing {transition_count} frame transitions at {nominal_fps} FPS",
         file=sys.stderr,
     )
 
@@ -334,13 +177,12 @@ def generate_report():
         index_col="recording_timestamp_seconds",
         usecols=["recording_timestamp_seconds", "frame"],
     )
-    transitions.loc[:, "transition_index"] = np.arange(0, transitions.size)
     transitions_interval_seconds = interval(transitions.index)
     print(
         f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
         file=sys.stderr,
     )
-    if transitions.index.size == reference_transitions.index.size:
+    if transitions.index.size == transition_count:
         print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
     else:
         print(
@@ -348,65 +190,36 @@ def generate_report():
             file=sys.stderr,
         )
 
-    transitions = match_transitions(transitions, reference_transitions)
+    transitions.loc[
+        :, "time_since_previous_transition_seconds"
+    ] = transitions.index.to_series().diff()
 
-    transitions.loc[:, "error_seconds"] = (
-        transitions.loc[:, "recording_timestamp_seconds"]
-        - transitions.loc[:, "reference_timestamp_seconds"]
-    )
-    linear_regression = error_linear_regression(
-        transitions, deg=1 if args.compensate_clock_skew else 0
-    )
-    if args.compensate_clock_skew:
-        clock_skew = 1 + linear_regression.coef[1]
-        if abs(linear_regression.coef[1]) > 0.10:
-            print(
-                f"WARNING: abnormally large clock skew detected - recording is {clock_skew}x longer than expected.",
-                file=sys.stderr,
-            )
-        else:
-            print(
-                f"Recording is {clock_skew}x longer than expected. This is usually due to benign clock skew. Scaling timestamps to compensate.",
-                file=sys.stderr,
-            )
-    transitions.loc[:, "error_seconds"] -= linear_regression(
-        transitions.loc[:, "recording_timestamp_seconds"]
-    )
-
-    frames = transitions.loc[:, "frame"].astype(bool)
-    black_offset = transitions.loc[~frames, "error_seconds"].mean()
-    white_offset = transitions.loc[frames, "error_seconds"].mean()
+    time_between_transitions_standard_deviation_seconds = transitions.loc[
+        :, "time_since_previous_transition_seconds"
+    ].std()
     print(
-        f"Offsets black: {white_offset} seconds white: {black_offset} seconds",
-        file=sys.stderr,
-    )
-    transitions.loc[~frames, "error_seconds"] -= black_offset
-    transitions.loc[frames, "error_seconds"] -= white_offset
-
-    error_standard_deviation = transitions.loc[:, "error_seconds"].std()
-    print(
-        f"Error standard deviation: {error_standard_deviation} seconds",
+        f"Transition interval standard deviation: {time_between_transitions_standard_deviation_seconds} seconds",
         file=sys.stderr,
     )
 
     if output_csv:
         transitions.to_csv(sys.stdout)
     if output_chart_file:
-        error_minimum_index = transitions.loc[:, "error_seconds"].idxmin()
-        error_maximum_index = transitions.loc[:, "error_seconds"].idxmax()
+        minimum_time_between_transitions_index = transitions.loc[
+            :, "time_since_previous_transition_seconds"
+        ].idxmin()
+        maximum_time_between_transitions_index = transitions.loc[
+            :, "time_since_previous_transition_seconds"
+        ].idxmax()
         generate_chart(
             transitions,
-            f"{int(transitions.loc[:, 'transition_index'].max())+1} transitions at {nominal_fps:.3f} nominal FPS",
-            args.display_maximum_absolute_error_seconds,
+            f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
+            args.chart_minimum_time_between_transitions_seconds,
+            args.chart_maximum_time_between_transitions_seconds,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
-                f"First transition reference timestamp is {si_format(reference_transitions_interval_seconds.left, 3)}s; last: {si_format(reference_transitions_interval_seconds.right, 3)}s; length: {si_format(reference_transitions_interval_seconds.length, 3)}s",
-                f"Recorded {int(transitions.loc[:, 'transition_index'].max())+1} transitions; expected {int(transitions.loc[:, 'reference_transition_index'].max())+1} reference transitions across {int(transitions.loc[:, 'reference_frame_index'].max())+1} frames",
-                f"Detected {transitions.loc[:, 'duplicate'].sum()} duplicate transitions and {pd.isna(transitions.loc[:, 'recording_timestamp_seconds']).sum()} missing transitions",
-                f"Compensating for estimated recording clock skew of ~{clock_skew:.6f}x"
-                if args.compensate_clock_skew
-                else "Recording clock skew compensation is disabled",
-                f"Timing error range: {si_format(transitions.loc[error_minimum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_minimum_index, 'recording_timestamp_seconds'], 3)}s) to {si_format(transitions.loc[error_maximum_index, 'error_seconds'], 3)}s (at {si_format(transitions.loc[error_maximum_index, 'recording_timestamp_seconds'], 3)}s) - standard deviation: {si_format(error_standard_deviation, 3)}s - 99% of transitions are between {si_format(transitions.loc[:, 'error_seconds'].quantile(0.005), 3)}s and {si_format(transitions.loc[:, 'error_seconds'].quantile(0.995), 3)}s",
+                f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
+                f"Transition interval range: {si_format(transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions.loc[:, 'time_since_previous_transition_seconds'].quantile(0.005), 3)}s and {si_format(transitions.loc[:, 'time_since_previous_transition_seconds'].quantile(0.995), 3)}s",
                 "Generated by videojitter",
             ],
         ).save(output_chart_file)
