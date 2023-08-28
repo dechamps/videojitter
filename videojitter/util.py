@@ -17,9 +17,10 @@ def generate_frames(transition_count, delayed_transitions):
     For example, `generate_frames(6, [4])` will return FTFTFFTF, i.e.
     alternating between black and white 6 times, with the 4th transition
     (counting from zero) coming after a repeated black frame."""
-    repeated_frames = np.array(delayed_transitions, dtype=int)
-    repeated_frames += 1 + np.arange(repeated_frames.size)
-    frames = np.ones(transition_count + repeated_frames.size + 1, dtype=int)
-    frames[repeated_frames] = 0
-    frames = (frames.cumsum() - 1) % 2
-    return frames.astype(bool)
+    frames = np.ones(transition_count + len(delayed_transitions) + 1, dtype=int)
+    frames[
+        np.array(delayed_transitions, dtype=int)
+        + 1  # because transition #0 occurs on frame #1
+        + np.arange(len(delayed_transitions))
+    ] = 0
+    return ~(frames.cumsum() % 2).astype(bool)
