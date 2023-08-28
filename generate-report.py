@@ -7,6 +7,7 @@ import json
 import pandas as pd
 import sys
 from si_prefix import si_format
+from scipy import stats
 
 
 def parse_arguments():
@@ -157,6 +158,10 @@ def generate_chart(
     )
 
 
+def mean_without_outliers(x):
+    return x[np.abs(stats.zscore(x, nan_policy="omit")) < 3].mean()
+
+
 def si_format_plus(value, *kargs, **kwargs):
     return ("+" if value >= 0 else "") + si_format(value, *kargs, **kwargs)
 
@@ -212,13 +217,17 @@ def generate_report():
     if args.no_black_white_offset_compensation:
         black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
     else:
-        black_lag_seconds = (
+        # We don't use the mean to prevent an outlier from biasing all
+        # transitions of the same color, nor the median to prevent odd results
+        # when dealing with pattern changes.
+        black_lag_seconds = mean_without_outliers(
             transitions.loc[
                 ~transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
-            ].mean()
-            - transitions.loc[
+            ]
+        ) - mean_without_outliers(
+            transitions.loc[
                 transitions.loc[:, "frame"], "time_since_previous_transition_seconds"
-            ].mean()
+            ]
         )
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
