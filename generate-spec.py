@@ -22,7 +22,7 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--no-delayed-transition",
-        help="(Not recommended) Do not delay a single transition (i.e. repeat a single frame) the middle of the video. This ensures every single frame is accounted for and simplifies analysis, but produces misleading results in the presence of patterns affecting pairs of consecutive frames (e.g. 3:2, 24p@60Hz) due to black vs. white transition lag compensation.",
+        help="(Not recommended) Do not delay a single transition (i.e. repeat a single frame) the middle of the video. This ensures every single frame is accounted for and simplifies analysis, but breaks black/white offset compensation in the presence of patterns affecting pairs of consecutive frames (e.g. 3:2, 24p@60Hz).",
         action="store_true",
     )
     return argument_parser.parse_args()

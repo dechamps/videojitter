@@ -45,9 +45,10 @@ def parse_arguments():
         default=0.100,
     )
     argument_parser.add_argument(
-        "--no-black-white-offset-compensation",
-        help="Do not compensate for consistent timing differences between transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system)",
-        action="store_true",
+        "--black-white-offset-compensation",
+        help="Compensate for consistent timing differences between transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
+        action=argparse.BooleanOptionalAction,
+        default=argparse.SUPPRESS,
     )
     return argument_parser.parse_args()
 
@@ -224,10 +225,7 @@ def generate_report():
         file=sys.stderr,
     )
 
-    black_white_offset_fineprint = []
-    if args.no_black_white_offset_compensation:
-        black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
-    else:
+    if getattr(args, "black_white_offset_compensation", spec["delayed_transitions"]):
         black_lag_seconds = estimate_black_lag_seconds(transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
@@ -238,6 +236,8 @@ def generate_report():
         transitions.loc[
             transitions.frame, "time_since_previous_transition_seconds"
         ] += white_offset_seconds
+    else:
+        black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
 
     if output_csv:
         transitions.to_csv(sys.stdout)
