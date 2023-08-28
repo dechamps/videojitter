@@ -312,9 +312,7 @@ def generate_report():
     ).astype(bool)
     reference_transitions.loc[:, "previous_frame_count"] = 1
     reference_transitions.loc[
-        # TODO: why -1? Looks like the output of generate_frames() may be off by
-        # one
-        np.array(spec["delayed_transitions"]) - 1,
+        np.array(spec["delayed_transitions"]),
         "previous_frame_count",
     ] = 2
     reference_transitions.loc[:, "frame_index"] = reference_transitions.loc[
