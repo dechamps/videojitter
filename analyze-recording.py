@@ -7,6 +7,7 @@ import pandas as pd
 import scipy.io
 import scipy.signal
 import sys
+import videojitter.util
 
 
 # TODO: decreasing this increases dispersion. Increasing also results in
@@ -112,7 +113,7 @@ def parse_arguments():
 
 def generate_reference_samples(fps_den, fps_num, frames, sample_rate):
     frame_numbers = (
-        np.arange(np.ceil(len(frames) * fps_den * sample_rate / fps_num))
+        np.arange(np.floor(frames.size * fps_den * sample_rate / fps_num))
         * fps_num
         / (sample_rate * fps_den)
     ).astype(int)
@@ -188,7 +189,9 @@ def analyze_recording():
     args = parse_arguments()
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    frames = spec["frames"]
+    frames = videojitter.util.generate_frames(
+        spec["transition_count"], spec["delayed_transitions"]
+    )
     reference_duration_seconds = len(frames) / nominal_fps
     print(
         f"Successfully loaded spec file describing {len(frames)} frames at {nominal_fps} FPS ({reference_duration_seconds} seconds)",

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import math
 import json
-import numpy as np
 import sys
 
 
@@ -21,85 +21,38 @@ def parse_arguments():
         "--duration-seconds", help="Test duration in seconds", default=60, type=float
     )
     argument_parser.add_argument(
-        "--frame-repeat-ratio",
-        help="Ratio of transitions that will have a repeated frame before or after the transition",
-        default=0.1,
-        type=float,
+        "--no-delayed-transition",
+        help="(Not recommended) Do not delay a single transition (i.e. repeat a single frame) the middle of the video. This ensures every single frame is accounted for and simplifies analysis, but produces misleading results in the presence of patterns affecting pairs of consecutive frames (e.g. 3:2, 24p@60Hz) due to black vs. white transition lag compensation.",
+        action="store_true",
     )
     return argument_parser.parse_args()
 
 
-def nonconsecutive_integers_count(minimum, maximum):
-    """Returns the number of non-consecutive integers between `minimum` and
-    `maximum`, inclusive."""
-    return
-
-
-def nonconsecutive_random_integers(minimum, maximum, count):
-    """Generates an array of `count` integers between `minimum` and `maximum`.
-
-    The bounds are inclusive.
-
-    The distance between any two numbers in the output is guaranteed to be at
-    least 2 (e.g. the output can include 42 or 43, but not both).
-
-    `count` is clamped to the number of nonconsecutive integers that can fit
-    between `minimum` and `maximum`.
-    """
-    # Inspired by https://stackoverflow.com/a/31060350/172594
-    count = min(count, int((maximum - minimum + 2) / 2))
-    return (
-        np.sort(np.random.choice(maximum - minimum - count + 2, count, replace=False))
-        + np.arange(count)
-        + minimum
-    )
-
-
-def generate_frames(count, frame_repeat_ratio, rng):
-    """Generate n frames alternating between black and white.
-
-    Some frames are repeated at random, constrained by the following rules:
-     - A given frame will never appear more than twice in a row;
-     - Frames cannot be repeated on *both* sides of a transition (i.e. no
-       consecutive repeats);
-     - The first and last frames can never be repeated."""
-    transition_frame_counts = np.ones(
-        int(np.ceil(count / (1 + frame_repeat_ratio))), dtype=int
-    )
-    transition_frame_counts[
-        nonconsecutive_random_integers(
-            1,
-            transition_frame_counts.size - 2,
-            int(np.round(transition_frame_counts.size * frame_repeat_ratio)),
-        )
-    ] = 2
-    return (
-        ((np.arange(transition_frame_counts.size) + rng.choice([0, 1])) % 2)
-        .astype(bool)
-        .repeat(transition_frame_counts)
-    )
-
-
 def generate_spec():
     args = parse_arguments()
-    # Frame repeat ratio cannot be higher than 50% as we don't allow consecutive
-    # repeats.
-    assert (
-        args.frame_repeat_ratio <= 0.5
-    ), "Frame repeat ratio cannot be higher than 0.5"
 
-    frame_count = int(args.duration_seconds * (args.fps_num / args.fps_den))
+    delayed_transition = not args.no_delayed_transition
+
+    transition_count = math.floor(args.duration_seconds * args.fps_num / args.fps_den)
+    if delayed_transition:
+        transition_count -= 1
+    if transition_count % 2 != 0:
+        # Keep the transition count even so that we begin and end with a black
+        # frame.
+        transition_count += 1
+
     print(
-        f"Generating {frame_count} frames at {args.fps_num / args.fps_den} FPS",
+        f"{transition_count} transitions at {args.fps_num / args.fps_den} FPS",
         file=sys.stderr,
     )
 
     json.dump(
         {
             "fps": {"num": args.fps_num, "den": args.fps_den},
-            "frames": generate_frames(
-                frame_count, args.frame_repeat_ratio, np.random.default_rng()
-            ).tolist(),
+            "transition_count": transition_count,
+            "delayed_transitions": [int(transition_count / 2)]
+            if delayed_transition
+            else [],
         },
         sys.stdout,
     )

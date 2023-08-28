@@ -2,8 +2,10 @@
 
 import argparse
 import json
+import numpy as np
 import ffmpeg
 import sys
+import videojitter.util
 
 
 def parse_arguments():
@@ -33,6 +35,7 @@ def parse_arguments():
 def generate_video():
     args = parse_arguments()
     spec = json.load(sys.stdin)
+
     ffmpeg_process = (
         ffmpeg.output(
             ffmpeg.input(
@@ -74,8 +77,14 @@ def generate_video():
         .run_async(pipe_stdin=True)
     )
 
-    for frame_is_white in spec["frames"]:
-        ffmpeg_process.stdin.write(b"\xff" if frame_is_white else b"\x00")
+    ffmpeg_process.stdin.write(
+        (
+            videojitter.util.generate_frames(
+                spec["transition_count"], spec["delayed_transitions"]
+            ).astype(np.uint8)
+            * 0xFF
+        ).tobytes()
+    )
     ffmpeg_process.stdin.close()
     ffmpeg_process.wait()
 

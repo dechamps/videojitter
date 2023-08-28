@@ -8,6 +8,7 @@ import pandas as pd
 import scipy.signal
 import sys
 from si_prefix import si_format
+import videojitter.util
 
 
 def parse_arguments():
@@ -304,10 +305,13 @@ def generate_report():
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     frame_duration = spec["fps"]["den"] / spec["fps"]["num"]
+    reference_frames = videojitter.util.generate_frames(
+        spec["transition_count"], spec["delayed_transitions"]
+    )
     reference_transitions = pd.DataFrame(
-        {"frame": spec["frames"], "frame_index": np.arange(0, len(spec["frames"]))},
+        {"frame": reference_frames, "frame_index": np.arange(0, len(reference_frames))},
         index=pd.Index(
-            np.arange(0, len(spec["frames"])) * frame_duration,
+            np.arange(0, len(reference_frames)) * frame_duration,
             name="timestamp_seconds",
         ),
     )
