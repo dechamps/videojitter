@@ -200,6 +200,54 @@ def si_format_plus(value, *kargs, **kwargs):
     return ("+" if value >= 0 else "") + si_format(value, *kargs, **kwargs)
 
 
+def match_delayed_transitions(
+    time_since_previous_transition_seconds,
+    delayed_transition_indexes,
+    expected_transition_count,
+):
+    transition_count = time_since_previous_transition_seconds.index.size
+    if transition_count == expected_transition_count:
+        print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
+    else:
+        print(
+            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/duplicate some transitions entirely. This makes it difficult to figure out which transitions were intentionally delayed, and as such those may be incorrectly annotated.",
+            file=sys.stderr,
+        )
+    delayed_transitions = np.zeros(transition_count, dtype=bool)
+    for delayed_transition_index in delayed_transition_indexes:
+        # We guess which transition was intentionally delayed using the
+        # following heuristic:
+        #  1. Based on the spec, define a window over the recorded transitions
+        #     where we expect to find the delayed transition;
+        #  2. Assume that the delayed transition is the longest one within that
+        #     window.
+        #
+        # If the recorded transition count matches the spec exactly, we assume
+        # that the transition sequence matches the spec 1:1 and use a window of
+        # size 1 centered on the delayed transition index according to the spec.
+        #
+        # If the recorded transition count is different from the spec, we use
+        # a window whose size is the delta between the transition counts. If
+        # there are too many recorded transitions, the window starts on the
+        # delayed transition index according to the spec, and we look forward
+        # for the delayed transition. If there are too few recorded transitions,
+        # the window ends on the delayed transition index according to the spec,
+        # and we look backward for the delayed transition.
+        window_begin = delayed_transition_index
+        window_end = max(
+            delayed_transition_index + transition_count - expected_transition_count, 0
+        )
+        if window_end < window_begin:
+            window_begin, window_end = window_end, window_begin
+        delayed_transitions[
+            time_since_previous_transition_seconds.iloc[
+                window_begin : window_end + 1
+            ].argmax()
+            + window_begin
+        ] = True
+    return delayed_transitions
+
+
 def generate_report():
     args = parse_arguments()
 
@@ -227,22 +275,17 @@ def generate_report():
         f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
         file=sys.stderr,
     )
-    if transitions.index.size == transition_count:
-        print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
-    else:
-        print(
-            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/duplicate some transitions entirely.",
-            file=sys.stderr,
-        )
 
     transitions[
         "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
     delayed_transitions = spec["delayed_transitions"]
-    transitions["delayed"] = False
-    # TODO: this won't work if the transition count doesn't match the spec.
-    transitions.loc[transitions.index[delayed_transitions], "delayed"] = True
+    transitions["delayed"] = match_delayed_transitions(
+        transitions["time_since_previous_transition_seconds"],
+        delayed_transitions,
+        transition_count,
+    )
 
     if getattr(args, "black_white_offset_compensation", delayed_transitions):
         black_lag_seconds = estimate_black_lag_seconds(
