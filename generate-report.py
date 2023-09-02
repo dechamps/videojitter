@@ -85,7 +85,7 @@ def generate_chart(
             transition_index=alt.expr.datum.transition_count - 1,
             frame_label=alt.expr.if_(alt.datum.frame, "white", "black"),
             label="Transition to " + alt.datum.frame_label,
-            opacity=alt.expr.if_(alt.datum.delayed, 0.4, 1),
+            opacity=alt.expr.if_(alt.datum.intentionally_delayed, 0.4, 1),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
                 < -minimum_time_between_transitions_seconds,
@@ -150,22 +150,24 @@ def generate_chart(
             format="~s",
         ),
     ]
-    if "delayed" in transitions:
+    if "intentionally_delayed" in transitions:
         chart = chart.transform_calculate(
-            delayed_label=alt.expr.if_(
-                alt.datum.delayed,
+            intentionally_delayed_label=alt.expr.if_(
+                alt.datum.intentionally_delayed,
                 "Intentionally delayed transition (ignore)",
                 "Normal transition",
             ),
-            delayed_tooltip_label=alt.expr.if_(alt.datum.delayed, "yes", "no"),
+            intentionally_delayed_tooltip=alt.expr.if_(
+                alt.datum.intentionally_delayed, "yes", "no"
+            ),
         ).encode(
-            alt.Opacity("delayed_label", type="nominal", title=None)
+            alt.Opacity("intentionally_delayed_label", type="nominal", title=None)
             .scale(range=alt.FieldRange("opacity"))
             .legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
         )
         tooltips.append(
             alt.Tooltip(
-                "delayed_tooltip_label",
+                "intentionally_delayed_tooltip",
                 type="nominal",
                 title="Intentionally delayed",
             )
@@ -296,18 +298,20 @@ def generate_report():
         "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
-    delayed_transitions = spec["delayed_transitions"]
-    if delayed_transitions:
-        transitions["delayed"] = match_delayed_transitions(
+    intentionally_delayed_transitions = spec["delayed_transitions"]
+    if intentionally_delayed_transitions:
+        transitions["intentionally_delayed"] = match_delayed_transitions(
             transitions["time_since_previous_transition_seconds"],
-            delayed_transitions,
+            intentionally_delayed_transitions,
             transition_count,
         )
-        non_delayed_transitions = transitions[~transitions.delayed]
+        non_delayed_transitions = transitions[~transitions.intentionally_delayed]
     else:
         non_delayed_transitions = transitions
 
-    if getattr(args, "black_white_offset_compensation", delayed_transitions):
+    if getattr(
+        args, "black_white_offset_compensation", intentionally_delayed_transitions
+    ):
         black_lag_seconds = estimate_black_lag_seconds(non_delayed_transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
@@ -350,7 +354,7 @@ def generate_report():
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
-                f"{len(delayed_transitions)} transitions were intentionally delayed, and are not included in the below stats:",
+                f"{len(intentionally_delayed_transitions)} transitions were intentionally delayed, and are not included in the below stats:",
                 black_white_offset_fineprint,
                 f"Transition interval range: {si_format(non_delayed_transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(non_delayed_transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(non_delayed_transitions.time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(non_delayed_transitions.time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
