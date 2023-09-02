@@ -86,12 +86,6 @@ def generate_chart(
             frame_label=alt.expr.if_(alt.datum.frame, "white", "black"),
             label="Transition to " + alt.datum.frame_label,
             opacity=alt.expr.if_(alt.datum.delayed, 0.4, 1),
-            delayed_label=alt.expr.if_(
-                alt.datum.delayed,
-                "Intentionally delayed transition (ignore)",
-                "Normal transition",
-            ),
-            delayed_tooltip_label=alt.expr.if_(alt.datum.delayed, "yes", "no"),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
                 < -minimum_time_between_transitions_seconds,
@@ -131,45 +125,54 @@ def generate_chart(
                 title=None,
             ).legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
             alt.Shape("shape", type="nominal", scale=None),
-            tooltip=[
-                alt.Tooltip(
-                    "transition_index",
-                    type="quantitative",
-                    title="Recorded transition #",
-                ),
-                alt.Tooltip(
-                    "frame_label",
-                    type="nominal",
-                    title="Transition to",
-                ),
-                alt.Tooltip(
-                    "recording_timestamp_seconds",
-                    title="Recording time (s)",
-                    format="~s",
-                ),
-                alt.Tooltip(
-                    "time_since_previous_transition_seconds",
-                    title="Time since last transition (s)",
-                    format="~s",
-                ),
-                alt.Tooltip(
-                    "delayed_tooltip_label",
-                    type="nominal",
-                    title="Intentionally delayed",
-                ),
-            ],
         )
         .properties(width=1000, height=750)
     )
+    tooltips = [
+        alt.Tooltip(
+            "transition_index",
+            type="quantitative",
+            title="Recorded transition #",
+        ),
+        alt.Tooltip(
+            "frame_label",
+            type="nominal",
+            title="Transition to",
+        ),
+        alt.Tooltip(
+            "recording_timestamp_seconds",
+            title="Recording time (s)",
+            format="~s",
+        ),
+        alt.Tooltip(
+            "time_since_previous_transition_seconds",
+            title="Time since last transition (s)",
+            format="~s",
+        ),
+    ]
     if "delayed" in transitions:
-        chart = chart.encode(
+        chart = chart.transform_calculate(
+            delayed_label=alt.expr.if_(
+                alt.datum.delayed,
+                "Intentionally delayed transition (ignore)",
+                "Normal transition",
+            ),
+            delayed_tooltip_label=alt.expr.if_(alt.datum.delayed, "yes", "no"),
+        ).encode(
             alt.Opacity("delayed_label", type="nominal", title=None)
             .scale(range=alt.FieldRange("opacity"))
             .legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
         )
+        tooltips.append(
+            alt.Tooltip(
+                "delayed_tooltip_label",
+                type="nominal",
+                title="Intentionally delayed",
+            )
+        )
     return (
         alt.vconcat(
-            chart,
+            chart.encode(tooltip=tooltips),
             alt.Chart(
                 title=alt.TitleParams(
                     fine_print,
