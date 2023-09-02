@@ -57,6 +57,20 @@ def interval(series):
     return pd.Interval(series.min(), series.max())
 
 
+def packed_columns_chart(data, *kargs, **kwargs):
+    """Functionally equivalent to `alt.Chart()`, but packs the values in a given
+    column together so that the column name only appears once in the Vega-Lite
+    spec (instead of once per row). This can massively reduce the size of the
+    resulting spec if the number of rows is much larger than the number of
+    columns."""
+    data = (
+        data.apply(lambda column: column.values, result_type="reduce")
+        .to_frame()
+        .transpose()
+    )
+    return alt.Chart(data, *kargs, **kwargs).transform_flatten(data.columns.values)
+
+
 def generate_chart(
     transitions,
     title,
@@ -66,7 +80,7 @@ def generate_chart(
     fine_print,
 ):
     chart = (
-        alt.Chart(transitions.reset_index(), title=title)
+        packed_columns_chart(transitions.reset_index(), title=title)
         .transform_window(transition_count="row_number()")
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
@@ -99,7 +113,7 @@ def generate_chart(
                 labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
                 title="Recording timestamp",
             ),
-            alt.Y("time_since_previous_transition_seconds")
+            alt.Y("time_since_previous_transition_seconds", type="quantitative")
             .scale(
                 zero=False,
                 domain=[
