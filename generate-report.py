@@ -76,7 +76,6 @@ def generate_chart(
     title,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
-    has_delayed_transitions,
     fine_print,
 ):
     chart = (
@@ -162,7 +161,7 @@ def generate_chart(
         )
         .properties(width=1000, height=750)
     )
-    if has_delayed_transitions:
+    if "delayed" in transitions:
         chart = chart.encode(
             alt.Opacity("delayed_label", type="nominal", title=None)
             .scale(range=alt.FieldRange("opacity"))
@@ -295,16 +294,18 @@ def generate_report():
     ] = transitions.index.to_series().diff()
 
     delayed_transitions = spec["delayed_transitions"]
-    transitions["delayed"] = match_delayed_transitions(
-        transitions["time_since_previous_transition_seconds"],
-        delayed_transitions,
-        transition_count,
-    )
+    if delayed_transitions:
+        transitions["delayed"] = match_delayed_transitions(
+            transitions["time_since_previous_transition_seconds"],
+            delayed_transitions,
+            transition_count,
+        )
+        non_delayed_transitions = transitions[~transitions.delayed]
+    else:
+        non_delayed_transitions = transitions
 
     if getattr(args, "black_white_offset_compensation", delayed_transitions):
-        black_lag_seconds = estimate_black_lag_seconds(
-            transitions[~transitions.delayed]
-        )
+        black_lag_seconds = estimate_black_lag_seconds(non_delayed_transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
         black_white_offset_fineprint = f"Time since last transition includes {si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
@@ -317,7 +318,6 @@ def generate_report():
     else:
         black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
 
-    non_delayed_transitions = transitions[~transitions.delayed]
     time_between_transitions_standard_deviation_seconds = (
         non_delayed_transitions.time_since_previous_transition_seconds.std()
     )
@@ -344,7 +344,6 @@ def generate_report():
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
-            has_delayed_transitions=delayed_transitions,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
