@@ -76,6 +76,7 @@ def generate_chart(
     title,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
+    mean_time_between_transitions,
     fine_print,
 ):
     chart = (
@@ -97,6 +98,8 @@ def generate_chart(
                     "circle",
                 ),
             ),
+            time_since_previous_transition_seconds_relative_to_mean=alt.datum.time_since_previous_transition_seconds
+            - mean_time_between_transitions,
         )
         .mark_point(filled=True)
         .encode(
@@ -150,6 +153,12 @@ def generate_chart(
             type="quantitative",
             title="Time since last transition (s)",
             format="~s",
+        ),
+        alt.Tooltip(
+            "time_since_previous_transition_seconds_relative_to_mean",
+            type="quantitative",
+            title="Relative to mean (s)",
+            format="+~s",
         ),
     ]
     if "intentionally_delayed" in transitions:
@@ -353,6 +362,7 @@ def generate_report():
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
+            mean_time_between_transitions,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
