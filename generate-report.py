@@ -141,11 +141,13 @@ def generate_chart(
         ),
         alt.Tooltip(
             "recording_timestamp_seconds",
+            type="quantitative",
             title="Recording time (s)",
             format="~s",
         ),
         alt.Tooltip(
             "time_since_previous_transition_seconds",
+            type="quantitative",
             title="Time since last transition (s)",
             format="~s",
         ),
