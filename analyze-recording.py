@@ -71,13 +71,13 @@ def parse_arguments():
         "--low-slope-threshold-ratio",
         help="The recording slope level below which an edge will be recorded, relative to the overall maximum negative slope.",
         type=float,
-        default=0.7,
+        default=0.6,
     )
     argument_parser.add_argument(
         "--high-slope-threshold-ratio",
         help="The recording slope level above which an edge will be recorded, relative to the overall maximum positive slope.",
         type=float,
-        default=0.7,
+        default=0.6,
     )
     argument_parser.add_argument(
         "--minimum-falling-edge-distance-seconds",
