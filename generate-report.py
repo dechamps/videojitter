@@ -85,7 +85,13 @@ def generate_chart(
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
             frame_label=alt.expr.if_(alt.datum.frame, "white", "black"),
-            label="Transition to " + alt.datum.frame_label,
+            label=alt.expr.if_(
+                alt.datum.transition_from_same_frame,
+                "Invalid transition to ",
+                "Transition to ",
+            )
+            + alt.datum.frame_label,
+            valid_label=alt.expr.if_(alt.datum.transition_from_same_frame, "no", "yes"),
             opacity=alt.expr.if_(alt.datum.intentionally_delayed, 0.4, 1),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
@@ -141,6 +147,11 @@ def generate_chart(
             "frame_label",
             type="nominal",
             title="Transition to",
+        ),
+        alt.Tooltip(
+            "valid_label",
+            type="nominal",
+            title="Valid",
         ),
         alt.Tooltip(
             "recording_timestamp_seconds",
@@ -309,6 +320,16 @@ def generate_report():
         "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
+    transitions["transition_from_same_frame"] = transitions.frame.diff() == False
+    transitions_from_same_frame_count = transitions.transition_from_same_frame.sum()
+    if transitions_from_same_frame_count > 0:
+        print(
+            f'WARNING: transition data contains {transitions_from_same_frame_count} transitions where the previous transition is to the same color. This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".',
+            file=sys.stderr,
+        )
+
+    transition_is_valid = ~transitions.transition_from_same_frame
+
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
         transitions["intentionally_delayed"] = match_delayed_transitions(
@@ -316,14 +337,14 @@ def generate_report():
             intentionally_delayed_transitions,
             transition_count,
         )
-        non_delayed_transitions = transitions[~transitions.intentionally_delayed]
-    else:
-        non_delayed_transitions = transitions
+        transition_is_valid = transition_is_valid & ~transitions.intentionally_delayed
+
+    valid_transitions = transitions[transition_is_valid]
 
     if getattr(
         args, "black_white_offset_compensation", intentionally_delayed_transitions
     ):
-        black_lag_seconds = estimate_black_lag_seconds(non_delayed_transitions)
+        black_lag_seconds = estimate_black_lag_seconds(valid_transitions)
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
         black_white_offset_fineprint = f"Time since last transition includes {si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
@@ -337,10 +358,10 @@ def generate_report():
         black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
 
     time_between_transitions_standard_deviation_seconds = (
-        non_delayed_transitions.time_since_previous_transition_seconds.std()
+        valid_transitions.time_since_previous_transition_seconds.std()
     )
     print(
-        f"Non-delayed transition interval standard deviation: {time_between_transitions_standard_deviation_seconds} seconds",
+        f"Valid, non-delayed transition interval standard deviation: {time_between_transitions_standard_deviation_seconds} seconds",
         file=sys.stderr,
     )
 
@@ -348,13 +369,13 @@ def generate_report():
         transitions.to_csv(sys.stdout)
     if output_chart_file:
         minimum_time_between_transitions_index = (
-            non_delayed_transitions.time_since_previous_transition_seconds.idxmin()
+            valid_transitions.time_since_previous_transition_seconds.idxmin()
         )
         maximum_time_between_transitions_index = (
-            non_delayed_transitions.time_since_previous_transition_seconds.idxmax()
+            valid_transitions.time_since_previous_transition_seconds.idxmax()
         )
         mean_time_between_transitions = (
-            non_delayed_transitions.time_since_previous_transition_seconds.mean()
+            valid_transitions.time_since_previous_transition_seconds.mean()
         )
         mean_fps = 1 / mean_time_between_transitions
         generate_chart(
@@ -366,11 +387,11 @@ def generate_report():
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
-                f"{len(intentionally_delayed_transitions)} transitions were intentionally delayed, and are not included in the below stats:",
+                f"The following stats exclude {transitions_from_same_frame_count} invalid transitions and {len(intentionally_delayed_transitions)} intentionally delayed transitions:",
                 black_white_offset_fineprint,
-                f"Transition interval range: {si_format(non_delayed_transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(non_delayed_transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(non_delayed_transitions.time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(non_delayed_transitions.time_since_previous_transition_seconds.quantile(0.995), 3)}s",
+                f"Transition interval range: {si_format(valid_transitions.loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(valid_transitions.loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(valid_transitions.time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(valid_transitions.time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
-                f"{(np.abs(stats.zscore(non_delayed_transitions.loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
+                f"{(np.abs(stats.zscore(valid_transitions.loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
                 "Generated by videojitter",
             ],
         ).save(output_chart_file)
