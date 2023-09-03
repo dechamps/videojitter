@@ -44,32 +44,50 @@ def parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
+        "--boundaries-signal-frames",
+        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording, in nominal frame durations.",
+        type=int,
+        default=11,
+    )
+    argument_parser.add_argument(
+        "--boundaries-score-threshold-ratio",
+        help="How well does a given portion of the recording have to match the reference sequence in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
+        type=float,
+        default=0.5,
+    )
+    argument_parser.add_argument(
+        "--signal-end-threshold",
+        help="How well does a given portion of the recording have to match the end sequence in order for it to be considered as the end of the test signal, as a ratio of the best match anywhere in the recording.",
+        type=float,
+        default=0.5,
+    )
+    argument_parser.add_argument(
         "--timing-minimum-sample-rate-hz",
-        help="What rate to upsample the recording to (at least) before estimating frame transition timestamps. Frame transition timestamps have to land on a sample boundary, so higher sample rates make the timestamp more accurate, at the price of making analysis slower.",
+        help="What rate to upsample the recording to (at least) before estimating edge (i.e. frame transition) timestamps. Edge timestamps have to land on a sample boundary, so higher sample rates make the timestamps more accurate, at the price of making analysis slower.",
         type=float,
         default=100000,
     )
     argument_parser.add_argument(
-        "--black-threshold-ratio",
-        help="The recording slope level below which a transition to black is deemed to have occurred, relative to the overall maximum negative slope.",
+        "--low-slope-threshold-ratio",
+        help="The recording slope level below which an edge will be recorded, relative to the overall maximum negative slope.",
         type=float,
         default=0.7,
     )
     argument_parser.add_argument(
-        "--white-threshold-ratio",
-        help="The recording slope level above which a transition to white is deemed to have occurred, relative to the overall maximum positive slope.",
+        "--high-slope-threshold-ratio",
+        help="The recording slope level above which an edge will be recorded, relative to the overall maximum positive slope.",
         type=float,
         default=0.7,
     )
     argument_parser.add_argument(
-        "--minimum-black-transition-distance-seconds",
-        help="When two transitions to black are less than this many seconds apart, remove the transition with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
+        "--minimum-falling-edge-distance-seconds",
+        help="When two falling edges are less than this many seconds apart, remove the edge with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
         type=float,
         default=0.002,
     )
     argument_parser.add_argument(
-        "--minimum-white-transition-distance-seconds",
-        help="When two transitions to white are less than this many seconds apart, remove the transition with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
+        "--minimum-rising-edge-distance-seconds",
+        help="When two rising edges are less than this many seconds apart, remove the edge with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
         type=float,
         default=0.002,
     )
@@ -79,13 +97,18 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-reference-signal-file",
-        help="(Only useful for debugging) Write the reference signal as a WAV file to the given path",
+        "--output-boundaries-signal-file",
+        help="(Only useful for debugging) Write the boundaries reference signal as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
         "--output-cross-correlation-file",
-        help="(Only useful for debugging) Write the cross-correlation of the recording against the reference signal as a WAV file to the given path",
+        help="(Only useful for debugging) Write the cross-correlation of recording against the boundaries reference signal as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-boundary-candidates-file",
+        help="(Only useful for debugging) Write the boundary candidates as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -104,82 +127,48 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-frame-transitions-file",
-        help="(Only useful for debugging) Write the estimated frame transitions as a WAV file to the given path",
+        "--output-edges-file",
+        help="(Only useful for debugging) Write the estimated edges as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     return argument_parser.parse_args()
 
 
-def generate_reference_samples(fps_den, fps_num, frames, sample_rate):
-    frame_numbers = (
-        np.arange(np.floor(frames.size * fps_den * sample_rate / fps_num))
+def generate_boundaries_reference_samples(fps_den, fps_num, frame_count, sample_rate):
+    return (
+        np.arange(np.floor(frame_count * fps_den * sample_rate / fps_num))
         * fps_num
         / (sample_rate * fps_den)
-    ).astype(int)
-    return (np.array(frames) * 2 - 1)[frame_numbers]
+    ).astype(int) % 2 * 2 - 1
 
 
-def find_recording_offset(cross_correlation):
-    minimum_index = np.argmin(cross_correlation)
-    maximum_index = np.argmax(cross_correlation)
-    inverted = abs(cross_correlation[minimum_index]) > abs(
-        cross_correlation[maximum_index]
-    )
-    return minimum_index if inverted else maximum_index, inverted
-
-
-def check_bogus_offset(cross_correlation, offset, sample_rate, fps):
-    """Checks if the computed offset may be bogus.
-
-    The offset is considered suspicious if there is an alternative candidate
-    offset that is nearly as good as the one we have, and is located more than 1
-    frame duration away.
-
-    This is mostly arbitrary and might need revisiting based on how recordings
-    typically look like in the field."""
-    frame_duration_in_samples = sample_rate / fps
-    cross_correlation_remainder = cross_correlation.copy()
-    cross_correlation_remainder[
-        int(offset - frame_duration_in_samples) : int(
-            offset + frame_duration_in_samples
-        )
-    ] = 0
-    best_alternative_offset = np.argmax(cross_correlation_remainder)
-    if cross_correlation_remainder[best_alternative_offset] > 0.75:
-        print(
-            f"WARNING: detected offset may be bogus, as there is another candidate at {best_alternative_offset} ({best_alternative_offset / sample_rate} seconds). This suggests the recording may be corrupted, or the video that was played was generated from a different spec, or was playing so badly that the original frame sequence is unrecognizable. Expect garbage results.",
-            file=sys.stderr,
-        )
-
-
-def find_transitions(
+def find_edges(
     slope,
     black_threshold,
     white_threshold,
-    minimum_black_distance,
-    minimum_white_distance,
+    minimum_falling_edge_distance,
+    minimum_rising_edge_distance,
 ):
-    """Looks for black/white transitions in the recording slope signal.
+    """Looks for edges in the recording slope signal.
 
     Returns a Series whose index is the offset into `slope` and whose values
-    are booleans indicating a transition to black (False) or to white (True).
+    are booleans indicating a falling edge (False) or a rising edge (True).
     """
-    transitions_to_black = scipy.signal.find_peaks(
-        -slope, height=-black_threshold, distance=minimum_black_distance
+    falling_edge_indexes = scipy.signal.find_peaks(
+        -slope, height=-black_threshold, distance=minimum_falling_edge_distance
     )[0]
-    transitions_to_white = scipy.signal.find_peaks(
-        slope, height=white_threshold, distance=minimum_white_distance
+    rising_edge_indexes = scipy.signal.find_peaks(
+        slope, height=white_threshold, distance=minimum_rising_edge_distance
     )[0]
     return pd.Series(
         np.concatenate(
             [
-                np.repeat(True, transitions_to_white.size),
-                np.repeat(False, transitions_to_black.size),
+                np.repeat(True, rising_edge_indexes.size),
+                np.repeat(False, falling_edge_indexes.size),
             ]
         ),
         index=pd.Index(
-            np.concatenate([transitions_to_white, transitions_to_black]), name="offset"
+            np.concatenate([rising_edge_indexes, falling_edge_indexes]), name="offset"
         ),
         name="frame",
     ).sort_index()
@@ -187,6 +176,9 @@ def find_transitions(
 
 def analyze_recording():
     args = parse_arguments()
+    assert (
+        args.boundaries_signal_frames % 2 != 0
+    ), "The number of frames in the boundaries reference signal should be odd so that the signal begins and ends on the same frame"
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     frames = videojitter.util.generate_frames(
@@ -207,16 +199,17 @@ def analyze_recording():
         file=sys.stderr,
     )
 
-    def maybe_write_wavfile(file, samples):
+    def format_index(index):
+        return f"sample {index} ({index / recording_sample_rate} seconds)"
+
+    def maybe_write_wavfile(file, samples, normalize=False):
         if not file:
             return
+        if normalize:
+            samples = samples / np.max(np.abs(samples))
         scipy.io.wavfile.write(
             file, int(recording_sample_rate), samples.astype(np.float32)
         )
-
-    assert (
-        recording_duration_seconds > reference_duration_seconds
-    ), f"Recording is shorter than expected - test video is {reference_duration_seconds} seconds long, but recording is only {recording_duration_seconds} seconds long"
 
     downsampling_ratio = getattr(
         args,
@@ -233,56 +226,64 @@ def analyze_recording():
     )
     maybe_write_wavfile(args.output_downsampled_recording_file, recording_samples)
 
-    reference_samples = generate_reference_samples(
-        spec["fps"]["den"], spec["fps"]["num"], frames, recording_sample_rate
+    boundaries_reference_samples = generate_boundaries_reference_samples(
+        spec["fps"]["den"],
+        spec["fps"]["num"],
+        args.boundaries_signal_frames,
+        recording_sample_rate,
     )
-    maybe_write_wavfile(args.output_reference_signal_file, reference_samples)
+    maybe_write_wavfile(
+        args.output_boundaries_signal_file, boundaries_reference_samples
+    )
 
     cross_correlation = scipy.signal.correlate(
-        recording_samples, reference_samples, mode="valid"
+        recording_samples, boundaries_reference_samples, mode="valid"
     )
-    cross_correlation = cross_correlation / np.max(np.abs(cross_correlation))
-    maybe_write_wavfile(args.output_cross_correlation_file, cross_correlation)
+    maybe_write_wavfile(
+        args.output_cross_correlation_file,
+        cross_correlation,
+        normalize=True,
+    )
 
-    recording_offset, inverted = find_recording_offset(cross_correlation)
+    abs_cross_correlation = np.abs(cross_correlation)
+    boundary_candidates = (
+        abs_cross_correlation
+        >= np.max(abs_cross_correlation) * args.boundaries_score_threshold_ratio
+    )
+    maybe_write_wavfile(
+        args.output_boundary_candidates_file,
+        boundary_candidates,
+    )
 
+    boundary_candidate_indexes = np.nonzero(boundary_candidates)[0]
+    assert boundary_candidate_indexes.size > 1
+    test_signal_start_index = boundary_candidate_indexes[0]
+    test_signal_end_index = (
+        boundary_candidate_indexes[-1] + boundaries_reference_samples.size
+    )
     print(
-        f"Test signal appears to start near sample {recording_offset} ({recording_offset / recording_sample_rate} seconds) in the recording",
+        f"Test signal appears to start at {format_index(test_signal_start_index)} and end at {format_index(test_signal_end_index)} in the recording.",
         file=sys.stderr,
     )
-    if inverted:
-        print(
-            "NOTE: recording polarity appears to be reversed (white is low and black is high). Nothing to worry about, this can be totally expected depending on recording setup. Inverting it back to compensate.",
-            file=sys.stderr,
-        )
-        recording_samples = np.negative(recording_samples)
 
-    check_bogus_offset(
-        cross_correlation, recording_offset, recording_sample_rate, nominal_fps
-    )
-
-    recording_samples = recording_samples[
-        recording_offset : recording_offset + reference_samples.size
-    ]
+    recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_wavfile(args.output_post_processed_recording_file, recording_samples)
 
     recording_slope = np.diff(recording_samples)
     maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
 
-    recording_slope_approx_min = recording_slope.min()
-    recording_slope_approx_max = recording_slope.max()
+    recording_slope_min = recording_slope.min()
+    recording_slope_max = recording_slope.max()
     print(
-        f"Recording slope range: [{recording_slope_approx_min}, {recording_slope_approx_max}]",
+        f"Recording slope range: [{recording_slope_min}, {recording_slope_max}]",
         file=sys.stderr,
     )
-    recording_slope_black_threshold = (
-        recording_slope_approx_min * args.black_threshold_ratio
-    )
-    recording_slope_white_threshold = (
-        recording_slope_approx_max * args.white_threshold_ratio
+    recording_slope_low_threshold = recording_slope_min * args.low_slope_threshold_ratio
+    recording_slope_high_threshold = (
+        recording_slope_max * args.high_slope_threshold_ratio
     )
     print(
-        f"Assuming that video is transitioning to black when recording slope dips below {recording_slope_black_threshold} and to white above {recording_slope_white_threshold}",
+        f"Recording an edge when slope dips below {recording_slope_low_threshold} or rises above {recording_slope_high_threshold}",
         file=sys.stderr,
     )
 
@@ -290,7 +291,8 @@ def analyze_recording():
         args.timing_minimum_sample_rate_hz / recording_sample_rate
     )
     recording_sample_rate *= upsampling_ratio
-    recording_offset *= upsampling_ratio
+    test_signal_start_index *= upsampling_ratio
+    test_signal_end_index *= upsampling_ratio
     print(
         f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
         file=sys.stderr,
@@ -300,21 +302,38 @@ def analyze_recording():
     )
     maybe_write_wavfile(args.output_upsampled_recording_slope_file, recording_slope)
 
-    transitions = find_transitions(
+    edges = find_edges(
         recording_slope,
-        recording_slope_black_threshold,
-        recording_slope_white_threshold,
-        args.minimum_black_transition_distance_seconds * recording_sample_rate,
-        args.minimum_white_transition_distance_seconds * recording_sample_rate,
+        recording_slope_low_threshold,
+        recording_slope_high_threshold,
+        args.minimum_falling_edge_distance_seconds * recording_sample_rate,
+        args.minimum_rising_edge_distance_seconds * recording_sample_rate,
     )
+    print(f"Detected {edges.index.size} edges (frame transitions).", file=sys.stderr)
+    assert edges.index.size > 0
 
-    if args.output_frame_transitions_file:
-        frame_transitions = np.zeros(recording_slope.size)
-        frame_transitions[transitions.index] = transitions * 2 - 1
-        maybe_write_wavfile(args.output_frame_transitions_file, frame_transitions)
+    if args.output_edges_file:
+        is_edge = np.zeros(recording_slope.size)
+        is_edge[edges.index] = edges * 2 - 1
+        maybe_write_wavfile(args.output_edges_file, is_edge)
 
-    transitions.index = (transitions.index + recording_offset) / recording_sample_rate
-    transitions.rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
+    first_edge = edges.iloc[0]
+    last_edge = edges.iloc[-1]
+    if first_edge == last_edge:
+        print(
+            f"WARNING: the first and last edges are both {'rising' if first_edge else 'falling'}. This doesn't make sense as the first and last frames of the test video are supposed to be both black. Unable to determine transition directions as a result.",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"First edge is {'rising' if first_edge else 'falling'} and last edge is {'rising' if last_edge else 'falling'}. Deducing that a falling edge means a transition to {'black' if first_edge else 'white'} and a rising edge means a transition to {'white' if first_edge else 'black'}.",
+            file=sys.stderr,
+        )
+        if not first_edge:
+            edges = ~edges
+
+    edges.index = (edges.index + test_signal_start_index) / recording_sample_rate
+    edges.rename_axis("recording_timestamp_seconds").to_csv(sys.stdout)
 
 
 analyze_recording()
