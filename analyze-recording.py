@@ -112,8 +112,8 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-post-processed-recording-file",
-        help="(Only useful for debugging) Write the post-processed (trimmed and possibly inverted) recording as a WAV file to the given path",
+        "--output-trimmed-recording-file",
+        help="(Only useful for debugging) Write the trimmed recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -267,7 +267,7 @@ def analyze_recording():
     )
 
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
-    maybe_write_wavfile(args.output_post_processed_recording_file, recording_samples)
+    maybe_write_wavfile(args.output_trimmed_recording_file, recording_samples)
 
     recording_slope = np.diff(recording_samples)
     maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
