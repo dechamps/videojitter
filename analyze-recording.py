@@ -144,8 +144,8 @@ def generate_boundaries_reference_samples(fps_den, fps_num, frame_count, sample_
 
 def find_edges(
     slope,
-    black_threshold,
-    white_threshold,
+    falling_edge_threshold,
+    rising_edge_threshold,
     minimum_falling_edge_distance,
     minimum_rising_edge_distance,
 ):
@@ -155,20 +155,20 @@ def find_edges(
     are booleans indicating a falling edge (False) or a rising edge (True).
     """
     falling_edge_indexes = scipy.signal.find_peaks(
-        -slope, height=-black_threshold, distance=minimum_falling_edge_distance
+        -slope, height=-falling_edge_threshold, distance=minimum_falling_edge_distance
     )[0]
     rising_edge_indexes = scipy.signal.find_peaks(
-        slope, height=white_threshold, distance=minimum_rising_edge_distance
+        slope, height=rising_edge_threshold, distance=minimum_rising_edge_distance
     )[0]
     return pd.Series(
         np.concatenate(
             [
-                np.repeat(True, rising_edge_indexes.size),
                 np.repeat(False, falling_edge_indexes.size),
+                np.repeat(True, rising_edge_indexes.size),
             ]
         ),
         index=pd.Index(
-            np.concatenate([rising_edge_indexes, falling_edge_indexes]), name="offset"
+            np.concatenate([falling_edge_indexes, rising_edge_indexes]), name="offset"
         ),
         name="frame",
     ).sort_index()
