@@ -33,6 +33,12 @@ def parse_arguments():
         action="store_true",
     )
     argument_parser.add_argument(
+        "--omit-first-transitions-seconds",
+        help="Omit the first recorded transitions up to the specified duration. The first few transitions can be slightly noisier than the others, especially when using an AC-coupled instrument, which will overlay its step response (typically lasting a few tens of milliseconds) on top of the signal due to the sudden change in long-term average light level as the test sequence starts. This in turn causes the early portion of the waveform to be distorted.",
+        type=float,
+        default=0.200,
+    )
+    argument_parser.add_argument(
         "--chart-minimum-time-between-transitions-seconds",
         help="The minimum time since previous transition that will be shown on the chart before the points are clamped",
         type=float,
@@ -328,8 +334,6 @@ def generate_report():
             file=sys.stderr,
         )
 
-    transition_is_valid = ~transitions.transition_from_same_frame
-
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
         transitions["intentionally_delayed"] = match_delayed_transitions(
@@ -337,6 +341,19 @@ def generate_report():
             intentionally_delayed_transitions,
             transition_count,
         )
+
+    original_transitions_size = transitions.index.size
+    transitions.drop(
+        transitions[
+            transitions.index
+            < transitions.index[0] + args.omit_first_transitions_seconds
+        ].index,
+        inplace=True,
+    )
+    removed_early_transition_count = original_transitions_size - transitions.index.size
+
+    transition_is_valid = ~transitions.transition_from_same_frame
+    if intentionally_delayed_transitions:
         transition_is_valid = transition_is_valid & ~transitions.intentionally_delayed
 
     if getattr(
@@ -384,7 +401,16 @@ def generate_report():
             mean_time_between_transitions,
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
-                f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
+                f"Recorded {original_transitions_size} transitions; expected {spec['transition_count']} transitions",
+            ]
+            + (
+                [
+                    f"The first {removed_early_transition_count} transitions are omitted from this chart and all calculations"
+                ]
+                if removed_early_transition_count > 0
+                else []
+            )
+            + [
                 f"The following stats exclude {transitions_from_same_frame_count} invalid transitions and {len(intentionally_delayed_transitions)} intentionally delayed transitions:",
                 black_white_offset_fineprint,
                 f"Transition interval range: {si_format(transitions[transition_is_valid].loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions[transition_is_valid].loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
