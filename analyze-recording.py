@@ -31,9 +31,9 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--min-edge-separation-seconds",
-        help="The minimum time interval between edges that the analyzer will be able to resolve. Note that this is the theoretical limit; in practice, this needs to include a safety margin to account for the non-ideal response of the downsampling filter. Higher values improve high frequency noise rejection but make it more likely the analyzer will fail to detect edges.",
+        help="The minimum time interval between edges that the analyzer will be able to resolve. Note that this is the theoretical limit; in practice, this needs to include a safety margin to account for the non-ideal response of the downsampling filter. Higher values improve high frequency noise rejection but make it more likely the analyzer will fail to detect edges, and may slightly degrade timestamp resolution.",
         type=float,
-        default=0.000125,
+        default=0.0005,
     )
     argument_parser.add_argument(
         "--boundaries-signal-frames",
