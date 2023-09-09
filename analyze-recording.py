@@ -72,18 +72,6 @@ def parse_arguments():
         default=0.6,
     )
     argument_parser.add_argument(
-        "--minimum-falling-edge-distance-seconds",
-        help="When two falling edges are less than this many seconds apart, remove the edge with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
-        type=float,
-        default=0.002,
-    )
-    argument_parser.add_argument(
-        "--minimum-rising-edge-distance-seconds",
-        help="When two rising edges are less than this many seconds apart, remove the edge with the smallest slope. Useful to remove spurious transitions resulting from high-frequency noise in the slope signal.",
-        type=float,
-        default=0.002,
-    )
-    argument_parser.add_argument(
         "--output-downsampled-recording-file",
         help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -331,8 +319,12 @@ def analyze_recording():
         recording_slope,
         recording_slope_low_threshold,
         recording_slope_high_threshold,
-        args.minimum_falling_edge_distance_seconds * recording_sample_rate,
-        args.minimum_rising_edge_distance_seconds * recording_sample_rate,
+        minimum_falling_edge_distance=args.min_edge_separation_seconds
+        * 2
+        * recording_sample_rate,
+        minimum_rising_edge_distance=args.min_edge_separation_seconds
+        * 2
+        * recording_sample_rate,
     )
     print(f"Detected {edges.index.size} edges (frame transitions).", file=sys.stderr)
     assert edges.index.size > 0
