@@ -31,7 +31,7 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--min-edge-separation-seconds",
-        help="The minimum time interval between edges that the analyzer will be able to resolve. Note that this is the theoretical limit; in practice, this needs to include a safety margin to account for the non-ideal response of the downsampling filter. Higher values improve high frequency noise rejection but make it more likely the analyzer will fail to detect edges, and may slightly degrade timestamp resolution.",
+        help="The minimum time interval between edges that the analyzer will be able to resolve. Note that this is the theoretical limit; in practice, this needs to include a safety margin of about 2x to account for the non-ideal response of the downsampling and upsampling filters. Higher values improve high frequency noise rejection but make it more likely the analyzer will fail to detect edges, and may slightly degrade timestamp resolution.",
         type=float,
         default=0.0005,
     )
@@ -290,10 +290,15 @@ def analyze_recording():
         f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
         file=sys.stderr,
     )
+    # The x2 factor is because the period is twice the edge separation (due
+    # to alternating rising/falling edges)
+    # TODO: it would appear that dividing this value by another factor of 2
+    # slightly reduces dipersion. Investigate.
+    upsampling_cutoff_hz = 1 / (args.min_edge_separation_seconds * 2)
     upsampling_derivative_kernel = generate_upsampling_derivative_kernel(
         recording_sample_rate,
-        cutoff_hz=1000,
-        transition_width_hz=500,
+        cutoff_hz=upsampling_cutoff_hz,
+        transition_width_hz=upsampling_cutoff_hz / 2,
     )
     maybe_write_wavfile(
         args.output_upsampling_derivative_kernel_file, upsampling_derivative_kernel
