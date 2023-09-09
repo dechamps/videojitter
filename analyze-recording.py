@@ -62,10 +62,10 @@ def parse_arguments():
         default=0.5,
     )
     argument_parser.add_argument(
-        "--timing-minimum-sample-rate-hz",
-        help="What rate to upsample the recording to (at least) before estimating edge (i.e. frame transition) timestamps. Edge timestamps have to land on a sample boundary, so higher sample rates make the timestamps more accurate, at the price of making analysis slower.",
+        "--timestamp-resolution-seconds",
+        help="The desired resolution of the resulting transition timestamps, in seconds. This determines the upsampling ratio used before looking for edges. Higher values will reduce transition timing resolution but will make processing faster and less memory intensive.",
         type=float,
-        default=100000,
+        default=0.00001,
     )
     argument_parser.add_argument(
         "--low-slope-threshold-ratio",
@@ -286,7 +286,7 @@ def analyze_recording():
     maybe_write_wavfile(args.output_trimmed_recording_file, recording_samples)
 
     upsampling_ratio = np.ceil(
-        args.timing_minimum_sample_rate_hz / recording_sample_rate
+        (1 / args.timestamp_resolution_seconds) / recording_sample_rate
     )
     recording_sample_rate *= upsampling_ratio
     test_signal_start_index *= upsampling_ratio
