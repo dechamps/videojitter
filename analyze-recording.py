@@ -10,14 +10,6 @@ import sys
 import videojitter.util
 
 
-# TODO: decreasing this increases dispersion. Increasing also results in
-# increased dispersion, *and* also makes it harder to find peaks (due to what
-# looks like high frequency noise). It's not clear what causes this. It's
-# possible we might be able to tighten dispersion even further if we manage to
-# get an understanding of these issues.
-DOWNSAMPLE_TO_FPS_TIMES = 128
-
-
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format.",
@@ -38,10 +30,10 @@ def parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--downsampling-ratio",
-        help=f"Downsampling ratio for preprocessing. Downsampling makes cross-correlation faster and reduces the likelihood that the analyzer will choke on high-frequency noise. (default: downsample down to just above {DOWNSAMPLE_TO_FPS_TIMES}x video FPS)",
-        type=int,
-        default=argparse.SUPPRESS,
+        "--min-edge-separation-seconds",
+        help="The minimum time interval between edges that the analyzer will be able to resolve. Note that this is the theoretical limit; in practice, this needs to include a safety margin to account for the non-ideal response of the downsampling filter. Higher values improve high frequency noise rejection but make it more likely the analyzer will fail to detect edges.",
+        type=float,
+        default=0.000125,
     )
     argument_parser.add_argument(
         "--boundaries-signal-frames",
@@ -227,10 +219,13 @@ def analyze_recording():
             file, int(recording_sample_rate), samples.astype(np.float32)
         )
 
-    downsampling_ratio = getattr(
-        args,
-        "downsampling_ratio",
-        np.floor(recording_sample_rate / (nominal_fps * DOWNSAMPLE_TO_FPS_TIMES)),
+    # A rising edge is always followed by a falling edge, so the period is twice
+    # the distance between edges. Therefore, in order to resolve a given edge
+    # interval, we need to be able to resolve a signal of a frequency that is
+    # half the edge frequency. The minimum sample rate is double that (Nyquist),
+    # so these cancel each other out.
+    downsampling_ratio = np.floor(
+        recording_sample_rate / (1 / args.min_edge_separation_seconds)
     )
     recording_sample_rate /= downsampling_ratio
     print(
