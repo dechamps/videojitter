@@ -117,13 +117,13 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-recording-slope-file",
-        help="(Only useful for debugging) Write the recording slope as a WAV file to the given path",
+        "--output-upsampling-derivative-kernel-file",
+        help="(Only useful for debugging) Write the convolution kernel used for upsampling and derivative to the WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-upsampled-recording-slope-file",
-        help="(Only useful for debugging) Write the upsampled recording slope as a WAV file to the given path",
+        "--output-recording-slope-file",
+        help="(Only useful for debugging) Write the recording slope as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -172,6 +172,22 @@ def find_edges(
         ),
         name="frame",
     ).sort_index()
+
+
+def generate_upsampling_derivative_kernel(
+    sample_rate_hz, cutoff_hz, transition_width_hz
+):
+    return scipy.signal.convolve(
+        scipy.signal.firwin(
+            numtaps=2 * int(10 * (sample_rate_hz / cutoff_hz)) + 1,
+            cutoff=cutoff_hz,
+            width=transition_width_hz,
+            fs=sample_rate_hz,
+        ),
+        # Take first derivative (differentiation). See
+        # https://terpconnect.umd.edu/~toh/spectrum/Convolution.html
+        [1, -1],
+    )
 
 
 def analyze_recording():
@@ -269,7 +285,31 @@ def analyze_recording():
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_wavfile(args.output_trimmed_recording_file, recording_samples)
 
-    recording_slope = np.diff(recording_samples)
+    upsampling_ratio = np.ceil(
+        args.timing_minimum_sample_rate_hz / recording_sample_rate
+    )
+    recording_sample_rate *= upsampling_ratio
+    test_signal_start_index *= upsampling_ratio
+    test_signal_end_index *= upsampling_ratio
+    print(
+        f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
+        file=sys.stderr,
+    )
+    upsampling_derivative_kernel = generate_upsampling_derivative_kernel(
+        recording_sample_rate,
+        cutoff_hz=1000,
+        transition_width_hz=500,
+    )
+    maybe_write_wavfile(
+        args.output_upsampling_derivative_kernel_file, upsampling_derivative_kernel
+    )
+    recording_slope = scipy.signal.resample_poly(
+        recording_samples,
+        up=upsampling_ratio,
+        down=1,
+        window=upsampling_derivative_kernel,
+        padtype="line",
+    )
     maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
 
     recording_slope_min = recording_slope.min()
@@ -286,21 +326,6 @@ def analyze_recording():
         f"Recording an edge when slope dips below {recording_slope_low_threshold} or rises above {recording_slope_high_threshold}",
         file=sys.stderr,
     )
-
-    upsampling_ratio = np.ceil(
-        args.timing_minimum_sample_rate_hz / recording_sample_rate
-    )
-    recording_sample_rate *= upsampling_ratio
-    test_signal_start_index *= upsampling_ratio
-    test_signal_end_index *= upsampling_ratio
-    print(
-        f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
-        file=sys.stderr,
-    )
-    recording_slope = scipy.signal.resample_poly(
-        recording_slope, up=upsampling_ratio, down=1
-    )
-    maybe_write_wavfile(args.output_upsampled_recording_slope_file, recording_slope)
 
     edges = find_edges(
         recording_slope,
