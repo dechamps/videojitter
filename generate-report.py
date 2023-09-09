@@ -119,7 +119,7 @@ def generate_chart(
             .scale(
                 zero=False,
                 domain=[
-                    -minimum_time_between_transitions_seconds,
+                    minimum_time_between_transitions_seconds,
                     maximum_time_between_transitions_seconds,
                 ],
                 clamp=True,
