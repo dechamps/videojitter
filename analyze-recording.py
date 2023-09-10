@@ -48,12 +48,6 @@ def parse_arguments():
         default=0.5,
     )
     argument_parser.add_argument(
-        "--signal-end-threshold",
-        help="How well does a given portion of the recording have to match the end sequence in order for it to be considered as the end of the test signal, as a ratio of the best match anywhere in the recording.",
-        type=float,
-        default=0.5,
-    )
-    argument_parser.add_argument(
         "--timestamp-resolution-seconds",
         help="The desired resolution of the resulting transition timestamps, in seconds. This determines the upsampling ratio used before looking for edges. Higher values will reduce transition timing resolution but will make processing faster and less memory intensive.",
         type=float,
