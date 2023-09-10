@@ -78,8 +78,8 @@ def parse_arguments():
         default=0.3,
     )
     argument_parser.add_argument(
-        "--output-downsampled-recording-file",
-        help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
+        "--output-downsampled-slope-file",
+        help="(Only useful for debugging) Write the first derivative (slope) of the downsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -98,17 +98,12 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-trimmed-recording-file",
+        "--output-trimmed-slope-file",
         help="(Only useful for debugging) Write the trimmed recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
-        "--output-upsampling-derivative-kernel-file",
-        help="(Only useful for debugging) Write the convolution kernel used for upsampling and derivative to the WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-recording-slope-file",
+        "--output-upsampled-slope-file",
         help="(Only useful for debugging) Write the recording slope as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
@@ -168,15 +163,11 @@ def find_edges(
     ).sort_index()
 
 
-def generate_upsampling_derivative_kernel(
-    sample_rate_hz, cutoff_hz, transition_width_hz
-):
+def generate_downsampling_derivative_kernel(downsampling_ratio):
     return scipy.signal.convolve(
         scipy.signal.firwin(
-            numtaps=2 * int(10 * (sample_rate_hz / cutoff_hz)) + 1,
-            cutoff=cutoff_hz,
-            width=transition_width_hz,
-            fs=sample_rate_hz,
+            numtaps=2 * int(2 * 10 * downsampling_ratio) + 1,
+            cutoff=1 / downsampling_ratio,
         ),
         # Take first derivative (differentiation). See
         # https://terpconnect.umd.edu/~toh/spectrum/Convolution.html
@@ -234,10 +225,13 @@ def analyze_recording():
         f"Downsampling recording by {downsampling_ratio}x (to {recording_sample_rate} Hz)",
         file=sys.stderr,
     )
-    recording_samples = scipy.signal.resample_poly(
-        recording_samples, up=1, down=downsampling_ratio
+    recording_slope = scipy.signal.resample_poly(
+        recording_samples,
+        up=1,
+        down=downsampling_ratio,
+        window=generate_downsampling_derivative_kernel(downsampling_ratio),
     )
-    maybe_write_wavfile(args.output_downsampled_recording_file, recording_samples)
+    maybe_write_wavfile(args.output_downsampled_slope_file, recording_slope)
 
     boundaries_reference_samples = generate_boundaries_reference_samples(
         spec["fps"]["den"],
@@ -250,7 +244,7 @@ def analyze_recording():
     )
 
     cross_correlation = scipy.signal.correlate(
-        recording_samples, boundaries_reference_samples, mode="valid"
+        recording_slope, boundaries_reference_samples, mode="valid"
     )
     maybe_write_wavfile(
         args.output_cross_correlation_file,
@@ -279,8 +273,8 @@ def analyze_recording():
         file=sys.stderr,
     )
 
-    recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
-    maybe_write_wavfile(args.output_trimmed_recording_file, recording_samples)
+    recording_slope = recording_slope[test_signal_start_index:test_signal_end_index]
+    maybe_write_wavfile(args.output_trimmed_slope_file, recording_slope)
 
     upsampling_ratio = np.ceil(
         (1 / args.timestamp_resolution_seconds) / recording_sample_rate
@@ -292,27 +286,12 @@ def analyze_recording():
         f"Upsampling recording slope by {upsampling_ratio}x to {recording_sample_rate} Hz",
         file=sys.stderr,
     )
-    # The x2 factor is because the period is twice the edge separation (due
-    # to alternating rising/falling edges)
-    # TODO: it would appear that dividing this value by another factor of 2
-    # slightly reduces dipersion. Investigate.
-    upsampling_cutoff_hz = 1 / (args.min_edge_separation_seconds * 2)
-    upsampling_derivative_kernel = generate_upsampling_derivative_kernel(
-        recording_sample_rate,
-        cutoff_hz=upsampling_cutoff_hz,
-        transition_width_hz=upsampling_cutoff_hz / 2,
-    )
-    maybe_write_wavfile(
-        args.output_upsampling_derivative_kernel_file, upsampling_derivative_kernel
-    )
     recording_slope = scipy.signal.resample_poly(
-        recording_samples,
+        recording_slope,
         up=upsampling_ratio,
         down=1,
-        window=upsampling_derivative_kernel,
-        padtype="line",
     )
-    maybe_write_wavfile(args.output_recording_slope_file, recording_slope)
+    maybe_write_wavfile(args.output_upsampled_slope_file, recording_slope)
 
     recording_slope_min = recording_slope.min()
     recording_slope_max = recording_slope.max()
