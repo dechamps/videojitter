@@ -60,16 +60,28 @@ def parse_arguments():
         default=0.00001,
     )
     argument_parser.add_argument(
-        "--low-slope-threshold-ratio",
-        help="The recording slope level below which an edge will be recorded, relative to the overall maximum negative slope.",
+        "--minimum-negative-slope-peak-height-ratio",
+        help="The minimum height required for a negative slope peak to be recorded as a falling edge, relative to the overall maximum negative slope.",
         type=float,
-        default=0.6,
+        default=0.3,
     )
     argument_parser.add_argument(
-        "--high-slope-threshold-ratio",
-        help="The recording slope level above which an edge will be recorded, relative to the overall maximum positive slope.",
+        "--minimum-positive-slope-peak-height-ratio",
+        help="The minimum height required for a positive slope peak to be recorded as a rising edge, relative to the overall maximum negative slope.",
         type=float,
-        default=0.6,
+        default=0.3,
+    )
+    argument_parser.add_argument(
+        "--minimum-negative-slope-peak-prominence-ratio",
+        help="The minimum prominence required for a negative slope peak to be recorded as a falling edge, relative to the overall maximum negative slope.",
+        type=float,
+        default=0.3,
+    )
+    argument_parser.add_argument(
+        "--minimum-positive-slope-peak-prominence-ratio",
+        help="The minimum prominence required for a positive slope peak to be recorded as a rising edge, relative to the overall maximum negative slope.",
+        type=float,
+        default=0.3,
     )
     argument_parser.add_argument(
         "--output-downsampled-recording-file",
@@ -124,10 +136,12 @@ def generate_boundaries_reference_samples(fps_den, fps_num, frame_count, sample_
 
 def find_edges(
     slope,
-    falling_edge_threshold,
-    rising_edge_threshold,
+    minimum_negative_height,
+    minimum_positive_height,
     minimum_falling_edge_distance,
     minimum_rising_edge_distance,
+    minimum_negative_prominence,
+    minimum_positive_prominence,
 ):
     """Looks for edges in the recording slope signal.
 
@@ -135,10 +149,16 @@ def find_edges(
     are booleans indicating a falling edge (False) or a rising edge (True).
     """
     falling_edge_indexes = scipy.signal.find_peaks(
-        -slope, height=-falling_edge_threshold, distance=minimum_falling_edge_distance
+        -slope,
+        height=minimum_negative_height,
+        distance=minimum_falling_edge_distance,
+        prominence=minimum_negative_prominence,
     )[0]
     rising_edge_indexes = scipy.signal.find_peaks(
-        slope, height=rising_edge_threshold, distance=minimum_rising_edge_distance
+        slope,
+        height=minimum_positive_height,
+        distance=minimum_rising_edge_distance,
+        prominence=minimum_positive_prominence,
     )[0]
     return pd.Series(
         np.concatenate(
@@ -306,26 +326,27 @@ def analyze_recording():
         f"Recording slope range: [{recording_slope_min}, {recording_slope_max}]",
         file=sys.stderr,
     )
-    recording_slope_low_threshold = recording_slope_min * args.low_slope_threshold_ratio
-    recording_slope_high_threshold = (
-        recording_slope_max * args.high_slope_threshold_ratio
+
+    minimum_edge_distance_samples = int(
+        args.min_edge_separation_seconds * 2 * recording_sample_rate
     )
+    find_edge_params = {
+        "minimum_negative_height": -recording_slope_min
+        * args.minimum_negative_slope_peak_height_ratio,
+        "minimum_positive_height": recording_slope_max
+        * args.minimum_positive_slope_peak_height_ratio,
+        "minimum_falling_edge_distance": minimum_edge_distance_samples,
+        "minimum_rising_edge_distance": minimum_edge_distance_samples,
+        "minimum_negative_prominence": -recording_slope_min
+        * args.minimum_negative_slope_peak_prominence_ratio,
+        "minimum_positive_prominence": recording_slope_max
+        * args.minimum_positive_slope_peak_prominence_ratio,
+    }
     print(
-        f"Recording an edge when slope dips below {recording_slope_low_threshold} or rises above {recording_slope_high_threshold}",
+        f"Finding edges with parameters: {find_edge_params}",
         file=sys.stderr,
     )
-
-    edges = find_edges(
-        recording_slope,
-        recording_slope_low_threshold,
-        recording_slope_high_threshold,
-        minimum_falling_edge_distance=args.min_edge_separation_seconds
-        * 2
-        * recording_sample_rate,
-        minimum_rising_edge_distance=args.min_edge_separation_seconds
-        * 2
-        * recording_sample_rate,
-    )
+    edges = find_edges(recording_slope, **find_edge_params)
     print(f"Detected {edges.index.size} edges (frame transitions).", file=sys.stderr)
     assert edges.index.size > 0
 
