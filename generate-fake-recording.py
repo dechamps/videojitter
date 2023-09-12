@@ -45,6 +45,12 @@ def parse_arguments():
         default=5,
     )
     argument_parser.add_argument(
+        "--white-duration-overshoot",
+        help="Make white frames overshoot into the next frame by this amount of time, relative to the nominal frame duration. Can be used to simulate asymmetry.",
+        type=float,
+        default=0.05,
+    )
+    argument_parser.add_argument(
         "--invert",
         help="Invert the test signal, i.e. white is low and black is high",
         action="store_true",
@@ -84,6 +90,7 @@ def generate_fake_recording():
                         spec["fps"]["num"],
                         spec["fps"]["den"],
                         sample_rate,
+                        white_duration_overshoot=args.white_duration_overshoot,
                     ),
                     -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
                 ),
