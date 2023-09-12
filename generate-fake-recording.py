@@ -51,6 +51,12 @@ def parse_arguments():
         default=0.05,
     )
     argument_parser.add_argument(
+        "--even-duration-overshoot",
+        help="Make even frames overshoot into odd frames by this amount of time, relative to the nominal frame duration. Set to 0.2 (or -0.2) to simulate a 3:2 (or 2:3) 24p@60Hz-like pattern.",
+        type=float,
+        default=0,
+    )
+    argument_parser.add_argument(
         "--invert",
         help="Invert the test signal, i.e. white is low and black is high",
         action="store_true",
@@ -91,6 +97,7 @@ def generate_fake_recording():
                         spec["fps"]["den"],
                         sample_rate,
                         white_duration_overshoot=args.white_duration_overshoot,
+                        even_duration_overshoot=args.even_duration_overshoot,
                     ),
                     -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
                 ),
