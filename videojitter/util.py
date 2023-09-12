@@ -47,6 +47,7 @@ def generate_fake_samples(
                 np.round(
                     (
                         frame_numbers
+                        + 1
                         + frames * white_duration_overshoot
                         + (frame_numbers % 2 == 0) * even_duration_overshoot
                     )
