@@ -23,7 +23,7 @@ def parse_arguments():
     argument_parser.add_argument(
         "--sample-rate-hz",
         help="Sample rate to use for the resulting recording",
-        type=float,
+        type=int,
         default=48000,
     )
     argument_parser.add_argument(
@@ -56,7 +56,7 @@ def generate_fake_recording():
         sample_rate,
         np.concatenate(
             (
-                -np.ones(args.begin_padding_seconds * sample_rate),
+                -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
                 videojitter.util.generate_fake_samples(
                     videojitter.util.generate_frames(
                         spec["transition_count"], spec["delayed_transitions"]
@@ -65,7 +65,7 @@ def generate_fake_recording():
                     spec["fps"]["den"],
                     sample_rate,
                 ),
-                -np.ones(args.end_padding_seconds * sample_rate),
+                -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
             ),
         )
         * (-1 if args.invert else 1),
