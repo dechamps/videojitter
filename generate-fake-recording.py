@@ -21,8 +21,14 @@ def parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--sample-rate-hz",
-        help="Sample rate to use for the resulting recording",
+        "--internal-sample-rate-hz",
+        help="The (minimum) internal sample rate used for generating the signal. Directly determines the time resolution of the frame transitions.",
+        type=int,
+        default=100000,
+    )
+    argument_parser.add_argument(
+        "--output-sample-rate-hz",
+        help="Sample rate to resample to before writing the recording.",
         type=int,
         default=48000,
     )
@@ -48,27 +54,38 @@ def parse_arguments():
 
 def generate_fake_recording():
     args = parse_arguments()
-    sample_rate = args.sample_rate_hz
+    sample_rate = args.internal_sample_rate_hz
     spec = json.load(sys.stdin)
+
+    assert args.internal_sample_rate_hz > args.output_sample_rate_hz
+    downsample_ratio = int(
+        np.ceil(args.internal_sample_rate_hz / args.output_sample_rate_hz)
+    )
+    sample_rate = args.output_sample_rate_hz * downsample_ratio
+    print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
 
     scipy.io.wavfile.write(
         args.output_recording_file,
-        sample_rate,
-        np.concatenate(
-            (
-                -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
-                videojitter.util.generate_fake_samples(
-                    videojitter.util.generate_frames(
-                        spec["transition_count"], spec["delayed_transitions"]
+        args.output_sample_rate_hz,
+        scipy.signal.resample_poly(
+            np.concatenate(
+                (
+                    -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
+                    videojitter.util.generate_fake_samples(
+                        videojitter.util.generate_frames(
+                            spec["transition_count"], spec["delayed_transitions"]
+                        ),
+                        spec["fps"]["num"],
+                        spec["fps"]["den"],
+                        sample_rate,
                     ),
-                    spec["fps"]["num"],
-                    spec["fps"]["den"],
-                    sample_rate,
+                    -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
                 ),
-                -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
-            ),
-        )
-        * (-1 if args.invert else 1),
+            )
+            * (-1 if args.invert else 1),
+            up=1,
+            down=downsample_ratio,
+        ),
     )
 
 
