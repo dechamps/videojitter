@@ -115,12 +115,13 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def generate_boundaries_reference_samples(fps_den, fps_num, frame_count, sample_rate):
-    return (
-        np.arange(np.floor(frame_count * fps_den * sample_rate / fps_num))
-        * fps_num
-        / (sample_rate * fps_den)
-    ).astype(int) % 2 * 2 - 1
+def generate_boundaries_reference_samples(frame_count, fps_num, fps_den, sample_rate):
+    return videojitter.util.generate_fake_samples(
+        np.tile([False, True], int(np.ceil(frame_count / 2)))[0:frame_count],
+        fps_num,
+        fps_den,
+        sample_rate,
+    )
 
 
 def find_edges(
@@ -234,9 +235,9 @@ def analyze_recording():
     maybe_write_wavfile(args.output_downsampled_slope_file, recording_slope)
 
     boundaries_reference_samples = generate_boundaries_reference_samples(
-        spec["fps"]["den"],
-        spec["fps"]["num"],
         args.boundaries_signal_frames,
+        spec["fps"]["num"],
+        spec["fps"]["den"],
         recording_sample_rate,
     )
     maybe_write_wavfile(

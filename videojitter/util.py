@@ -1,5 +1,7 @@
 import numpy as np
 
+import sys
+
 
 def generate_frames(transition_count, delayed_transitions):
     """Generates an alternating frame sequence in the form of a boolean array.
@@ -24,3 +26,20 @@ def generate_frames(transition_count, delayed_transitions):
         + np.arange(len(delayed_transitions))
     ] = 0
     return ~(frames.cumsum() % 2).astype(bool)
+
+
+def generate_fake_samples(frames, fps_num, fps_den, sample_rate):
+    """Generates a recording simulating what an ideal instrument would output
+    when faced with the given frame sequence.
+    """
+    return (
+        frames[
+            np.floor(
+                np.arange(np.ceil(frames.size * fps_den * sample_rate / fps_num))
+                * fps_num
+                / (sample_rate * fps_den)
+            ).astype(int)
+        ]
+        * 2
+        - 1
+    )
