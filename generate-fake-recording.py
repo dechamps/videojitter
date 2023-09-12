@@ -49,6 +49,12 @@ def parse_arguments():
         help="Invert the test signal, i.e. white is low and black is high",
         action="store_true",
     )
+    argument_parser.add_argument(
+        "--amplitude",
+        help="Amplitude of the resulting signal, where 1.0 is full scale.",
+        type=float,
+        default=0.8,
+    )
     return argument_parser.parse_args()
 
 
@@ -82,7 +88,7 @@ def generate_fake_recording():
                     -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
                 ),
             )
-            * (-1 if args.invert else 1),
+            * ((-1 if args.invert else 1) * args.amplitude),
             up=1,
             down=downsample_ratio,
         ),
