@@ -65,13 +65,19 @@ def parse_arguments():
         "--amplitude",
         help="Amplitude of the resulting signal, where 1.0 is full scale.",
         type=float,
-        default=0.8,
+        default=0.5,
     )
     argument_parser.add_argument(
         "--gaussian-filter-stddev-seconds",
         help="Run the signal through a gaussian filter with this specific standard deviation. Can be used to simulate the response of a typical light sensor. As an approximate rule of thumb, to simulate a light sensor that takes N seconds to reach steady state, set this option to N/2.6. Set to zero to disable.",
         type=float,
-        default=0.003,
+        default=0.001,
+    )
+    argument_parser.add_argument(
+        "--high-pass-filter-hz",
+        help="Run the signal through a single-pole Butterworth high-pass IIR filter with the specified cutoff frequency. Can be used to simulate an AC-coupled instrument. Set to zero to disable.",
+        type=float,
+        default=10,
     )
     return argument_parser.parse_args()
 
@@ -127,6 +133,14 @@ def generate_fake_recording():
             args.gaussian_filter_stddev_seconds * sample_rate
         )
         samples = apply_gaussian_filter(samples, gaussian_filter_stddev_samples)
+
+    if args.high_pass_filter_hz:
+        samples = scipy.signal.sosfilt(
+            scipy.signal.butter(
+                1, args.high_pass_filter_hz, "highpass", fs=sample_rate, output="sos"
+            ),
+            samples,
+        )
 
     scipy.io.wavfile.write(
         args.output_recording_file,
