@@ -67,7 +67,25 @@ def parse_arguments():
         type=float,
         default=0.8,
     )
+    argument_parser.add_argument(
+        "--gaussian-filter-stddev-seconds",
+        help="Run the signal through a gaussian filter with this specific standard deviation. Can be used to simulate the response of a typical light sensor. As an approximate rule of thumb, to simulate a light sensor that takes N seconds to reach steady state, set this option to N/2.6. Set to zero to disable.",
+        type=float,
+        default=0.003,
+    )
     return argument_parser.parse_args()
+
+
+def apply_gaussian_filter(samples, stddev_samples):
+    kernel = scipy.signal.windows.gaussian(
+        M=int(np.round(stddev_samples * 10)),
+        std=stddev_samples,
+    )
+    return scipy.signal.convolve(
+        samples,
+        kernel / np.sum(kernel),
+        mode="same",
+    )
 
 
 def generate_fake_recording():
@@ -82,30 +100,38 @@ def generate_fake_recording():
     sample_rate = args.output_sample_rate_hz * downsample_ratio
     print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
 
+    samples = scipy.signal.resample_poly(
+        np.concatenate(
+            (
+                -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
+                videojitter.util.generate_fake_samples(
+                    videojitter.util.generate_frames(
+                        spec["transition_count"], spec["delayed_transitions"]
+                    ),
+                    spec["fps"]["num"],
+                    spec["fps"]["den"],
+                    sample_rate,
+                    white_duration_overshoot=args.white_duration_overshoot,
+                    even_duration_overshoot=args.even_duration_overshoot,
+                ),
+                -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
+            )
+        ),
+        up=1,
+        down=downsample_ratio,
+    ) * ((-1 if args.invert else 1) * args.amplitude)
+    sample_rate = sample_rate / downsample_ratio
+
+    if args.gaussian_filter_stddev_seconds:
+        gaussian_filter_stddev_samples = (
+            args.gaussian_filter_stddev_seconds * sample_rate
+        )
+        samples = apply_gaussian_filter(samples, gaussian_filter_stddev_samples)
+
     scipy.io.wavfile.write(
         args.output_recording_file,
         args.output_sample_rate_hz,
-        scipy.signal.resample_poly(
-            np.concatenate(
-                (
-                    -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
-                    videojitter.util.generate_fake_samples(
-                        videojitter.util.generate_frames(
-                            spec["transition_count"], spec["delayed_transitions"]
-                        ),
-                        spec["fps"]["num"],
-                        spec["fps"]["den"],
-                        sample_rate,
-                        white_duration_overshoot=args.white_duration_overshoot,
-                        even_duration_overshoot=args.even_duration_overshoot,
-                    ),
-                    -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
-                ),
-            )
-            * ((-1 if args.invert else 1) * args.amplitude),
-            up=1,
-            down=downsample_ratio,
-        ),
+        samples,
     )
 
 
