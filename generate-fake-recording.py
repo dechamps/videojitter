@@ -51,6 +51,18 @@ def parse_arguments():
         default=0.95,
     )
     argument_parser.add_argument(
+        "--sawtooth-step-seconds",
+        help="Modulates the frame durations with a sawtooth wave, resulting in a highly visible pattern in the resulting charts. This occurs before the overshoots are added. The specified step determines the difference in duration between one frame and the next. The cycle repeats when the offset reaches half a frame duration. Set to zero to disable.",
+        type=float,
+        default=0.0001,
+    )
+    argument_parser.add_argument(
+        "--sawtooth-max-deviation",
+        help="The maximum duration change imparted by the sawtooth pattern (i.e. the amplitude of the sawtooth wave), as ratio of the nominal frame duration. See --sawtooth-step-seconds.",
+        type=float,
+        default=0.1,
+    )
+    argument_parser.add_argument(
         "--white-duration-overshoot",
         help="Make white frames overshoot into the next frame by this amount of time, relative to the nominal frame duration. Can be used to simulate asymmetry.",
         type=float,
@@ -106,6 +118,12 @@ def apply_gaussian_filter(samples, stddev_samples):
     )
 
 
+def get_sawtooth_frame_offsets(frame_count, step, max_deviation):
+    return np.cumsum(
+        scipy.signal.sawtooth(np.arange(frame_count) * (np.pi * step)) * max_deviation
+    )
+
+
 def generate_fake_recording():
     args = parse_arguments()
     sample_rate = args.internal_sample_rate_hz
@@ -131,7 +149,20 @@ def generate_fake_recording():
                         spec["fps"]["num"],
                         spec["fps"]["den"],
                         sample_rate / args.clock_skew,
-                        frame_offsets=frames * args.white_duration_overshoot
+                        frame_offsets=(
+                            get_sawtooth_frame_offsets(
+                                frames.size,
+                                2
+                                * args.sawtooth_step_seconds
+                                * spec["fps"]["num"]
+                                / spec["fps"]["den"],
+                                args.sawtooth_max_deviation,
+                            )
+                            if args.sawtooth_step_seconds
+                            and args.sawtooth_max_deviation
+                            else 0
+                        )
+                        + frames * args.white_duration_overshoot
                         + (np.arange(frames.size) % 2 == 0)
                         * args.even_duration_overshoot,
                     ),
