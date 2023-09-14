@@ -57,13 +57,19 @@ def parse_arguments():
         default=0,
     )
     argument_parser.add_argument(
+        "--dc-offset",
+        help="Add a DC offset.",
+        type=float,
+        default=1.0,
+    )
+    argument_parser.add_argument(
         "--invert",
-        help="Invert the test signal, i.e. white is low and black is high",
+        help="Invert the test signal (after the DC offset), i.e. white is low and black is high",
         action="store_true",
     )
     argument_parser.add_argument(
         "--amplitude",
-        help="Amplitude of the resulting signal, where 1.0 is full scale.",
+        help="Amplitude of the resulting signal, where 1.0 (plus the DC offset) is full scale.",
         type=float,
         default=0.5,
     )
@@ -106,25 +112,28 @@ def generate_fake_recording():
     sample_rate = args.output_sample_rate_hz * downsample_ratio
     print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
 
-    samples = scipy.signal.resample_poly(
-        np.concatenate(
-            (
-                -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
-                videojitter.util.generate_fake_samples(
-                    videojitter.util.generate_frames(
-                        spec["transition_count"], spec["delayed_transitions"]
+    samples = (
+        scipy.signal.resample_poly(
+            np.concatenate(
+                (
+                    -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
+                    videojitter.util.generate_fake_samples(
+                        videojitter.util.generate_frames(
+                            spec["transition_count"], spec["delayed_transitions"]
+                        ),
+                        spec["fps"]["num"],
+                        spec["fps"]["den"],
+                        sample_rate,
+                        white_duration_overshoot=args.white_duration_overshoot,
+                        even_duration_overshoot=args.even_duration_overshoot,
                     ),
-                    spec["fps"]["num"],
-                    spec["fps"]["den"],
-                    sample_rate,
-                    white_duration_overshoot=args.white_duration_overshoot,
-                    even_duration_overshoot=args.even_duration_overshoot,
-                ),
-                -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
-            )
-        ),
-        up=1,
-        down=downsample_ratio,
+                    -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
+                )
+            ),
+            up=1,
+            down=downsample_ratio,
+        )
+        + args.dc_offset
     ) * ((-1 if args.invert else 1) * args.amplitude)
     sample_rate = sample_rate / downsample_ratio
 
