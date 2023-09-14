@@ -118,20 +118,22 @@ def generate_fake_recording():
     sample_rate = args.output_sample_rate_hz * downsample_ratio
     print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
 
+    frames = videojitter.util.generate_frames(
+        spec["transition_count"], spec["delayed_transitions"]
+    )
     samples = (
         scipy.signal.resample_poly(
             np.concatenate(
                 (
                     -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
                     videojitter.util.generate_fake_samples(
-                        videojitter.util.generate_frames(
-                            spec["transition_count"], spec["delayed_transitions"]
-                        ),
+                        frames,
                         spec["fps"]["num"],
                         spec["fps"]["den"],
                         sample_rate / args.clock_skew,
-                        white_duration_overshoot=args.white_duration_overshoot,
-                        even_duration_overshoot=args.even_duration_overshoot,
+                        frame_offsets=frames * args.white_duration_overshoot
+                        + (np.arange(frames.size) % 2 == 0)
+                        * args.even_duration_overshoot,
                     ),
                     -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
                 )

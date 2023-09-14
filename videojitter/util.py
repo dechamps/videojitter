@@ -28,29 +28,16 @@ def generate_frames(transition_count, delayed_transitions):
     return ~(frames.cumsum() % 2).astype(bool)
 
 
-def generate_fake_samples(
-    frames,
-    fps_num,
-    fps_den,
-    sample_rate,
-    white_duration_overshoot=0,
-    even_duration_overshoot=0,
-):
+def generate_fake_samples(frames, fps_num, fps_den, sample_rate, frame_offsets=0):
     """Generates a recording simulating what an ideal instrument would output
     when faced with the given frame sequence.
     """
-    frame_numbers = np.arange(frames.size)
     return (
         np.repeat(
             frames,
             np.diff(
                 np.round(
-                    (
-                        frame_numbers
-                        + 1
-                        + frames * white_duration_overshoot
-                        + (frame_numbers % 2 == 0) * even_duration_overshoot
-                    )
+                    (np.arange(frames.size) + (1 + frame_offsets))
                     * (sample_rate * fps_den / fps_num)
                 ).astype(int),
                 prepend=0,
