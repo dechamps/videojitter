@@ -45,6 +45,12 @@ def parse_arguments():
         default=5,
     )
     argument_parser.add_argument(
+        "--clock-skew",
+        help="Simulate clock skew, i.e. the test signal will be stretched by this amount. Note this doesn't affect padding.",
+        type=float,
+        default=0.95,
+    )
+    argument_parser.add_argument(
         "--white-duration-overshoot",
         help="Make white frames overshoot into the next frame by this amount of time, relative to the nominal frame duration. Can be used to simulate asymmetry.",
         type=float,
@@ -123,7 +129,7 @@ def generate_fake_recording():
                         ),
                         spec["fps"]["num"],
                         spec["fps"]["den"],
-                        sample_rate,
+                        sample_rate / args.clock_skew,
                         white_duration_overshoot=args.white_duration_overshoot,
                         even_duration_overshoot=args.even_duration_overshoot,
                     ),
