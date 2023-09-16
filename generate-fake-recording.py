@@ -125,8 +125,17 @@ def apply_gaussian_filter(samples, stddev_samples):
 
 
 def get_sawtooth_frame_offsets(frame_count, step, max_deviation):
-    return np.cumsum(
-        scipy.signal.sawtooth(np.arange(frame_count) * (np.pi * step)) * max_deviation
+    max_deviation -= max_deviation % step
+    period_frames = 2 * max_deviation / step
+    frame_offset_in_cycle = (
+        scipy.signal.sawtooth(np.arange(frame_count) * 2 * np.pi / period_frames) / 2
+        + 0.5
+    ) * period_frames
+    # https://math.stackexchange.com/q/178079
+    return (
+        max_deviation
+        * (frame_offset_in_cycle * (frame_offset_in_cycle - period_frames))
+        / period_frames
     )
 
 
@@ -158,8 +167,7 @@ def generate_fake_recording():
                         frame_offsets=(
                             get_sawtooth_frame_offsets(
                                 frames.size,
-                                2
-                                * args.sawtooth_step_seconds
+                                args.sawtooth_step_seconds
                                 * spec["fps"]["num"]
                                 / spec["fps"]["den"],
                                 args.sawtooth_max_deviation,
