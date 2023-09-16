@@ -103,6 +103,12 @@ def parse_arguments():
         type=float,
         default=10,
     )
+    argument_parser.add_argument(
+        "--noise-rms-per-hz",
+        help="Add gaussian noise of the specified RMS amplitude multiplied by half the sample rate. This is done as the last step. Set to zero to disable.",
+        type=float,
+        default=0.00000005,
+    )
     return argument_parser.parse_args()
 
 
@@ -190,9 +196,14 @@ def generate_fake_recording():
             samples,
         )
 
+    if args.noise_rms_per_hz:
+        samples += np.random.default_rng(0).normal(
+            scale=args.noise_rms_per_hz * sample_rate / 2, size=samples.size
+        )
+
     scipy.io.wavfile.write(
         args.output_recording_file,
-        args.output_sample_rate_hz,
+        int(sample_rate),
         samples,
     )
 
