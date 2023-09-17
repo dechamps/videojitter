@@ -5,6 +5,7 @@ import sys
 import json
 import numpy as np
 import scipy.io
+import scipy.special
 import videojitter.util
 
 
@@ -51,16 +52,16 @@ def parse_arguments():
         default=0.95,
     )
     argument_parser.add_argument(
-        "--sawtooth-step-seconds",
-        help="Modulates the frame durations with a sawtooth wave, resulting in a highly visible pattern in the resulting charts. This occurs before the overshoots are added. The specified step determines the difference in duration between one frame and the next. The cycle repeats when the offset reaches half a frame duration. Set to zero to disable.",
+        "--pattern-count",
+        help="Modulates the frame durations in such a way as to create a visible pattern on the resulting charts. This occurs before the overshoots are added. This option sets the number of times the pattern repeats; fractional numbers can be used to add padding at the beginning and end of the test signal. Set to zero to disable.",
         type=float,
-        default=0.0001,
+        default=3.5,
     )
     argument_parser.add_argument(
-        "--sawtooth-max-deviation",
-        help="The maximum duration change imparted by the sawtooth pattern (i.e. the amplitude of the sawtooth wave), as ratio of the nominal frame duration. See --sawtooth-step-seconds.",
+        "--pattern-min-interval",
+        help="The minimum frame interval to use when generating the pattern (see --pattern-count), as a ratio of the nominal frame duration.",
         type=float,
-        default=0.1,
+        default=0.5,
     )
     argument_parser.add_argument(
         "--white-duration-overshoot",
@@ -124,19 +125,78 @@ def apply_gaussian_filter(samples, stddev_samples):
     )
 
 
-def get_sawtooth_frame_offsets(frame_count, step, max_deviation):
-    max_deviation -= max_deviation % step
-    period_frames = 2 * max_deviation / step
-    frame_offset_in_cycle = (
-        scipy.signal.sawtooth(np.arange(frame_count) * 2 * np.pi / period_frames) / 2
-        + 0.5
-    ) * period_frames
-    # https://math.stackexchange.com/q/178079
-    return (
-        max_deviation
-        * (frame_offset_in_cycle * (frame_offset_in_cycle - period_frames))
-        / period_frames
+def get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
+    # The goal here is to generate a pattern that looks like a "sawtooth" on the
+    # resulting chart. From a mathematical perspective this is surprisingly
+    # tricky, because when we change the duration of a frame, this doesn't just
+    # change the position of the following transition on the Y axis - it also
+    # changes its position on the X axis, since the timestamp of the transition
+    # changes. The change in the X axis is much less visible than the change in
+    # the Y axis due to the difference in scale, but it still results in a
+    # curved line, especially for tall patterns (small `start`). We want a
+    # perfectly straight line to make it easier to tell when the analyzer is
+    # malfunctioning.
+    #
+    # More rigorously, the value on the Y axis is equal to the difference with
+    # the previous point on the X axis:
+    #
+    #   y(n)=dx(n)=x(n)-x(n-1)
+    #
+    # In order to draw in a straight line, we want the change in Y to equal the
+    # change in X (times a constant A):
+    #
+    #   y(n)=A*dx(n)
+    #
+    # Combining the above:
+    #
+    #   y(n)=(y(n)-y(n-1))/A
+    #
+    # Which reduces to:
+    #
+    #   y(n)=B*C^(n-1)
+    #
+    # That's not all. The above is a way to compute the interval between two
+    # successive frames, but what we really need is a way to compute the
+    # adjustments to individual frame timestamps (offsets). Indeed the
+    # adjustment to a given frame timestamp has to take into account the
+    # adjustments to all previous frame timestamps. This is given by the
+    # integral of y(n), which we'll note Y(n).
+    #
+    # But wait, we're still not done. Where this becomes really tricky is that
+    # we want the pattern to have a neutral effect on the overall duration of
+    # the frame sequence, i.e. when all the adjustments to frame durations are
+    # summed up, the result should be zero. Otherwise this would mess up the
+    # average FPS and might also result in discontinuities at the beginning
+    # and/or end of the pattern. This means we have to constrain the parameters
+    # such that Y(n) is zero at the end of the period. Setting a constraint on
+    # the period itself would not work well because the parameter has limited
+    # resolution (it's an integer). Instead we let the user choose the period as
+    # well as the initial/minimum frame duration adjustment (`start`) and from
+    # there we calculate the maximum frame duration adjustment (`end`).
+    #
+    # Coming up with an equation for `end` such that the final value of Y(n) is
+    # zero is surprisingly hard. See the generator-pattern.ipynb Jupyter
+    # notebook for an overview of the math that was used to arrive at the
+    # formulas for Y(n) (`frame_offset_adjustments`) and `end` that are used in
+    # this code.
+    period_frames = int(np.floor(frame_count / pattern_count))
+    offsetIntoCycle = np.arange(0, period_frames) / period_frames
+    end = -np.real(scipy.special.lambertw(-start * np.exp(-start), -1))
+    frame_offset_adjustments = np.tile(
+        (
+            start * ((end / start) ** offsetIntoCycle - 1) / np.log(end / start)
+            - offsetIntoCycle
+        )
+        * period_frames,
+        int(pattern_count),
     )
+
+    frame_index = int((frame_count - frame_offset_adjustments.size) / 2)
+    all_frame_offset_adjustments = np.zeros(frame_count)
+    all_frame_offset_adjustments[
+        frame_index : frame_index + frame_offset_adjustments.size
+    ] = frame_offset_adjustments
+    return all_frame_offset_adjustments
 
 
 def generate_fake_recording():
@@ -165,15 +225,12 @@ def generate_fake_recording():
                         spec["fps"]["den"],
                         sample_rate / args.clock_skew,
                         frame_offsets=(
-                            get_sawtooth_frame_offsets(
+                            get_pattern_frame_offset_adjustments(
                                 frames.size,
-                                args.sawtooth_step_seconds
-                                * spec["fps"]["num"]
-                                / spec["fps"]["den"],
-                                args.sawtooth_max_deviation,
+                                args.pattern_count,
+                                args.pattern_min_interval,
                             )
-                            if args.sawtooth_step_seconds
-                            and args.sawtooth_max_deviation
+                            if args.pattern_count
                             else 0
                         )
                         + frames * args.white_duration_overshoot
