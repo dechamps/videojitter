@@ -42,6 +42,12 @@ def parse_arguments():
         default=0.020,
     )
     argument_parser.add_argument(
+        "--upsampling-ratio",
+        help="How much to upsample the signal before attempting to find edges. Upsampling reduces interpolation error, thereby improving the precision of zero crossing calculations (timestamp and slope), but makes processing slower.",
+        type=int,
+        default=2,
+    )
+    argument_parser.add_argument(
         "--min-edges-ratio",
         help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-slope-threshold.",
         type=float,
@@ -51,7 +57,7 @@ def parse_arguments():
         "--edge-slope-threshold",
         help="The absolute slope-at-zero-crossing threshold above which an edge will be recorded, as a ratio of the Nth steepest slope, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
         type=float,
-        default=0.3,
+        default=0.5,
     )
     argument_parser.add_argument(
         "--boundaries-signal-frames",
@@ -93,6 +99,11 @@ def parse_arguments():
     argument_parser.add_argument(
         "--output-trimmed-file",
         help="(Only useful for debugging) Write the trimmed recording as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
+        "--output-upsampled-file",
+        help="(Only useful for debugging) Write the upsampled recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
@@ -254,6 +265,30 @@ def analyze_recording():
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_wavfile(args.output_trimmed_file, recording_samples)
 
+    # Upsampling improves the accuracy of our zero crossing estimates (slope,
+    # position), which are based on linear interpolation. For more background
+    # on how sampling rate (and other factors) affect the accuracy of
+    # zero-crossing estimates, see Svitlov, Sergiy et al. “Accuracy assessment
+    # of the two-sample zero-crossing detection in a sinusoidal signal.”
+    # Metrologia 49 (2012): 413 - 424. We could also have tried to use more
+    # sophisticated interpolation techniques (such as cubic or splines) but it's
+    # not clear they would be worth it, given just simple 2x upsampling seems
+    # to make the calculations accurate enough for all practical purposes.
+    upsampling_ratio = args.upsampling_ratio
+    recording_sample_rate *= upsampling_ratio
+    test_signal_start_index *= upsampling_ratio
+    test_signal_end_index *= upsampling_ratio
+    print(
+        f"Downsampling recording by {upsampling_ratio}x (to {recording_sample_rate} Hz)",
+        file=sys.stderr,
+    )
+    recording_samples = scipy.signal.resample_poly(
+        recording_samples,
+        up=upsampling_ratio,
+        down=1,
+    )
+    maybe_write_wavfile(args.output_upsampled_file, recording_samples)
+
     zero_crossing_indexes = np.nonzero(np.diff(recording_samples > 0))[0]
     recording_slope = np.diff(recording_samples)
     zero_crossing_slopes = recording_slope[zero_crossing_indexes]
@@ -307,14 +342,6 @@ def analyze_recording():
     # sample rate. To improve the precision, we use linear interpolation
     # between that sample and the next to compute a better estimate of the true
     # position of the zero crossing.
-    # TODO: while this approach does improve precision tremendously, we still
-    # observe improvements as sample rate increases, suggesting that we still
-    # haven't reached the true potential of the underlying signal. This is
-    # unsurprising given the literature (e.g. Svitlov, Sergiy et al. “Accuracy
-    # assessment of the two-sample zero-crossing detection in a sinusoidal
-    # signal.” Metrologia 49 (2012): 413 - 424). We could either upsample first,
-    # or we could try more sophisticated interpolation techniques such as cubic
-    # or splines.
     valid_edge_positions = (
         valid_edge_indexes
         - recording_samples[valid_edge_indexes] / recording_slope[valid_edge_indexes]
