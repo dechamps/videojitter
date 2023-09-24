@@ -314,7 +314,6 @@ def analyze_recording():
         maybe_write_wavfile(
             args.output_zero_crossing_slopes_file, recording_zero_crossing_slopes
         )
-    zero_crossing_absolute_slopes = np.abs(zero_crossing_slopes)
 
     # Noise in the recording signal can result in lots of spurious zero
     # crossings, especially if the last frame transition happened some time ago
@@ -333,17 +332,33 @@ def analyze_recording():
     # a valid edge even if the test signal contains fewer edges than expected.
     # We then multiply that reference with a fudge factor to allow for edges
     # with slightly smaller slopes, and that's our threshold.
+    #
+    # We need to do the above calculations separately for rising and falling
+    # edges, because real-world systems often exhibit highly asymmetrical
+    # responses where the typical slope (and therefore the threshold we should
+    # use) can look quite different between falling and rising edges.
     zero_crossing_partition_nth = int(
-        np.round(expected_transition_count * args.min_edges_ratio)
+        np.round(0.5 * expected_transition_count * args.min_edges_ratio)
     )
-    edge_slope_reference = np.partition(
-        zero_crossing_absolute_slopes, -zero_crossing_partition_nth
+    rising_edge_slope_reference = np.partition(
+        zero_crossing_slopes[zero_crossing_slopes > 0], -zero_crossing_partition_nth
     )[-zero_crossing_partition_nth]
-    edge_slope_threshold = edge_slope_reference * args.edge_slope_threshold
-    valid_edge = zero_crossing_absolute_slopes > edge_slope_threshold
+    falling_edge_slope_reference = np.partition(
+        zero_crossing_slopes[zero_crossing_slopes < 0], zero_crossing_partition_nth
+    )[zero_crossing_partition_nth]
+    assert falling_edge_slope_reference < 0
+    rising_edge_slope_threshold = (
+        rising_edge_slope_reference * args.edge_slope_threshold
+    )
+    falling_edge_slope_threshold = (
+        falling_edge_slope_reference * args.edge_slope_threshold
+    )
+    valid_edge = (zero_crossing_slopes > rising_edge_slope_threshold) | (
+        zero_crossing_slopes < falling_edge_slope_threshold
+    )
     valid_edge_indexes = zero_crossing_indexes[valid_edge]
     print(
-        f"{zero_crossing_partition_nth}nth steepest absolute zero crossing slope is {edge_slope_reference}. Kept {valid_edge_indexes.size} edges (out of {zero_crossing_indexes.size} zero crossings) whose absolute slope is above {edge_slope_threshold}. First edge is right after {format_index(valid_edge_indexes[0])} and last edge is right after {format_index(valid_edge_indexes[-1])}.",
+        f"{zero_crossing_partition_nth}nth steepest slope is {rising_edge_slope_reference} (rising edges) / {falling_edge_slope_reference} (falling edges). Kept {valid_edge_indexes.size} edges (out of {zero_crossing_indexes.size} candidates) whose slope is above {rising_edge_slope_threshold} or below {falling_edge_slope_threshold}. First edge is right after {format_index(valid_edge_indexes[0])} and last edge is right after {format_index(valid_edge_indexes[-1])}.",
         file=sys.stderr,
     )
     assert valid_edge_indexes.size > 0
