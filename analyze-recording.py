@@ -37,7 +37,7 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--max-edge-spread-seconds",
-        help='The approximate maximum amount of time an edge can spread over before the analyzer might fail to detect it. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this higher will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing faster transitions to be missed due to drift.',
+        help='The approximate maximum amount of time an edge can spread over before the analyzer might fail to detect it. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this higher will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing other transitions to be missed or mistimed due to drift.',
         type=float,
         default=0.020,
     )
