@@ -255,7 +255,8 @@ def analyze_recording():
     maybe_write_wavfile(args.output_trimmed_file, recording_samples)
 
     zero_crossing_indexes = np.nonzero(np.diff(recording_samples > 0))[0]
-    zero_crossing_slopes = np.diff(recording_samples)[zero_crossing_indexes]
+    recording_slope = np.diff(recording_samples)
+    zero_crossing_slopes = recording_slope[zero_crossing_indexes]
     if args.output_zero_crossing_slopes_file:
         recording_zero_crossing_slopes = np.zeros(recording_samples.size)
         recording_zero_crossing_slopes[zero_crossing_indexes] = zero_crossing_slopes
@@ -301,19 +302,28 @@ def analyze_recording():
         recording_edges[valid_edge_indexes] = valid_edge_is_rising * 2 - 1
         maybe_write_wavfile(args.output_edges_file, recording_edges)
 
+    # `valid_edge_indexes` refers to the sample right before the zero crossing.
+    # This is an integer index whose precision is inherently limited by the
+    # sample rate. To improve the precision, we use linear interpolation
+    # between that sample and the next to compute a better estimate of the true
+    # position of the zero crossing.
+    # TODO: while this approach does improve precision tremendously, we still
+    # observe improvements as sample rate increases, suggesting that we still
+    # haven't reached the true potential of the underlying signal. This is
+    # unsurprising given the literature (e.g. Svitlov, Sergiy et al. “Accuracy
+    # assessment of the two-sample zero-crossing detection in a sinusoidal
+    # signal.” Metrologia 49 (2012): 413 - 424). We could either upsample first,
+    # or we could try more sophisticated interpolation techniques such as cubic
+    # or splines.
+    valid_edge_positions = (
+        valid_edge_indexes
+        - recording_samples[valid_edge_indexes] / recording_slope[valid_edge_indexes]
+    )
+
     edges = pd.Series(
         valid_edge_is_rising,
         index=pd.Index(
-            # TODO: the precision of these timestamps is limited by the sample
-            # rate, which is quite low. We could compute a more precise estimate
-            # using linear interpolation from both sides of the zero crossing,
-            # but that's not ideal either, especially as the signal frequency
-            # approaches the sample rate (Svitlov, Sergiy et al. “Accuracy
-            # assessment of the two-sample zero-crossing detection in a
-            # sinusoidal signal.” Metrologia 49 (2012): 413 - 424). We could
-            # either upsample and linearly interpolate, or use more
-            # sophisticated interpolation techniques such as cubic or splines.
-            (valid_edge_indexes + test_signal_start_index) / recording_sample_rate,
+            (valid_edge_positions + test_signal_start_index) / recording_sample_rate,
             name="recording_timestamp_seconds",
         ),
         name="frame",
