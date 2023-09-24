@@ -77,6 +77,11 @@ def parse_arguments():
         type=argparse.FileType(mode="wb"),
     )
     argument_parser.add_argument(
+        "--output-highpass-kernel-file",
+        help="(Only useful for debugging) Write the highpass FIR filter convolution kernel as a WAV file to the given path",
+        type=argparse.FileType(mode="wb"),
+    )
+    argument_parser.add_argument(
         "--output-highpassed-file",
         help="(Only useful for debugging) Write the highpassed recording as a WAV file to the given path",
         type=argparse.FileType(mode="wb"),
@@ -203,22 +208,24 @@ def analyze_recording():
         f"Removing frequencies lower than {min_frequency} Hz from the recording",
         file=sys.stderr,
     )
-    # Note: the default filter impulse response rings in the time domain,
-    # resulting in spurious zero crossings that weren't there in the original
-    # signal. This is probably fine though, because it's ringing at the cutoff
-    # frequency, which is low enough that it wouldn't produce a steep zero
-    # crossing that could be mistaken for an edge. If we really want to get rid
-    # of these, one idea could be to use a Gaussian or raised cosine filter
-    # instead.
+    # A naive highpass filter can cause massive ringing in the time domain,
+    # creating additional spurious zero crossings. To avoid ringing we choose a
+    # very short FIR filter length that only lets in the main lobe of the sinc
+    # function. Empirically it would be appear the cosine window lets us have
+    # the best attenuation given these difficult parameters.
+    # TODO: this filter should have zero output at DC, but it doesn't - it's
+    # only about -25 dB down, as the sum of the coefficients is not zero.
+    # Investigate.
+    highpass_kernel = scipy.signal.firwin(
+        int(np.ceil(recording_sample_rate / min_frequency / 2)) * 2 + 1,
+        min_frequency,
+        pass_zero=False,
+        fs=recording_sample_rate,
+        window="cosine",
+    )
+    maybe_write_wavfile(args.output_highpass_kernel_file, highpass_kernel)
     recording_samples = scipy.signal.convolve(
-        recording_samples,
-        scipy.signal.firwin(
-            int(np.ceil(10 * recording_sample_rate / min_frequency / 2)) * 2 + 1,
-            min_frequency,
-            pass_zero=False,
-            fs=recording_sample_rate,
-        ),
-        "same",
+        recording_samples, highpass_kernel, "same"
     )
     maybe_write_wavfile(args.output_highpassed_file, recording_samples)
 
