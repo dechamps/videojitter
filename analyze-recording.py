@@ -139,20 +139,14 @@ def generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
     # very short FIR filter length that only lets in the main lobe of the sinc
     # function.
     #
-    # Also note that we don't ask firwin() to generate a highpass filter;
-    # instead, we generate a lowpass filter and then turn it into a highpass
-    # filter. This is to work around
-    # https://github.com/scipy/scipy/issues/19291.
-    #
     # TODO: one would expect this filter to be down -3 dB at the cutoff
     # frequency, but it's actually down approx. -8 dB. Investigate.
-    highpass_kernel = -scipy.signal.firwin(
+    return videojitter.util.firwin(
         int(np.ceil(sample_rate / cutoff_frequency_hz / 2)) * 2 + 1,
         cutoff_frequency_hz,
         fs=sample_rate,
+        pass_zero=False,
     )
-    highpass_kernel[int(highpass_kernel.size / 2)] += 1
-    return highpass_kernel
 
 
 def analyze_recording():

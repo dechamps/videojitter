@@ -1,6 +1,5 @@
 import numpy as np
-
-import sys
+import scipy.signal
 
 
 def generate_frames(transition_count, delayed_transitions):
@@ -46,3 +45,15 @@ def generate_fake_samples(frames, fps_num, fps_den, sample_rate, frame_offsets=0
         * 2
         - 1
     )
+
+
+def firwin(*kargs, pass_zero=True, **kwargs):
+    """Equivalent to scipy.signal.firwin() but with a workaround for
+    the `pass_zero=False` bug described at
+    https://github.com/scipy/scipy/issues/19291.
+    """
+    kernel = scipy.signal.firwin(*kargs, **kwargs)
+    if not pass_zero:
+        kernel = -kernel
+        kernel[int(kernel.size / 2)] += 1
+    return kernel
