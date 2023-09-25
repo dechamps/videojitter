@@ -289,7 +289,7 @@ def analyze_recording():
     test_signal_start_index *= upsampling_ratio
     test_signal_end_index *= upsampling_ratio
     print(
-        f"Downsampling recording by {upsampling_ratio}x (to {recording_sample_rate} Hz)",
+        f"Upsampling recording by {upsampling_ratio}x (to {recording_sample_rate} Hz)",
         file=sys.stderr,
     )
     recording_samples = scipy.signal.resample_poly(
