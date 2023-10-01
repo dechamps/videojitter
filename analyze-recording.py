@@ -60,10 +60,10 @@ def parse_arguments():
         default=0.5,
     )
     argument_parser.add_argument(
-        "--boundaries-signal-frames",
-        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording, in nominal frame durations.",
+        "--boundaries-signal-periods",
+        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording, in periods (i.e. pairs of frames).",
         type=int,
-        default=11,
+        default=5,
     )
     argument_parser.add_argument(
         "--boundaries-score-threshold-ratio",
@@ -124,9 +124,9 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def generate_boundaries_reference_samples(frame_count, fps_num, fps_den, sample_rate):
+def generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample_rate):
     return videojitter.util.generate_fake_samples(
-        np.tile([False, True], int(np.ceil(frame_count / 2)))[0:frame_count],
+        np.tile([False, True], period_count),
         fps_num,
         fps_den,
         sample_rate,
@@ -151,9 +151,6 @@ def generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
 
 def analyze_recording():
     args = parse_arguments()
-    assert (
-        args.boundaries_signal_frames % 2 != 0
-    ), "The number of frames in the boundaries reference signal should be odd so that the signal begins and ends on the same frame"
     spec = json.load(args.spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     expected_transition_count = spec["transition_count"]
@@ -233,7 +230,7 @@ def analyze_recording():
     maybe_write_wavfile(args.output_highpassed_file, recording_samples)
 
     boundaries_reference_samples = generate_boundaries_reference_samples(
-        args.boundaries_signal_frames,
+        args.boundaries_signal_periods,
         spec["fps"]["num"],
         spec["fps"]["den"],
         recording_sample_rate,
