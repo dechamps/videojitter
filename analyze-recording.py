@@ -240,12 +240,13 @@ def analyze_recording():
     )
 
     cross_correlation = scipy.signal.correlate(
-        recording_samples, boundaries_reference_samples, mode="valid"
+        recording_samples,
+        boundaries_reference_samples / boundaries_reference_samples.size,
+        mode="valid",
     )
     maybe_write_wavfile(
         args.output_cross_correlation_file,
         cross_correlation,
-        normalize=True,
     )
 
     abs_cross_correlation = np.abs(cross_correlation)
