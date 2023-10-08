@@ -13,10 +13,10 @@ def _reset_directory(path):
 
 
 class _TestCase:
-    def __init__(self, name):
+    def __init__(self, root_directory, name):
         self.name = name
         self.module = importlib.import_module(f"videojitter.tests.{name}")
-        self.output_dir = pathlib.Path("videojitter") / "tests" / name / "test_output"
+        self.output_dir = root_directory / name / "test_output"
 
     async def run(self):
         try:
@@ -51,7 +51,9 @@ async def _run_tests():
     tests_directory = pathlib.Path("videojitter") / "tests"
     async with asyncio.TaskGroup() as task_group:
         for test_module_info in pkgutil.iter_modules([tests_directory]):
-            task_group.create_task(_TestCase(test_module_info.name).run())
+            task_group.create_task(
+                _TestCase(tests_directory, test_module_info.name).run()
+            )
 
 
 def main():
