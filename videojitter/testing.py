@@ -1,4 +1,12 @@
+import json
 import sys
+
+
+def prettify_json(path):
+    with open(path) as file:
+        contents = json.load(file)
+    with open(path, "w") as file:
+        json.dump(contents, file, indent=2)
 
 
 async def run_pipeline(test_case):
@@ -11,6 +19,7 @@ async def run_pipeline(test_case):
         "--output-spec-file",
         spec_path,
     )
+    prettify_json(spec_path)
     recording_path = test_case.get_output_path("recording.wav")
     await test_case.run_subprocess(
         "generate_fake_recording",
@@ -53,3 +62,4 @@ async def run_pipeline(test_case):
         "--output-chart-file",
         report_chart_path,
     )
+    prettify_json(report_chart_path)
