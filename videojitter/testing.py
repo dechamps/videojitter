@@ -27,6 +27,7 @@ async def run_pipeline(
         *generate_spec_args
     )
     prettify_json(spec_path)
+
     recording_path = test_case.get_output_path("recording.wav")
     await test_case.run_subprocess(
         "generate_fake_recording",
@@ -39,6 +40,7 @@ async def run_pipeline(
         recording_path,
         *generate_fake_recording_args
     )
+
     frame_transitions_csv_path = test_case.get_output_path("frame_transitions.csv")
     await test_case.run_subprocess(
         "analyze_recording",
@@ -55,6 +57,7 @@ async def run_pipeline(
         test_case.get_output_path("analyze_recording_debug_"),
         *analyze_recording_args
     )
+
     report_csv_path = test_case.get_output_path("report.csv")
     report_chart_path = test_case.get_output_path("report.json")
     await test_case.run_subprocess(
