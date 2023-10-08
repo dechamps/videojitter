@@ -84,54 +84,9 @@ def parse_arguments():
         default=0.5,
     )
     argument_parser.add_argument(
-        "--output-downsampled-file",
-        help="(Only useful for debugging) Write the downsampled recording as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-highpass-kernel-file",
-        help="(Only useful for debugging) Write the highpass FIR filter convolution kernel as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-highpassed-file",
-        help="(Only useful for debugging) Write the highpassed recording as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-boundaries-signal-file",
-        help="(Only useful for debugging) Write the boundaries reference signal as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-cross-correlation-file",
-        help="(Only useful for debugging) Write the cross-correlation of recording against the boundaries reference signal as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-boundary-candidates-file",
-        help="(Only useful for debugging) Write the boundary candidates as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-trimmed-file",
-        help="(Only useful for debugging) Write the trimmed recording as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-upsampled-file",
-        help="(Only useful for debugging) Write the upsampled recording as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-zero-crossing-slopes-file",
-        help="(Only useful for debugging) Write the slopes at zero crossings as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
-    )
-    argument_parser.add_argument(
-        "--output-edges-file",
-        help="(Only useful for debugging) Write the estimated edges as a WAV file to the given path",
-        type=argparse.FileType(mode="wb"),
+        "--output-debug-files-prefix",
+        help="If set, will write a bunch of files that describe the internal state of the analyzer at various stages of the pipeline under the specified file name prefix. Interpreting this data requires some familiarity with analyzer internals.",
+        default=argparse.SUPPRESS,
     )
     return argument_parser.parse_args()
 
@@ -196,14 +151,21 @@ def analyze_recording():
     def format_index(index):
         return f"sample {index} ({index / recording_sample_rate} seconds)"
 
-    def maybe_write_wavfile(file, samples, normalize=False):
-        if not file:
+    wavfile_index = 0
+    debug_files_prefix = getattr(args, "output_debug_files_prefix", None)
+
+    def maybe_write_debug_wavfile(name, samples, normalize=False):
+        if debug_files_prefix is None:
             return
         if normalize:
             samples = samples / np.max(np.abs(samples))
+        nonlocal wavfile_index
         scipy.io.wavfile.write(
-            file, int(recording_sample_rate), samples.astype(np.float32)
+            f"{debug_files_prefix}{wavfile_index:02}_{name}.wav",
+            int(recording_sample_rate),
+            samples.astype(np.float32),
         )
+        wavfile_index += 1
 
     # If we assume the worst-case scenario where all the edges in the input
     # signal are separated by the min threshold Tm, then the fundamental
@@ -229,7 +191,7 @@ def analyze_recording():
         up=1,
         down=downsampling_ratio,
     )
-    maybe_write_wavfile(args.output_downsampled_file, recording_samples)
+    maybe_write_debug_wavfile("downsampled", recording_samples)
 
     # If we asssume the worst-case scenario where the input signal is a
     # perfectly smooth (in other words, perfectly sluggish) sinusoid where each
@@ -244,11 +206,11 @@ def analyze_recording():
     )
 
     highpass_kernel = generate_highpass_kernel(min_frequency, recording_sample_rate)
-    maybe_write_wavfile(args.output_highpass_kernel_file, highpass_kernel)
+    maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
     recording_samples = scipy.signal.convolve(
         recording_samples, highpass_kernel, "same"
     )
-    maybe_write_wavfile(args.output_highpassed_file, recording_samples)
+    maybe_write_debug_wavfile("highpassed", recording_samples)
 
     boundaries_reference_samples = generate_boundaries_reference_samples(
         args.boundaries_signal_periods,
@@ -256,17 +218,15 @@ def analyze_recording():
         spec["fps"]["den"],
         recording_sample_rate,
     )
-    maybe_write_wavfile(
-        args.output_boundaries_signal_file, boundaries_reference_samples
-    )
+    maybe_write_debug_wavfile("boundaries_reference", boundaries_reference_samples)
 
     cross_correlation = scipy.signal.correlate(
         recording_samples,
         boundaries_reference_samples / boundaries_reference_samples.size,
         mode="valid",
     )
-    maybe_write_wavfile(
-        args.output_cross_correlation_file,
+    maybe_write_debug_wavfile(
+        "cross_correlation",
         cross_correlation,
     )
 
@@ -275,10 +235,7 @@ def analyze_recording():
         abs_cross_correlation
         >= np.max(abs_cross_correlation) * args.boundaries_score_threshold_ratio
     )
-    maybe_write_wavfile(
-        args.output_boundary_candidates_file,
-        boundary_candidates,
-    )
+    maybe_write_debug_wavfile("boundary_candidates", boundary_candidates)
 
     boundary_candidate_indexes = np.nonzero(boundary_candidates)[0]
     assert boundary_candidate_indexes.size > 1
@@ -292,7 +249,7 @@ def analyze_recording():
     )
 
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
-    maybe_write_wavfile(args.output_trimmed_file, recording_samples)
+    maybe_write_debug_wavfile("trimmed", recording_samples)
 
     # Upsampling improves the accuracy of our zero crossing estimates (slope,
     # position), which are based on linear interpolation. For more background
@@ -316,16 +273,16 @@ def analyze_recording():
         up=upsampling_ratio,
         down=1,
     )
-    maybe_write_wavfile(args.output_upsampled_file, recording_samples)
+    maybe_write_debug_wavfile("upsampled", recording_samples)
 
     zero_crossing_indexes = np.nonzero(np.diff(recording_samples > 0))[0]
     recording_slope = np.diff(recording_samples)
     zero_crossing_slopes = recording_slope[zero_crossing_indexes]
-    if args.output_zero_crossing_slopes_file:
+    if debug_files_prefix is not None:
         recording_zero_crossing_slopes = np.zeros(recording_samples.size)
         recording_zero_crossing_slopes[zero_crossing_indexes] = zero_crossing_slopes
-        maybe_write_wavfile(
-            args.output_zero_crossing_slopes_file, recording_zero_crossing_slopes
+        maybe_write_debug_wavfile(
+            "zero_crossing_slopes", recording_zero_crossing_slopes
         )
 
     # Noise in the recording signal can result in lots of spurious zero
@@ -417,10 +374,10 @@ def analyze_recording():
         valid_edge_indexes = valid_edge_indexes[:-1]
 
     valid_edge_is_rising = zero_crossing_slopes[valid_edge_zero_crossing_indexes] > 0
-    if args.output_edges_file:
+    if debug_files_prefix is not None:
         recording_edges = np.zeros(recording_samples.size)
         recording_edges[valid_edge_indexes] = valid_edge_is_rising * 2 - 1
-        maybe_write_wavfile(args.output_edges_file, recording_edges)
+        maybe_write_debug_wavfile("edges", recording_edges)
 
     # `valid_edge_indexes` refers to the sample right before the zero crossing.
     # This is an integer index whose precision is inherently limited by the
