@@ -21,12 +21,12 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--begin-padding",
-        help="How long to hold the first frame at the beginning of the video, in ffmpeg time format",
+        help="How long to display the padding pattern at the beginning of the video before the test signal, in ffmpeg time format",
         default="5",
     )
     argument_parser.add_argument(
         "--end-padding",
-        help="How long to hold the last frame at the end of the video, in ffmpeg time format",
+        help="How long to display the padding pattern at the end of the video after the test signal, in ffmpeg time format",
         default="5",
     )
     return argument_parser.parse_args()
