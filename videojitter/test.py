@@ -19,10 +19,14 @@ class _TestCase:
         self.output_dir = pathlib.Path("videojitter") / "tests" / name / "test_output"
 
     async def run(self):
-        _reset_directory(self.output_dir)
-        await self.module.videojitter_test(self)
+        try:
+            _reset_directory(self.output_dir)
+            await self.module.videojitter_test(self)
+        except Exception as exception:
+            raise Exception(f"Failed to run test: {self.name}") from exception
 
     async def run_subprocess(self, name, *args):
+        print(f"{self.name}: running {name}: {args}")
         with open(f"{self.output_dir / name }.stdout", "wb") as stdout, open(
             f"{self.output_dir / name }.stderr", "wb"
         ) as stderr:
