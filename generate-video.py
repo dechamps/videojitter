@@ -80,7 +80,7 @@ def generate_video():
             # Make the video behave like typical HD video for compatibility
             # and to ensure the video players behave similarly to a "real"
             # video.
-            "s": "hd1080",
+            "s": size,
             "pix_fmt": "yuv420p",
             "color_primaries": "bt709",
             "color_trc": "bt709",
