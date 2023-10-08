@@ -25,10 +25,13 @@ class _TestCase:
         except Exception as exception:
             raise Exception(f"Failed to run test: {self.name}") from exception
 
+    def get_output_path(self, file_name):
+        return self.output_dir / file_name
+
     async def run_subprocess(self, name, *args):
         print(f"{self.name}: running {name}: {args}")
-        with open(f"{self.output_dir / name }.stdout", "wb") as stdout, open(
-            f"{self.output_dir / name }.stderr", "wb"
+        with open(self.get_output_path(f"{name}.stdout"), "wb") as stdout, open(
+            self.get_output_path(f"{name}.stderr"), "wb"
         ) as stderr:
             process = await asyncio.create_subprocess_exec(
                 *args,
