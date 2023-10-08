@@ -29,6 +29,7 @@ class _TestCase:
         return self.output_dir / file_name
 
     async def run_subprocess(self, name, *args):
+        args = [str(arg) for arg in args]
         print(f"{self.name}: running {name}: {args}")
         with open(self.get_output_path(f"{name}.stdout"), "wb") as stdout, open(
             self.get_output_path(f"{name}.stderr"), "wb"

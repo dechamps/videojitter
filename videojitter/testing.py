@@ -9,7 +9,13 @@ def prettify_json(path):
         json.dump(contents, file, indent=2)
 
 
-async def run_pipeline(test_case):
+async def run_pipeline(
+    test_case,
+    generate_spec_args=[],
+    generate_fake_recording_args=[],
+    analyze_recording_args=[],
+    generate_report_args=[],
+):
     spec_path = test_case.get_output_path("spec.json")
     await test_case.run_subprocess(
         "generate_spec",
@@ -18,6 +24,7 @@ async def run_pipeline(test_case):
         "videojitter.generate_spec",
         "--output-spec-file",
         spec_path,
+        *generate_spec_args
     )
     prettify_json(spec_path)
     recording_path = test_case.get_output_path("recording.wav")
@@ -30,6 +37,7 @@ async def run_pipeline(test_case):
         spec_path,
         "--output-recording-file",
         recording_path,
+        *generate_fake_recording_args
     )
     frame_transitions_csv_path = test_case.get_output_path("frame_transitions.csv")
     await test_case.run_subprocess(
@@ -45,6 +53,7 @@ async def run_pipeline(test_case):
         frame_transitions_csv_path,
         "--output-debug-files-prefix",
         test_case.get_output_path("analyze_recording_debug_"),
+        *analyze_recording_args
     )
     report_csv_path = test_case.get_output_path("report.csv")
     report_chart_path = test_case.get_output_path("report.json")
@@ -61,5 +70,6 @@ async def run_pipeline(test_case):
         report_csv_path,
         "--output-chart-file",
         report_chart_path,
+        *generate_report_args
     )
     prettify_json(report_chart_path)
