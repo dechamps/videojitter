@@ -1,9 +1,25 @@
+import argparse
 import asyncio
 import importlib
+import os
 import pathlib
 import pkgutil
 import subprocess
 import sys
+
+
+def _parse_arguments():
+    argument_parser = argparse.ArgumentParser(
+        description="Runs the videojitter test suite.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    argument_parser.add_argument(
+        "--parallelism",
+        help="How many test cases to run in parallel.",
+        type=int,
+        default=len(os.sched_getaffinity(0)),
+    )
+    return argument_parser.parse_args()
 
 
 def _reset_directory(path):
@@ -48,11 +64,18 @@ class _TestCase:
 
 
 async def _run_tests():
+    args = _parse_arguments()
     tests_directory = pathlib.Path("videojitter") / "tests"
+    throttle = asyncio.Semaphore(args.parallelism)
+
+    async def run(test_case):
+        async with throttle:
+            await test_case.run()
+
     async with asyncio.TaskGroup() as task_group:
         for test_module_info in pkgutil.iter_modules([tests_directory]):
             task_group.create_task(
-                _TestCase(tests_directory, test_module_info.name).run()
+                run(_TestCase(tests_directory, test_module_info.name))
             )
 
 
