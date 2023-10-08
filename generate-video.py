@@ -49,6 +49,9 @@ def generate_video():
             all_expr="if(eq(gte(mod(X, 32), 16), gte(mod(Y, 32), 16)), A, B)",
         )
         .filter("negate", enable="eq(mod(n, 2), 1)")
+        # The loop is not strictly necessary, but makes the pipeline vastly
+        # faster by ensuring both frames are only computed once and then reused.
+        .filter("loop", -1, size=2, start=0)
         .filter_multi_output("split")
     )
 
