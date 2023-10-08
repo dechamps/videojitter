@@ -39,14 +39,18 @@ def generate_video():
     size = "hd1080"
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
 
-    warmup = ffmpeg.filter(
-        [
-            ffmpeg.input(f"color=c={color}:s={size}:r={rate}", format="lavfi")
-            for color in ["black", "white"]
-        ],
-        "blend",
-        all_expr="if(eq(gte(mod(X, 32), 16), gte(mod(Y, 32), 16)), A, B)",
-    ).filter_multi_output("split")
+    warmup = (
+        ffmpeg.filter(
+            [
+                ffmpeg.input(f"color=c={color}:s={size}:r={rate}", format="lavfi")
+                for color in ["black", "white"]
+            ],
+            "blend",
+            all_expr="if(eq(gte(mod(X, 32), 16), gte(mod(Y, 32), 16)), A, B)",
+        )
+        .filter("negate", enable="eq(mod(n, 2), 1)")
+        .filter_multi_output("split")
+    )
 
     ffmpeg_spec = ffmpeg.output(
         ffmpeg.concat(
