@@ -18,7 +18,6 @@ def parse_arguments():
         "--output-recording-file",
         help="Path to the resulting WAV file",
         required=True,
-        type=argparse.FileType(mode="wb"),
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(

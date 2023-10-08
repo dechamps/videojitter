@@ -19,14 +19,12 @@ def parse_arguments():
         "--spec-file",
         help="Path to the input spec file",
         required=True,
-        type=argparse.FileType(),
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--recording-file",
         help="Path to the input recording file",
         required=True,
-        type=argparse.FileType(mode="rb"),
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
@@ -127,7 +125,8 @@ def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
 
 def analyze_recording():
     args = parse_arguments()
-    spec = json.load(args.spec_file)
+    with open(args.spec_file) as spec_file:
+        spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     expected_transition_count = spec["transition_count"]
     frames = videojitter.util.generate_frames(

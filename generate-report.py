@@ -19,7 +19,6 @@ def parse_arguments():
         "--spec-file",
         help="Path to the input spec file",
         required=True,
-        type=argparse.FileType(),
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
@@ -297,7 +296,8 @@ def generate_report():
         output_chart_file or output_csv
     ), "At least one of --output-chart-file or --output-csv must be specified"
 
-    spec = json.load(args.spec_file)
+    with open(args.spec_file) as spec_file:
+        spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     transition_count = spec["transition_count"]
     print(
