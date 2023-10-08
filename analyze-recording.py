@@ -51,7 +51,7 @@ def parse_arguments():
         "--min-edges-ratio",
         help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-slope-threshold.",
         type=float,
-        default=0.25,
+        default=0.6,
     )
     argument_parser.add_argument(
         "--edge-slope-threshold",
