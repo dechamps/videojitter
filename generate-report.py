@@ -12,7 +12,7 @@ from scipy import stats
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file, and recording analysis results passed in stdin, produces a summary of the results.",
+        description="Given a frame transition CSV file, produces a summary of the data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
@@ -22,14 +22,20 @@ def parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--output-chart-file",
-        help="Path to the output file where the chart will be written. Format is determined from the file extension. Recommended format is HTML. Information on other formats is available at https://altair-viz.github.io/user_guide/saving_charts.html",
+        "--frame-transitions-csv-file",
+        help="Path to the input spec file",
+        required=True,
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--output-csv",
+        "--output-chart-file",
+        help="Output the results as a graphical chart to the specified file. Format is determined from the file extension. Recommended format is HTML. Information on other formats is available at https://altair-viz.github.io/user_guide/saving_charts.html",
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
+        "--output-csv-file",
         help="Output the results as CSV to standard output",
-        action="store_true",
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--chart-minimum-time-between-transitions-seconds",
@@ -291,10 +297,10 @@ def generate_report():
     args = parse_arguments()
 
     output_chart_file = getattr(args, "output_chart_file", None)
-    output_csv = args.output_csv
+    output_csv_file = getattr(args, "output_csv_file", None)
     assert (
-        output_chart_file or output_csv
-    ), "At least one of --output-chart-file or --output-csv must be specified"
+        output_chart_file or output_csv_file
+    ), "At least one of --output-chart-file or --output-csv-file must be specified"
 
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
@@ -306,7 +312,7 @@ def generate_report():
     )
 
     transitions = pd.read_csv(
-        sys.stdin,
+        args.frame_transitions_csv_file,
         index_col="recording_timestamp_seconds",
         usecols=["recording_timestamp_seconds", "frame"],
     )
@@ -363,8 +369,8 @@ def generate_report():
         file=sys.stderr,
     )
 
-    if output_csv:
-        transitions.to_csv(sys.stdout)
+    if output_csv_file:
+        transitions.to_csv(output_csv_file)
     if output_chart_file:
         minimum_time_between_transitions_index = transitions[
             transition_is_valid

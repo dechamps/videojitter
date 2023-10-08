@@ -12,6 +12,12 @@ def parse_arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
+        "--output-spec-file",
+        help="Write the spec to the specified file",
+        required=True,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--fps-num", help="FPS fraction numerator", default=24000, type=int
     )
     argument_parser.add_argument(
@@ -46,17 +52,17 @@ def generate_spec():
         file=sys.stderr,
     )
 
-    json.dump(
-        {
-            "fps": {"num": args.fps_num, "den": args.fps_den},
-            "transition_count": transition_count,
-            "delayed_transitions": [int(transition_count / 2)]
-            if delayed_transition
-            else [],
-        },
-        sys.stdout,
-    )
-    print()
+    with open(args.output_spec_file, "w") as spec_file:
+        json.dump(
+            {
+                "fps": {"num": args.fps_num, "den": args.fps_den},
+                "transition_count": transition_count,
+                "delayed_transitions": [int(transition_count / 2)]
+                if delayed_transition
+                else [],
+            },
+            spec_file,
+        )
 
 
 generate_spec()

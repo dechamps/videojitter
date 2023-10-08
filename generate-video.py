@@ -10,12 +10,18 @@ import videojitter.util
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Generates a jitter test video from a spec file passed in stdin.",
+        description="Generates a jitter test video.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
+        "--spec-file",
+        help="Path to the input spec file",
+        required=True,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--output-file",
-        help="Path to the output video file",
+        help="Write the video to the specified file",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -51,7 +57,8 @@ def parse_arguments():
 
 def generate_video():
     args = parse_arguments()
-    spec = json.load(sys.stdin)
+    with open(args.spec_file) as spec_file:
+        spec = json.load(spec_file)
 
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
 

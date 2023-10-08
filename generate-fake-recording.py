@@ -11,12 +11,18 @@ import videojitter.util
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file passed in stdin, generates a recording faking what a real instrument would output.",
+        description="Generates a light waveform recording faking what a real instrument would output.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
+        "--spec-file",
+        help="Path to the input spec file",
+        required=True,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--output-recording-file",
-        help="Path to the resulting WAV file",
+        help="Write the fake recording to the specified WAV file",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -201,7 +207,8 @@ def get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
 def generate_fake_recording():
     args = parse_arguments()
     sample_rate = args.internal_sample_rate_hz
-    spec = json.load(sys.stdin)
+    with open(args.spec_file) as spec_file:
+        spec = json.load(spec_file)
 
     assert args.internal_sample_rate_hz > args.output_sample_rate_hz
     downsample_ratio = int(

@@ -12,12 +12,18 @@ import videojitter.util
 
 def parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a spec file and recorded light waveform file, analyzes the recording and outputs the results to stdout in CSV format.",
+        description="Given the recorded light waveform file, analyzes the recording and writes the resulting frame transition timestamps to a CSV file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
         "--spec-file",
         help="Path to the input spec file",
+        required=True,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
+        "--output-frame-transitions-csv-file",
+        help="Write the frame transition information to the specified CSV file",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -412,7 +418,7 @@ def analyze_recording():
         if not first_edge:
             edges = ~edges
 
-    edges.to_csv(sys.stdout)
+    edges.to_csv(args.output_frame_transitions_csv_file)
 
 
 analyze_recording()
