@@ -20,6 +20,11 @@ def parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
+        "--size",
+        help="Size of the output video, in ffmpeg size format",
+        default="hd1080",
+    )
+    argument_parser.add_argument(
         "--begin-padding",
         help="How long to display the padding pattern at the beginning of the video before the test signal, in ffmpeg time format",
         default="5",
@@ -36,13 +41,12 @@ def generate_video():
     args = parse_arguments()
     spec = json.load(sys.stdin)
 
-    size = "hd1080"
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
 
     padding = (
         ffmpeg.filter(
             [
-                ffmpeg.input(f"color=c={color}:s={size}:r={rate}", format="lavfi")
+                ffmpeg.input(f"color=c={color}:s={args.size}:r={rate}", format="lavfi")
                 for color in ["black", "white"]
             ],
             "blend",
@@ -64,7 +68,7 @@ def generate_video():
                 pix_fmt="gray",
                 s="1x1",
                 r=rate,
-            ).filter("scale", s=size),
+            ).filter("scale", s=args.size),
             padding[1].trim(end=args.end_padding),
         ),
         # Include a dummy audio track as it makes the test video more
@@ -80,7 +84,7 @@ def generate_video():
             # Make the video behave like typical HD video for compatibility
             # and to ensure the video players behave similarly to a "real"
             # video.
-            "s": size,
+            "s": args.size,
             "pix_fmt": "yuv420p",
             "color_primaries": "bt709",
             "color_trc": "bt709",
