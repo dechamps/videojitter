@@ -36,19 +36,29 @@ def generate_video():
     args = parse_arguments()
     spec = json.load(sys.stdin)
 
+    size = "hd1080"
+    rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
+
+    warmup = ffmpeg.filter(
+        [
+            ffmpeg.input(f"color=c={color}:s={size}:r={rate}", format="lavfi")
+            for color in ["black", "white"]
+        ],
+        "blend",
+        all_expr="if(eq(gte(mod(X, 32), 16), gte(mod(Y, 32), 16)), A, B)",
+    ).filter_multi_output("split")
+
     ffmpeg_spec = ffmpeg.output(
-        ffmpeg.input(
-            "pipe:",
-            format="rawvideo",
-            pix_fmt="gray",
-            s="1x1",
-            r=f"{spec['fps']['num']}/{spec['fps']['den']}",
-        ).filter(
-            "tpad",
-            start_duration=args.begin_padding,
-            stop_duration=args.end_padding,
-            start_mode="clone",
-            stop_mode="clone",
+        ffmpeg.concat(
+            warmup[0].trim(end=args.begin_padding),
+            ffmpeg.input(
+                "pipe:",
+                format="rawvideo",
+                pix_fmt="gray",
+                s="1x1",
+                r=rate,
+            ).filter("scale", s=size),
+            warmup[1].trim(end=args.end_padding),
         ),
         # Include a dummy audio track as it makes the test video more
         # realistic. Some video players (especially PC software) rely on the
