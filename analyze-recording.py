@@ -67,7 +67,7 @@ def parse_arguments():
     )
     argument_parser.add_argument(
         "--boundary-edge-rejection-slope-threshold",
-        help="The slope below which the first or last edge will be rejected, as a ratio of the mean of the neighboring edges. See --boundary-edge-rejection-neighbor-count. This is used to reject spurious edges from the test video padding boundary.",
+        help="The slope below which the first or last edge will be rejected, as a ratio of the minimum of the neighboring edges. See --boundary-edge-rejection-neighbor-count. This is used to reject spurious edges from the test video padding boundary.",
         type=float,
         default=0.95,
     )
@@ -167,7 +167,7 @@ def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
     points."""
     first = x[0]
     x = x[(x > 0) if (first > 0) else (x < 0)]
-    return first / np.mean(x[1 : neighbor_count + 1])
+    return first / (np.min if first > 0 else np.max)(x[1 : neighbor_count + 1])
 
 
 def analyze_recording():
@@ -400,7 +400,7 @@ def analyze_recording():
         args.boundary_edge_rejection_neighbor_count,
     )
     print(
-        f"First/last edge slopes relative to neighbors mean: {first_slope_relative}/{last_slope_relative}",
+        f"First/last edge slopes relative to neighbors min: {first_slope_relative}/{last_slope_relative}",
         file=sys.stderr,
     )
     if first_slope_relative < args.boundary_edge_rejection_slope_threshold:
