@@ -391,6 +391,12 @@ def analyze_recording():
     # To that end, we look at the first/last N slopes that have the same sign
     # as the very first/last slope, and if that first/last slope is unusually
     # weaker than the others, we get rid of it.
+    #
+    # Note that we can't just get rid of the first and last transitions
+    # unconditionally, for two reasons: (1) it is conceivable that the user may
+    # be using a test video without padding; and (2) in some cases the spurious
+    # edges are so weak (due to transitioning from/to grey) that they were
+    # already rejected in the previous step.
     first_slope_relative = first_relative_to_same_sign_neighbor_mean(
         zero_crossing_slopes[valid_edge_zero_crossing_indexes],
         args.boundary_edge_rejection_neighbor_count,
