@@ -39,7 +39,7 @@ def generate_video():
     size = "hd1080"
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
 
-    warmup = (
+    padding = (
         ffmpeg.filter(
             [
                 ffmpeg.input(f"color=c={color}:s={size}:r={rate}", format="lavfi")
@@ -57,7 +57,7 @@ def generate_video():
 
     ffmpeg_spec = ffmpeg.output(
         ffmpeg.concat(
-            warmup[0].trim(end=args.begin_padding),
+            padding[0].trim(end=args.begin_padding),
             ffmpeg.input(
                 "pipe:",
                 format="rawvideo",
@@ -65,7 +65,7 @@ def generate_video():
                 s="1x1",
                 r=rate,
             ).filter("scale", s=size),
-            warmup[1].trim(end=args.end_padding),
+            padding[1].trim(end=args.end_padding),
         ),
         # Include a dummy audio track as it makes the test video more
         # realistic. Some video players (especially PC software) rely on the
