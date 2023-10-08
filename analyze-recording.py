@@ -60,6 +60,18 @@ def parse_arguments():
         default=0.5,
     )
     argument_parser.add_argument(
+        "--boundary-edge-rejection-neighbor-count",
+        help="The number of neighboring edges that are used to calculate the reference for boundary edge rejection. See --boundary-edge-rejection-slope-threshold.",
+        type=int,
+        default=20,
+    )
+    argument_parser.add_argument(
+        "--boundary-edge-rejection-slope-threshold",
+        help="The slope below which the first or last edge will be rejected, as a ratio of the mean of the neighboring edges. See --boundary-edge-rejection-neighbor-count. This is used to reject spurious edges from the test video padding boundary.",
+        type=float,
+        default=0.95,
+    )
+    argument_parser.add_argument(
         "--boundaries-signal-periods",
         help="The length of the reference signal used to detect the beginning and end of the test signal within the recording, in periods (i.e. pairs of frames).",
         type=int,
@@ -147,6 +159,15 @@ def generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
         fs=sample_rate,
         pass_zero=False,
     )
+
+
+def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
+    """Out of the points in `x` that are the same sign as `x[0]`, keep the first
+    `neighbor_count` points, then return `x[0]` divided by the mean of these
+    points."""
+    first = x[0]
+    x = x[(x > 0) if (first > 0) else (x < 0)]
+    return first / np.mean(x[1 : neighbor_count + 1])
 
 
 def analyze_recording():
@@ -345,16 +366,51 @@ def analyze_recording():
     falling_edge_slope_threshold = (
         falling_edge_slope_reference * args.edge_slope_threshold
     )
-    valid_edge = (zero_crossing_slopes > rising_edge_slope_threshold) | (
-        zero_crossing_slopes < falling_edge_slope_threshold
-    )
-    valid_edge_indexes = zero_crossing_indexes[valid_edge]
+    valid_edge_zero_crossing_indexes = np.nonzero(
+        (zero_crossing_slopes > rising_edge_slope_threshold)
+        | (zero_crossing_slopes < falling_edge_slope_threshold)
+    )[0]
+    valid_edge_indexes = zero_crossing_indexes[valid_edge_zero_crossing_indexes]
     print(
         f"{zero_crossing_partition_nth}nth steepest slope is {rising_edge_slope_reference} (rising edges) / {falling_edge_slope_reference} (falling edges). Kept {valid_edge_indexes.size} edges (out of {zero_crossing_indexes.size} candidates) whose slope is above {rising_edge_slope_threshold} or below {falling_edge_slope_threshold}. First edge is right after {format_index(valid_edge_indexes[0])} and last edge is right after {format_index(valid_edge_indexes[-1])}.",
         file=sys.stderr,
     )
-    assert valid_edge_indexes.size > 0
-    valid_edge_is_rising = zero_crossing_slopes[valid_edge] > 0
+    assert valid_edge_indexes.size > 1
+
+    # In the typical case, the test video would be crafted in such a way that
+    # the instrument sees "grey" (or some equivalent pattern) before and after
+    # the test signal to avoid sudden DC shifts in the instrument. (See the
+    # padding-related code in the video generator.)
+    #
+    # If that is the case, then we need to be careful to avoid misinterpreting
+    # the initial transition from grey and final transition to grey as real
+    # transitions, as these would be spurious transitions as far as the spec is
+    # concerned (and their timing would likely be somewhat inconsistent with a
+    # true transition between full black and full white).
+    #
+    # To that end, we look at the first/last N slopes that have the same sign
+    # as the very first/last slope, and if that first/last slope is unusually
+    # weaker than the others, we get rid of it.
+    first_slope_relative = first_relative_to_same_sign_neighbor_mean(
+        zero_crossing_slopes[valid_edge_zero_crossing_indexes],
+        args.boundary_edge_rejection_neighbor_count,
+    )
+    last_slope_relative = first_relative_to_same_sign_neighbor_mean(
+        np.flip(zero_crossing_slopes[valid_edge_zero_crossing_indexes]),
+        args.boundary_edge_rejection_neighbor_count,
+    )
+    print(
+        f"First/last edge slopes relative to neighbors mean: {first_slope_relative}/{last_slope_relative}",
+        file=sys.stderr,
+    )
+    if first_slope_relative < args.boundary_edge_rejection_slope_threshold:
+        valid_edge_zero_crossing_indexes = valid_edge_zero_crossing_indexes[1:]
+        valid_edge_indexes = valid_edge_indexes[1:]
+    if last_slope_relative < args.boundary_edge_rejection_slope_threshold:
+        valid_edge_zero_crossing_indexes = valid_edge_zero_crossing_indexes[:-1]
+        valid_edge_indexes = valid_edge_indexes[:-1]
+
+    valid_edge_is_rising = zero_crossing_slopes[valid_edge_zero_crossing_indexes] > 0
     if args.output_edges_file:
         recording_edges = np.zeros(recording_samples.size)
         recording_edges[valid_edge_indexes] = valid_edge_is_rising * 2 - 1
