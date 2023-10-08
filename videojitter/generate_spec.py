@@ -34,7 +34,7 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def generate_spec():
+def main():
     args = parse_arguments()
 
     delayed_transition = not args.no_delayed_transition
@@ -65,4 +65,5 @@ def generate_spec():
         )
 
 
-generate_spec()
+if __name__ == "__main__":
+    sys.exit(main())

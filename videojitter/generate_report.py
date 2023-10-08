@@ -293,7 +293,7 @@ def match_delayed_transitions(
     return delayed_transitions
 
 
-def generate_report():
+def main():
     args = parse_arguments()
 
     output_chart_file = getattr(args, "output_chart_file", None)
@@ -401,4 +401,5 @@ def generate_report():
         ).save(output_chart_file)
 
 
-generate_report()
+if __name__ == "__main__":
+    sys.exit(main())

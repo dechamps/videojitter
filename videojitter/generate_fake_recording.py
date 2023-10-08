@@ -204,7 +204,7 @@ def get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     return all_frame_offset_adjustments
 
 
-def generate_fake_recording():
+def main():
     args = parse_arguments()
     sample_rate = args.internal_sample_rate_hz
     with open(args.spec_file) as spec_file:
@@ -279,4 +279,5 @@ def generate_fake_recording():
     )
 
 
-generate_fake_recording()
+if __name__ == "__main__":
+    sys.exit(main())

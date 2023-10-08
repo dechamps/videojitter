@@ -55,7 +55,7 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def generate_video():
+def main():
     args = parse_arguments()
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
@@ -128,4 +128,5 @@ def generate_video():
     ffmpeg_process.wait()
 
 
-generate_video()
+if __name__ == "__main__":
+    sys.exit(main())

@@ -129,7 +129,7 @@ def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
     return first / (np.min if first > 0 else np.max)(x[1 : neighbor_count + 1])
 
 
-def analyze_recording():
+def main():
     args = parse_arguments()
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
@@ -421,4 +421,5 @@ def analyze_recording():
     edges.to_csv(args.output_frame_transitions_csv_file)
 
 
-analyze_recording()
+if __name__ == "__main__":
+    sys.exit(main())
