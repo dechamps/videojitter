@@ -6,7 +6,7 @@ import json
 import sys
 
 
-def parse_arguments():
+def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Generates a spec file for video jitter testing.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -35,7 +35,7 @@ def parse_arguments():
 
 
 def main():
-    args = parse_arguments()
+    args = _parse_arguments()
 
     delayed_transition = not args.no_delayed_transition
 

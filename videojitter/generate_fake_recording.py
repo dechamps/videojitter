@@ -9,7 +9,7 @@ import scipy.special
 import videojitter.util
 
 
-def parse_arguments():
+def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Generates a light waveform recording faking what a real instrument would output.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -118,7 +118,7 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def apply_gaussian_filter(samples, stddev_samples):
+def _apply_gaussian_filter(samples, stddev_samples):
     kernel = scipy.signal.windows.gaussian(
         M=int(np.round(stddev_samples * 10)),
         std=stddev_samples,
@@ -130,7 +130,7 @@ def apply_gaussian_filter(samples, stddev_samples):
     )
 
 
-def get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
+def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     # The goal here is to generate a pattern that looks like a "sawtooth" on the
     # resulting chart. From a mathematical perspective this is surprisingly
     # tricky, because when we change the duration of a frame, this doesn't just
@@ -205,7 +205,7 @@ def get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
 
 
 def main():
-    args = parse_arguments()
+    args = _parse_arguments()
     sample_rate = args.internal_sample_rate_hz
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
@@ -231,7 +231,7 @@ def main():
                         spec["fps"]["den"],
                         sample_rate / args.clock_skew,
                         frame_offsets=(
-                            get_pattern_frame_offset_adjustments(
+                            _get_pattern_frame_offset_adjustments(
                                 frames.size,
                                 args.pattern_count,
                                 args.pattern_min_interval,
@@ -257,7 +257,7 @@ def main():
         gaussian_filter_stddev_samples = (
             args.gaussian_filter_stddev_seconds * sample_rate
         )
-        samples = apply_gaussian_filter(samples, gaussian_filter_stddev_samples)
+        samples = _apply_gaussian_filter(samples, gaussian_filter_stddev_samples)
 
     if args.high_pass_filter_hz:
         samples = scipy.signal.sosfilt(

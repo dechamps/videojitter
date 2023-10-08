@@ -10,7 +10,7 @@ from si_prefix import si_format
 from scipy import stats
 
 
-def parse_arguments():
+def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Given a frame transition CSV file, produces a summary of the data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -58,11 +58,11 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def interval(series):
+def _interval(series):
     return pd.Interval(series.min(), series.max())
 
 
-def packed_columns_chart(data, *kargs, **kwargs):
+def _packed_columns_chart(data, *kargs, **kwargs):
     """Functionally equivalent to `alt.Chart()`, but packs the values in a given
     column together so that the column name only appears once in the Vega-Lite
     spec (instead of once per row). This can massively reduce the size of the
@@ -76,7 +76,7 @@ def packed_columns_chart(data, *kargs, **kwargs):
     return alt.Chart(data, *kargs, **kwargs).transform_flatten(data.columns.values)
 
 
-def generate_chart(
+def _generate_chart(
     transitions,
     title,
     minimum_time_between_transitions_seconds,
@@ -85,7 +85,7 @@ def generate_chart(
     fine_print,
 ):
     chart = (
-        packed_columns_chart(transitions.reset_index(), title=title)
+        _packed_columns_chart(transitions.reset_index(), title=title)
         .transform_window(transition_count="row_number()")
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
@@ -226,26 +226,26 @@ def generate_chart(
     )
 
 
-def mean_without_outliers(x):
+def _mean_without_outliers(x):
     return x[np.abs(stats.zscore(x, nan_policy="omit")) < 3].mean()
 
 
-def estimate_black_lag_seconds(transitions):
+def _estimate_black_lag_seconds(transitions):
     # We don't use the mean to prevent an outlier from biasing all
     # transitions of the same color, nor the median to prevent odd results
     # when dealing with pattern changes.
-    return mean_without_outliers(
+    return _mean_without_outliers(
         transitions.loc[~transitions.frame, "time_since_previous_transition_seconds"]
-    ) - mean_without_outliers(
+    ) - _mean_without_outliers(
         transitions.loc[transitions.frame, "time_since_previous_transition_seconds"]
     )
 
 
-def si_format_plus(value, *kargs, **kwargs):
+def _si_format_plus(value, *kargs, **kwargs):
     return ("+" if value >= 0 else "") + si_format(value, *kargs, **kwargs)
 
 
-def match_delayed_transitions(
+def _match_delayed_transitions(
     time_since_previous_transition_seconds,
     delayed_transition_indexes,
     expected_transition_count,
@@ -294,7 +294,7 @@ def match_delayed_transitions(
 
 
 def main():
-    args = parse_arguments()
+    args = _parse_arguments()
 
     output_chart_file = getattr(args, "output_chart_file", None)
     output_csv_file = getattr(args, "output_csv_file", None)
@@ -316,7 +316,7 @@ def main():
         index_col="recording_timestamp_seconds",
         usecols=["recording_timestamp_seconds", "frame"],
     )
-    transitions_interval_seconds = interval(transitions.index)
+    transitions_interval_seconds = _interval(transitions.index)
     print(
         f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
         file=sys.stderr,
@@ -338,7 +338,7 @@ def main():
 
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
-        transitions["intentionally_delayed"] = match_delayed_transitions(
+        transitions["intentionally_delayed"] = _match_delayed_transitions(
             transitions["time_since_previous_transition_seconds"],
             intentionally_delayed_transitions,
             transition_count,
@@ -348,10 +348,12 @@ def main():
     if getattr(
         args, "black_white_offset_compensation", intentionally_delayed_transitions
     ):
-        black_lag_seconds = estimate_black_lag_seconds(transitions[transition_is_valid])
+        black_lag_seconds = _estimate_black_lag_seconds(
+            transitions[transition_is_valid]
+        )
         black_offset_seconds = -black_lag_seconds / 2
         white_offset_seconds = black_lag_seconds / 2
-        black_white_offset_fineprint = f"Time since last transition includes {si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
+        black_white_offset_fineprint = f"Time since last transition includes {_si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {_si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
         transitions.loc[
             ~transitions.frame, "time_since_previous_transition_seconds"
         ] += black_offset_seconds
@@ -382,7 +384,7 @@ def main():
             transition_is_valid
         ].time_since_previous_transition_seconds.mean()
         mean_fps = 1 / mean_time_between_transitions
-        generate_chart(
+        _generate_chart(
             transitions,
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,

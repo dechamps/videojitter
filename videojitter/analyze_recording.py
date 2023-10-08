@@ -10,7 +10,7 @@ import sys
 import videojitter.util
 
 
-def parse_arguments():
+def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Given the recorded light waveform file, analyzes the recording and writes the resulting frame transition timestamps to a CSV file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -95,7 +95,7 @@ def parse_arguments():
     return argument_parser.parse_args()
 
 
-def generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample_rate):
+def _generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample_rate):
     return videojitter.util.generate_fake_samples(
         np.tile([False, True], period_count),
         fps_num,
@@ -104,7 +104,7 @@ def generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample
     )
 
 
-def generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
+def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
     # A naive highpass filter can cause massive ringing in the time domain,
     # creating additional spurious zero crossings. To avoid ringing we choose a
     # very short FIR filter length that only lets in the main lobe of the sinc
@@ -120,7 +120,7 @@ def generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
     )
 
 
-def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
+def _first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
     """Out of the points in `x` that are the same sign as `x[0]`, keep the first
     `neighbor_count` points, then return `x[0]` divided by the mean of these
     points."""
@@ -130,7 +130,7 @@ def first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
 
 
 def main():
-    args = parse_arguments()
+    args = _parse_arguments()
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
@@ -210,14 +210,14 @@ def main():
         file=sys.stderr,
     )
 
-    highpass_kernel = generate_highpass_kernel(min_frequency, recording_sample_rate)
+    highpass_kernel = _generate_highpass_kernel(min_frequency, recording_sample_rate)
     maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
     recording_samples = scipy.signal.convolve(
         recording_samples, highpass_kernel, "same"
     )
     maybe_write_debug_wavfile("highpassed", recording_samples)
 
-    boundaries_reference_samples = generate_boundaries_reference_samples(
+    boundaries_reference_samples = _generate_boundaries_reference_samples(
         args.boundaries_signal_periods,
         spec["fps"]["num"],
         spec["fps"]["den"],
@@ -359,11 +359,11 @@ def main():
     # be using a test video without padding; and (2) in some cases the spurious
     # edges are so weak (due to transitioning from/to grey) that they were
     # already rejected in the previous step.
-    first_slope_relative = first_relative_to_same_sign_neighbor_mean(
+    first_slope_relative = _first_relative_to_same_sign_neighbor_mean(
         zero_crossing_slopes[valid_edge_zero_crossing_indexes],
         args.boundary_edge_rejection_neighbor_count,
     )
-    last_slope_relative = first_relative_to_same_sign_neighbor_mean(
+    last_slope_relative = _first_relative_to_same_sign_neighbor_mean(
         np.flip(zero_crossing_slopes[valid_edge_zero_crossing_indexes]),
         args.boundary_edge_rejection_neighbor_count,
     )

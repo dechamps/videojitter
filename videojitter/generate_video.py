@@ -8,7 +8,7 @@ import sys
 import videojitter.util
 
 
-def parse_arguments():
+def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
         description="Generates a jitter test video.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -56,7 +56,7 @@ def parse_arguments():
 
 
 def main():
-    args = parse_arguments()
+    args = _parse_arguments()
     with open(args.spec_file) as spec_file:
         spec = json.load(spec_file)
 
