@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import altair as alt
 import argparse
 import numpy as np
