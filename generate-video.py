@@ -70,6 +70,7 @@ def generate_video():
             "colorspace": "bt709",
             "color_range": "tv",
             "acodec": "ac3",
+            "loglevel": "verbose",
         },
     ).overwrite_output()
 
