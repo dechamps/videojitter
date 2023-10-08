@@ -25,6 +25,18 @@ def parse_arguments():
         default="hd1080",
     )
     argument_parser.add_argument(
+        "--padding-square-width-pixels",
+        help="Width of the squares used in the padding pattern, in pixels",
+        default=16,
+        type=int,
+    )
+    argument_parser.add_argument(
+        "--padding-square-height-pixels",
+        help="Height of the squares used in the padding pattern, in pixels",
+        default=16,
+        type=int,
+    )
+    argument_parser.add_argument(
         "--begin-padding",
         help="How long to display the padding pattern at the beginning of the video before the test signal, in ffmpeg time format",
         default="5",
@@ -50,7 +62,7 @@ def generate_video():
                 for color in ["black", "white"]
             ],
             "blend",
-            all_expr="if(eq(gte(mod(X, 32), 16), gte(mod(Y, 32), 16)), A, B)",
+            all_expr=f"if(eq(gte(mod(X, {args.padding_square_width_pixels*2}), {args.padding_square_width_pixels}), gte(mod(Y, {args.padding_square_height_pixels*2}), {args.padding_square_height_pixels})), A, B)",
         )
         .filter("negate", enable="eq(mod(n, 2), 1)")
         # The loop is not strictly necessary, but makes the pipeline vastly
