@@ -47,11 +47,15 @@ class _TestCase:
                 )
 
 
-def main():
+async def _run_tests():
     tests_directory = pathlib.Path("videojitter") / "tests"
-    for test_module_info in pkgutil.iter_modules([tests_directory]):
-        # TODO: parallelize
-        asyncio.run(_TestCase(test_module_info.name).run())
+    async with asyncio.TaskGroup() as task_group:
+        for test_module_info in pkgutil.iter_modules([tests_directory]):
+            task_group.create_task(_TestCase(test_module_info.name).run())
+
+
+def main():
+    asyncio.run(_run_tests())
 
 
 if __name__ == "__main__":
