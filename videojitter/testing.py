@@ -34,6 +34,8 @@ async def run_pipeline(test_case):
         recording_path,
         "--output-frame-transitions-csv-file",
         frame_transitions_csv_path,
+        "--output-debug-files-prefix",
+        test_case.get_output_path("analyze_recording_debug_"),
     )
     report_csv_path = test_case.get_output_path("report.csv")
     report_chart_path = test_case.get_output_path("report.json")
