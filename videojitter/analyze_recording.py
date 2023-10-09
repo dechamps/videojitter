@@ -83,7 +83,7 @@ def _parse_arguments():
         "--boundaries-score-threshold-ratio",
         help="How well does a given portion of the recording have to match the reference sequence in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
         type=float,
-        default=0.5,
+        default=0.4,
     )
     argument_parser.add_argument(
         "--output-debug-files-prefix",
