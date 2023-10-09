@@ -9,72 +9,72 @@ def prettify_json(path):
         json.dump(contents, file, indent=2)
 
 
-async def run_pipeline(
-    test_case,
-    generate_spec_args=[],
-    generate_fake_recording_args=[],
-    analyze_recording_args=[],
-    generate_report_args=[],
-):
-    spec_path = test_case.get_output_path("spec.json")
-    await test_case.run_subprocess(
-        "generate_spec",
-        sys.executable,
-        "-m",
-        "videojitter.generate_spec",
-        "--output-spec-file",
-        spec_path,
-        *generate_spec_args,
-    )
-    prettify_json(spec_path)
+class Pipeline:
+    def __init__(self, test_case):
+        self.test_case = test_case
 
-    recording_path = test_case.get_output_path("recording.wav")
-    await test_case.run_subprocess(
-        "generate_fake_recording",
-        sys.executable,
-        "-m",
-        "videojitter.generate_fake_recording",
-        "--spec-file",
-        spec_path,
-        "--output-recording-file",
-        recording_path,
-        *generate_fake_recording_args,
-    )
+    async def run_generate_spec(self, *args):
+        await self._run_videojitter_module(
+            "generate_spec",
+            "--output-spec-file",
+            self.get_spec_path(),
+            *args,
+        )
+        prettify_json(self.get_spec_path())
 
-    frame_transitions_csv_path = test_case.get_output_path("frame_transitions.csv")
-    await test_case.run_subprocess(
-        "analyze_recording",
-        sys.executable,
-        "-m",
-        "videojitter.analyze_recording",
-        "--spec-file",
-        spec_path,
-        "--recording-file",
-        recording_path,
-        "--output-frame-transitions-csv-file",
-        frame_transitions_csv_path,
-        "--output-debug-files-prefix",
-        test_case.get_output_path("analyze_recording_debug_"),
-        *analyze_recording_args,
-    )
+    async def run_generate_fake_recording(self, *args):
+        await self._run_videojitter_module(
+            "generate_fake_recording",
+            "--spec-file",
+            self.get_spec_path(),
+            "--output-recording-file",
+            self.get_recording_path(),
+            *args,
+        )
+        prettify_json(self.get_spec_path())
 
-    report_csv_path = test_case.get_output_path("report.csv")
-    json_report_chart_path = test_case.get_output_path("report.json")
-    await test_case.run_subprocess(
-        "generate_report",
-        sys.executable,
-        "-m",
-        "videojitter.generate_report",
-        "--spec-file",
-        spec_path,
-        "--frame-transitions-csv-file",
-        frame_transitions_csv_path,
-        "--output-csv-file",
-        report_csv_path,
-        "--output-chart-file",
-        json_report_chart_path,
-        "--output-chart-file",
-        test_case.get_output_path("report.html"),
-        *generate_report_args,
-    )
-    prettify_json(json_report_chart_path)
+    async def run_analyze_recording(self, *args):
+        await self._run_videojitter_module(
+            "analyze_recording",
+            "--spec-file",
+            self.get_spec_path(),
+            "--recording-file",
+            self.get_recording_path(),
+            "--output-frame-transitions-csv-file",
+            self.get_frame_transitions_csv_path(),
+            "--output-debug-files-prefix",
+            self.test_case.get_output_path("analyze_recording_debug_"),
+            *args,
+        )
+
+    async def run_generate_report(self, *args):
+        json_report_chart_path = self.test_case.get_output_path("report.json")
+        await self._run_videojitter_module(
+            "generate_report",
+            "--spec-file",
+            self.get_spec_path(),
+            "--frame-transitions-csv-file",
+            self.get_frame_transitions_csv_path(),
+            "--output-csv-file",
+            self.test_case.get_output_path("report.csv"),
+            "--output-chart-file",
+            json_report_chart_path,
+            "--output-chart-file",
+            self.test_case.get_output_path("report.html"),
+            *args,
+        )
+        prettify_json(json_report_chart_path)
+
+    async def _run_videojitter_module(self, module_name, *args):
+        await self.test_case.run_subprocess(
+            module_name, sys.executable, "-m", f"videojitter.{module_name}", *args
+        )
+
+    def get_spec_path(self):
+        return self.test_case.get_output_path("spec.json")
+
+    def get_recording_path(self):
+        return self.test_case.get_output_path("recording.wav")
+
+    def get_frame_transitions_csv_path(self):
+        return self.test_case.get_output_path("frame_transitions.csv")
