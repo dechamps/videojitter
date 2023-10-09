@@ -14,6 +14,12 @@ def _parse_arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
+        "--test-case",
+        help="Run the specified test case. Can be specified multiple times. If not set, runs all test cases.",
+        action="append",
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--parallelism",
         help="How many test cases to run in parallel.",
         type=int,
@@ -65,6 +71,7 @@ class _TestCase:
 
 async def _run_tests():
     args = _parse_arguments()
+    test_cases = getattr(args, "test_case", None)
     tests_directory = pathlib.Path("videojitter") / "tests"
     throttle = asyncio.Semaphore(args.parallelism)
 
@@ -73,10 +80,15 @@ async def _run_tests():
             await test_case.run()
 
     async with asyncio.TaskGroup() as task_group:
-        for test_module_info in pkgutil.iter_modules([tests_directory]):
-            task_group.create_task(
-                run(_TestCase(tests_directory, test_module_info.name))
-            )
+        for test_module_name in (
+            [
+                module_info.name
+                for module_info in pkgutil.iter_modules([tests_directory])
+            ]
+            if test_cases is None
+            else test_cases
+        ):
+            task_group.create_task(run(_TestCase(tests_directory, test_module_name)))
 
 
 def main():
