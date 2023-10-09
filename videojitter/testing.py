@@ -22,6 +22,18 @@ class Pipeline:
         )
         prettify_json(self.get_spec_path())
 
+    async def run_generate_video(self, *args):
+        video_path = self.test_case.get_output_path("video.mp4")
+        await self._run_videojitter_module(
+            "generate_video",
+            "--spec-file",
+            self.get_spec_path(),
+            "--output-file",
+            video_path,
+            *args,
+        )
+        assert video_path.stat().st_size > 0
+
     async def run_generate_fake_recording(self, *args):
         await self._run_videojitter_module(
             "generate_fake_recording",
