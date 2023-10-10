@@ -20,14 +20,14 @@ def _parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--output-frame-transitions-csv-file",
-        help="Write the frame transition information to the specified CSV file",
+        "--recording-file",
+        help="Path to the input recording file",
         required=True,
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--recording-file",
-        help="Path to the input recording file",
+        "--output-frame-transitions-csv-file",
+        help="Write the frame transition information to the specified CSV file",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -42,24 +42,6 @@ def _parse_arguments():
         help='The approximate maximum amount of time an edge can spread over before the analyzer might fail to detect it. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this higher will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing other transitions to be missed or mistimed due to drift.',
         type=float,
         default=0.020,
-    )
-    argument_parser.add_argument(
-        "--upsampling-ratio",
-        help="How much to upsample the signal before attempting to find edges. Upsampling reduces interpolation error, thereby improving the precision of zero crossing calculations (timestamp and slope), but makes processing slower.",
-        type=int,
-        default=2,
-    )
-    argument_parser.add_argument(
-        "--min-edges-ratio",
-        help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-slope-threshold.",
-        type=float,
-        default=0.6,
-    )
-    argument_parser.add_argument(
-        "--edge-slope-threshold",
-        help="The absolute slope-at-zero-crossing threshold above which an edge will be recorded, as a ratio of the Nth steepest slope, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
-        type=float,
-        default=0.5,
     )
     argument_parser.add_argument(
         "--boundary-edge-rejection-neighbor-count",
@@ -84,6 +66,24 @@ def _parse_arguments():
         help="How well does a given portion of the recording have to match the reference sequence in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
         type=float,
         default=0.4,
+    )
+    argument_parser.add_argument(
+        "--upsampling-ratio",
+        help="How much to upsample the signal before attempting to find edges. Upsampling reduces interpolation error, thereby improving the precision of zero crossing calculations (timestamp and slope), but makes processing slower.",
+        type=int,
+        default=2,
+    )
+    argument_parser.add_argument(
+        "--min-edges-ratio",
+        help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-slope-threshold.",
+        type=float,
+        default=0.6,
+    )
+    argument_parser.add_argument(
+        "--edge-slope-threshold",
+        help="The absolute slope-at-zero-crossing threshold above which an edge will be recorded, as a ratio of the Nth steepest slope, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
+        type=float,
+        default=0.5,
     )
     argument_parser.add_argument(
         "--output-debug-files-prefix",
