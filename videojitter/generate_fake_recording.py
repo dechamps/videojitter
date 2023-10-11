@@ -49,6 +49,12 @@ def _parse_arguments():
         default=5,
     )
     argument_parser.add_argument(
+        "--padding-signal-level",
+        help="The signal level of the padding (before --dc-offset, --invert and --amplitude). -1, 0, and 1 can be used to simulate black, grey and white padding, respectively.",
+        type=float,
+        default=-1,
+    )
+    argument_parser.add_argument(
         "--clock-skew",
         help="Simulate clock skew, i.e. the test signal will be stretched by this amount. Note this doesn't affect padding.",
         type=float,
@@ -244,15 +250,17 @@ def main():
         scipy.signal.resample_poly(
             np.concatenate(
                 (
-                    -np.ones(
+                    np.ones(
                         int(np.round(args.begin_padding_seconds * sample_rate)),
                         dtype=test_signal_samples.dtype,
-                    ),
+                    )
+                    * args.padding_signal_level,
                     test_signal_samples,
-                    -np.ones(
+                    np.ones(
                         int(np.round(args.end_padding_seconds * sample_rate)),
                         dtype=test_signal_samples.dtype,
-                    ),
+                    )
+                    * args.padding_signal_level,
                 )
             ).astype(np.float32),
             up=1,
