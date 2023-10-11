@@ -1,0 +1,6 @@
+generate_spec.stderr
+generate_spec.stdout
+generate_video.stderr
+generate_video.stdout
+spec.json
+video.mp4
