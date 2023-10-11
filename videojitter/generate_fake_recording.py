@@ -52,7 +52,7 @@ def _parse_arguments():
         "--padding-signal-level",
         help="The signal level of the padding (before --dc-offset, --invert and --amplitude). -1, 0, and 1 can be used to simulate black, grey and white padding, respectively.",
         type=float,
-        default=-1,
+        default=0.2,
     )
     argument_parser.add_argument(
         "--clock-skew",
