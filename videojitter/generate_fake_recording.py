@@ -116,7 +116,7 @@ def _parse_arguments():
     argument_parser.add_argument(
         "--output-dtype",
         help='NumPy dtype to convert the samples to before writing them to the output file. Can be used to customize the output WAV sample type. Typical values are "int16", "int24", "float32".',
-        default="float64",
+        default="float32",
     )
     return argument_parser.parse_args()
 
@@ -135,7 +135,7 @@ def _apply_gaussian_filter(samples, stddev_samples):
     kernel = scipy.signal.windows.gaussian(
         M=int(np.round(stddev_samples * 10)),
         std=stddev_samples,
-    )
+    ).astype(samples.dtype)
     return scipy.signal.convolve(
         samples,
         kernel / np.sum(kernel),
@@ -233,32 +233,38 @@ def main():
     frames = videojitter.util.generate_frames(
         spec["transition_count"], spec["delayed_transitions"]
     )
+    test_signal_samples = videojitter.util.generate_fake_samples(
+        frames,
+        spec["fps"]["num"],
+        spec["fps"]["den"],
+        sample_rate / args.clock_skew,
+        frame_offsets=(
+            _get_pattern_frame_offset_adjustments(
+                frames.size,
+                args.pattern_count,
+                args.pattern_min_interval,
+            )
+            if args.pattern_count
+            else 0
+        )
+        + frames * args.white_duration_overshoot
+        + (np.arange(frames.size) % 2 == 0) * args.even_duration_overshoot,
+    )
     samples = (
         scipy.signal.resample_poly(
             np.concatenate(
                 (
-                    -np.ones(int(np.round(args.begin_padding_seconds * sample_rate))),
-                    videojitter.util.generate_fake_samples(
-                        frames,
-                        spec["fps"]["num"],
-                        spec["fps"]["den"],
-                        sample_rate / args.clock_skew,
-                        frame_offsets=(
-                            _get_pattern_frame_offset_adjustments(
-                                frames.size,
-                                args.pattern_count,
-                                args.pattern_min_interval,
-                            )
-                            if args.pattern_count
-                            else 0
-                        )
-                        + frames * args.white_duration_overshoot
-                        + (np.arange(frames.size) % 2 == 0)
-                        * args.even_duration_overshoot,
+                    -np.ones(
+                        int(np.round(args.begin_padding_seconds * sample_rate)),
+                        dtype=test_signal_samples.dtype,
                     ),
-                    -np.ones(int(np.round(args.end_padding_seconds * sample_rate))),
+                    test_signal_samples,
+                    -np.ones(
+                        int(np.round(args.end_padding_seconds * sample_rate)),
+                        dtype=test_signal_samples.dtype,
+                    ),
                 )
-            ),
+            ).astype(np.float32),
             up=1,
             down=downsample_ratio,
         )
@@ -278,7 +284,7 @@ def main():
                 1, args.high_pass_filter_hz, "highpass", fs=sample_rate, output="sos"
             ),
             samples,
-        )
+        ).astype(samples.dtype)
 
     if args.noise_rms_per_hz:
         samples += np.random.default_rng(0).normal(

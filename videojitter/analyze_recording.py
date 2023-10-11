@@ -95,7 +95,7 @@ def _parse_arguments():
 
 def _convert_samples_dtype(samples):
     dtype = samples.dtype
-    samples = samples.astype(np.float64)
+    samples = samples.astype(np.float32)
     if np.issubdtype(dtype, np.integer):
         iinfo = np.iinfo(dtype)
         samples = (samples - iinfo.min) * (2 / (iinfo.max - iinfo.min)) - 1
@@ -221,7 +221,7 @@ def main():
     highpass_kernel = _generate_highpass_kernel(min_frequency, recording_sample_rate)
     maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
     recording_samples = scipy.signal.convolve(
-        recording_samples, highpass_kernel, "same"
+        recording_samples, highpass_kernel.astype(recording_samples.dtype), "same"
     )
     maybe_write_debug_wavfile("highpassed", recording_samples)
 
@@ -235,7 +235,8 @@ def main():
 
     cross_correlation = scipy.signal.correlate(
         recording_samples,
-        boundaries_reference_samples / boundaries_reference_samples.size,
+        boundaries_reference_samples.astype(recording_samples.dtype)
+        / boundaries_reference_samples.size,
         mode="valid",
     )
     maybe_write_debug_wavfile(

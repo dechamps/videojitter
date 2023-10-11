@@ -38,10 +38,10 @@ def generate_fake_samples(frames, fps_num, fps_den, sample_rate, frame_offsets=0
                 np.round(
                     (np.arange(frames.size) + (1 + frame_offsets))
                     * (sample_rate * fps_den / fps_num)
-                ).astype(int),
+                ).astype(np.int64),
                 prepend=0,
             ),
-        )
+        ).astype(np.int8)
         * 2
         - 1
     )

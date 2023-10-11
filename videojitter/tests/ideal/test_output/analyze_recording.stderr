@@ -4,6 +4,6 @@ Downsampling recording by 24.0x (to 2000.0 Hz)
 Removing frequencies lower than 25.0 Hz from the recording
 Test signal appears to start at sample 9583 (4.7915 seconds) and end at sample 130538 (65.269 seconds) in the recording.
 Upsampling recording by 2x (to 4000.0 Hz)
-431nth steepest slope is 0.43974305749657167 (rising edges) / -0.43974305749657167 (falling edges). Kept 1438 edges (out of 4354 candidates) whose slope is above 0.21987152874828583 or below -0.21987152874828583. First edge is right after sample 1000 (0.25 seconds) and last edge is right after sample 240907 (60.22675 seconds).
-First/last edge slopes relative to neighbors min: 1.0485020918435857/1.0425921989685583
+431nth steepest slope is 0.4397432208061218 (rising edges) / -0.4397432208061218 (falling edges). Kept 1438 edges (out of 4326 candidates) whose slope is above 0.2198716104030609 or below -0.2198716104030609. First edge is right after sample 1000 (0.25 seconds) and last edge is right after sample 240907 (60.22675 seconds).
+First/last edge slopes relative to neighbors min: 1.0485014915466309/1.0425918102264404
 First edge is rising and last edge is falling. Deducing that a falling edge means a transition to black and a rising edge means a transition to white.
