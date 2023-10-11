@@ -343,7 +343,7 @@ def main():
     )[0]
     valid_edge_indexes = zero_crossing_indexes[valid_edge_zero_crossing_indexes]
     print(
-        f"{zero_crossing_partition_nth}nth steepest slope is {rising_edge_slope_reference} (rising edges) / {falling_edge_slope_reference} (falling edges). Kept {valid_edge_indexes.size} edges (out of {zero_crossing_indexes.size} candidates) whose slope is above {rising_edge_slope_threshold} or below {falling_edge_slope_threshold}. First edge is right after {format_index(valid_edge_indexes[0])} and last edge is right after {format_index(valid_edge_indexes[-1])}.",
+        f"{zero_crossing_partition_nth}nth steepest slope is ~{rising_edge_slope_reference:.3} (rising edges) / ~{falling_edge_slope_reference:.3} (falling edges). Kept {valid_edge_indexes.size} edges whose slope is above ~{rising_edge_slope_threshold:.3} or below ~{falling_edge_slope_threshold:.3}. First edge is right after {format_index(valid_edge_indexes[0])} and last edge is right after {format_index(valid_edge_indexes[-1])}.",
         file=sys.stderr,
     )
     assert valid_edge_indexes.size > 1
@@ -377,7 +377,7 @@ def main():
         args.boundary_edge_rejection_neighbor_count,
     )
     print(
-        f"First/last edge slopes relative to neighbors min: {first_slope_relative}/{last_slope_relative}",
+        f"First/last edge slopes relative to neighbors min: ~{first_slope_relative:.3}/~{last_slope_relative:.3}",
         file=sys.stderr,
     )
     if first_slope_relative < args.boundary_edge_rejection_slope_threshold:

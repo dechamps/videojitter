@@ -161,7 +161,7 @@
           "as": "shape"
         },
         {
-          "calculate": "(datum.time_since_previous_transition_seconds - 0.04170833458878038)",
+          "calculate": "(datum.time_since_previous_transition_seconds - 0.041708)",
           "as": "time_since_previous_transition_seconds_relative_to_mean"
         },
         {

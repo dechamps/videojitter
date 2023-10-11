@@ -322,7 +322,7 @@ def main():
     )
     transitions_interval_seconds = _interval(transitions.index)
     print(
-        f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at {transitions_interval_seconds.left} seconds and last transition at {transitions_interval_seconds.right} seconds for a total of {transitions_interval_seconds.length} seconds",
+        f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at ~{transitions_interval_seconds.left:.6f} seconds and last transition at ~{transitions_interval_seconds.right:.6f} seconds for a total of ~{transitions_interval_seconds.length:.6f} seconds",
         file=sys.stderr,
     )
 
@@ -371,7 +371,7 @@ def main():
         transition_is_valid
     ].time_since_previous_transition_seconds.std()
     print(
-        f"Valid, non-delayed transition interval standard deviation: {time_between_transitions_standard_deviation_seconds} seconds",
+        f"Valid, non-delayed transition interval standard deviation: ~{time_between_transitions_standard_deviation_seconds:.6f} seconds",
         file=sys.stderr,
     )
 
@@ -403,7 +403,9 @@ def main():
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
-            mean_time_between_transitions,
+            np.round(
+                mean_time_between_transitions, args.time_precision_seconds_decimals
+            ),
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
