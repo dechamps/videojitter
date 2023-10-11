@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import json
 import pandas as pd
-import scipy.io
+import soundfile
 import scipy.signal
 import sys
 import videojitter.util
@@ -93,15 +93,6 @@ def _parse_arguments():
     return argument_parser.parse_args()
 
 
-def _convert_samples_dtype(samples):
-    dtype = samples.dtype
-    samples = samples.astype(np.float32)
-    if np.issubdtype(dtype, np.integer):
-        iinfo = np.iinfo(dtype)
-        samples = (samples - iinfo.min) * (2 / (iinfo.max - iinfo.min)) - 1
-    return samples
-
-
 def _generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample_rate):
     return videojitter.util.generate_fake_samples(
         np.tile([False, True], period_count),
@@ -151,15 +142,14 @@ def main():
         file=sys.stderr,
     )
 
-    recording_sample_rate, recording_samples = scipy.io.wavfile.read(
-        args.recording_file
+    recording_samples, recording_sample_rate = soundfile.read(
+        args.recording_file, dtype=np.float32
     )
     recording_duration_seconds = recording_samples.size / recording_sample_rate
     print(
         f"Successfully loaded recording containing {recording_samples.size} samples at {recording_sample_rate} Hz ({recording_duration_seconds} seconds)",
         file=sys.stderr,
     )
-    recording_samples = _convert_samples_dtype(recording_samples)
 
     def format_index(index):
         return f"sample {index} ({index / recording_sample_rate} seconds)"

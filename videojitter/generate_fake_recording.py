@@ -2,7 +2,7 @@ import argparse
 import sys
 import json
 import numpy as np
-import scipy.io
+import soundfile
 import scipy.special
 import videojitter.util
 
@@ -114,21 +114,11 @@ def _parse_arguments():
         default=0.00000005,
     )
     argument_parser.add_argument(
-        "--output-dtype",
-        help='NumPy dtype to convert the samples to before writing them to the output file. Can be used to customize the output WAV sample type. Typical values are "int16", "int24", "float32".',
-        default="float32",
+        "--output-sample-type",
+        help='Output sample format as a python-soundfile subtype, e.g. "PCM_16", "PCM_24", "FLOAT".',
+        default="FLOAT",
     )
     return argument_parser.parse_args()
-
-
-def _convert_to_output_dtype(samples, dtype):
-    if np.issubdtype(dtype, np.floating):
-        return samples
-    assert np.issubdtype(dtype, np.integer)
-    iinfo = np.iinfo(dtype)
-    return (
-        np.clip(samples + 1, 0, 2) * ((iinfo.max - iinfo.min) / 2) + iinfo.min
-    ).astype(dtype)
 
 
 def _apply_gaussian_filter(samples, stddev_samples):
@@ -291,10 +281,11 @@ def main():
             scale=args.noise_rms_per_hz * sample_rate / 2, size=samples.size
         )
 
-    scipy.io.wavfile.write(
+    soundfile.write(
         args.output_recording_file,
-        int(sample_rate),
-        _convert_to_output_dtype(samples, np.dtype(args.output_dtype)),
+        samples,
+        samplerate=int(sample_rate),
+        subtype=args.output_sample_type,
     )
 
 
