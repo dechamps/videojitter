@@ -1,0 +1,4 @@
+Successfully loaded spec file containing 3596 frame transitions at 59.94005994005994 FPS
+Recording analysis contains 3596 frame transitions, with first transition at ~16.926710 seconds and last transition at ~76.925472 seconds for a total of ~59.998762 seconds
+Number of recorded transitions matches the spec. Good.
+Valid, non-delayed transition interval standard deviation: ~0.000012 seconds
