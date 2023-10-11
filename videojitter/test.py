@@ -28,54 +28,35 @@ def _parse_arguments():
     return argument_parser.parse_args()
 
 
-def _reset_directory(path):
-    path.mkdir(exist_ok=True)
-    for child in path.iterdir():
-        child.unlink()
-
-
-def _write_directory_listing(path):
-    file_names = [child.name for child in path.iterdir()]
-    file_names.sort()
-    with open(path / "file_list.txt", "w") as listing_file:
-        for file_name in file_names:
-            listing_file.write(f"{file_name}\n")
-
-
 class _TestCase:
     def __init__(self, root_directory, name):
         self._name = name
         self._module = importlib.import_module(f"videojitter.tests.{name}")
-        self._output_dir = root_directory / name / "test_output"
+        self._path = root_directory / name
 
     async def run(self):
         try:
-            _reset_directory(self._output_dir)
             await self._module.videojitter_test(self)
-            _write_directory_listing(self._output_dir)
         except Exception as exception:
             raise Exception(f"Failed to run test: {self._name}") from exception
 
-    def get_output_path(self, file_name):
-        return self._output_dir / file_name
+    def get_path(self):
+        return self._path
 
-    async def run_subprocess(self, name, *args):
+    async def run_subprocess(self, *args, stdout, stderr):
         args = [str(arg) for arg in args]
-        print(f"{self._name}: running {name}: {args}")
-        with open(self.get_output_path(f"{name}.stdout"), "wb") as stdout, open(
-            self.get_output_path(f"{name}.stderr"), "wb"
-        ) as stderr:
-            process = await asyncio.create_subprocess_exec(
-                *args,
-                stdin=subprocess.DEVNULL,
-                stdout=stdout,
-                stderr=stderr,
+        print(f"{self._name}: {args}")
+        process = await asyncio.create_subprocess_exec(
+            *args,
+            stdin=subprocess.DEVNULL,
+            stdout=stdout,
+            stderr=stderr,
+        )
+        await process.communicate()
+        if process.returncode != 0:
+            raise Exception(
+                f"Subprocess terminated with error code {process.returncode}"
             )
-            await process.communicate()
-            if process.returncode != 0:
-                raise Exception(
-                    f"Subprocess {name} terminated with error code {process.returncode}"
-                )
 
 
 async def _run_tests():
