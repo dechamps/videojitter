@@ -113,7 +113,22 @@ def _parse_arguments():
         type=float,
         default=0.00000005,
     )
+    argument_parser.add_argument(
+        "--output-dtype",
+        help='NumPy dtype to convert the samples to before writing them to the output file. Can be used to customize the output WAV sample type. Typical values are "int16", "int24", "float32".',
+        default="float64",
+    )
     return argument_parser.parse_args()
+
+
+def _convert_to_output_dtype(samples, dtype):
+    if np.issubdtype(dtype, np.floating):
+        return samples
+    assert np.issubdtype(dtype, np.integer)
+    iinfo = np.iinfo(dtype)
+    return (
+        np.clip(samples + 1, 0, 2) * ((iinfo.max - iinfo.min) / 2) + iinfo.min
+    ).astype(dtype)
 
 
 def _apply_gaussian_filter(samples, stddev_samples):
@@ -273,7 +288,7 @@ def main():
     scipy.io.wavfile.write(
         args.output_recording_file,
         int(sample_rate),
-        samples,
+        _convert_to_output_dtype(samples, np.dtype(args.output_dtype)),
     )
 
 
