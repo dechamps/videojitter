@@ -36,23 +36,23 @@ def _reset_directory(path):
 
 class _TestCase:
     def __init__(self, root_directory, name):
-        self.name = name
-        self.module = importlib.import_module(f"videojitter.tests.{name}")
-        self.output_dir = root_directory / name / "test_output"
+        self._name = name
+        self._module = importlib.import_module(f"videojitter.tests.{name}")
+        self._output_dir = root_directory / name / "test_output"
 
     async def run(self):
         try:
-            _reset_directory(self.output_dir)
-            await self.module.videojitter_test(self)
+            _reset_directory(self._output_dir)
+            await self._module.videojitter_test(self)
         except Exception as exception:
-            raise Exception(f"Failed to run test: {self.name}") from exception
+            raise Exception(f"Failed to run test: {self._name}") from exception
 
     def get_output_path(self, file_name):
-        return self.output_dir / file_name
+        return self._output_dir / file_name
 
     async def run_subprocess(self, name, *args):
         args = [str(arg) for arg in args]
-        print(f"{self.name}: running {name}: {args}")
+        print(f"{self._name}: running {name}: {args}")
         with open(self.get_output_path(f"{name}.stdout"), "wb") as stdout, open(
             self.get_output_path(f"{name}.stderr"), "wb"
         ) as stderr:
