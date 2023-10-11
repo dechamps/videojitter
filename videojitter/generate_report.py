@@ -54,6 +54,11 @@ def _parse_arguments():
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
     )
+    argument_parser.add_argument(
+        "--time-precision-seconds-decimals",
+        help="How many decimals to round to when producing timestamps (and differences between timestamps). Used to avoid producing overly long floating point numbers where there is no actual precision benefit.",
+        default=6,  # Microsecond precision
+    )
     return argument_parser.parse_args()
 
 
@@ -370,8 +375,18 @@ def main():
         file=sys.stderr,
     )
 
+    rounded_transitions = transitions.copy()
+    rounded_transitions.index = rounded_transitions.index.to_series().round(
+        args.time_precision_seconds_decimals
+    )
+    rounded_transitions.time_since_previous_transition_seconds = (
+        rounded_transitions.time_since_previous_transition_seconds.round(
+            args.time_precision_seconds_decimals
+        )
+    )
+
     if output_csv_file:
-        transitions.to_csv(output_csv_file)
+        rounded_transitions.to_csv(output_csv_file)
     if output_chart_files:
         minimum_time_between_transitions_index = transitions[
             transition_is_valid
@@ -384,7 +399,7 @@ def main():
         ].time_since_previous_transition_seconds.mean()
         mean_fps = 1 / mean_time_between_transitions
         chart = _generate_chart(
-            transitions,
+            rounded_transitions,
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
