@@ -1,0 +1,9 @@
+Successfully loaded spec file describing 3598 frames at 59.94005994005994 FPS (60.026633333333336 seconds)
+Successfully loaded recording containing 557520 samples at 8000 Hz (69.69 seconds)
+Downsampling recording by 4.0x (to 2000.0 Hz)
+Removing frequencies lower than 25.0 Hz from the recording
+Test signal appears to start at sample 12790 (6.395 seconds) and end at sample 133229 (66.6145 seconds) in the recording.
+Upsampling recording by 2x (to 4000.0 Hz)
+1079nth steepest slope is ~0.000726 (rising edges) / ~-0.00171 (falling edges). Kept 4625 edges whose slope is above ~0.000363 or below ~-0.000857. First edge is right after sample 4 (0.001 seconds) and last edge is right after sample 240868 (60.217 seconds).
+First/last edge slopes relative to neighbors min: ~1.34/~1.25
+WARNING: the first and last edges are both rising. This doesn't make sense as the first and last frames of the test video are supposed to be both black. Unable to determine transition directions as a result.

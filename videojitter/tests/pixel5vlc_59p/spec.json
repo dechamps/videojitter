@@ -1,0 +1,5 @@
+{
+  "fps": { "num": 60000, "den": 1001 },
+  "transition_count": 3596,
+  "delayed_transitions": [1798]
+}
