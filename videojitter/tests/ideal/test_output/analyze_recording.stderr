@@ -1,9 +1,9 @@
 Successfully loaded spec file describing 1440 frames at 23.976023976023978 FPS (60.059999999999995 seconds)
 Successfully loaded recording containing 3362880 samples at 48000 Hz (70.06 seconds)
 Downsampling recording by 24.0x (to 2000.0 Hz)
-Removing frequencies lower than 25.0 Hz from the recording
-Test signal appears to start at sample 9583 (4.7915 seconds) and end at sample 130538 (65.269 seconds) in the recording.
+Removing frequencies lower than 8.476804569668902 Hz from the recording
+Test signal appears to start at sample 9580 (4.79 seconds) and end at sample 130541 (65.2705 seconds) in the recording.
 Upsampling recording by 2x (to 4000.0 Hz)
-431nth steepest slope is ~0.44 (rising edges) / ~-0.44 (falling edges). Kept 1438 edges whose slope is above ~0.22 or below ~-0.22. First edge is right after sample 1000 (0.25 seconds) and last edge is right after sample 240907 (60.22675 seconds).
+431nth steepest slope is ~0.45 (rising edges) / ~-0.45 (falling edges). Kept 1438 edges whose slope is above ~0.225 or below ~-0.225. First edge is right after sample 1006 (0.2515 seconds) and last edge is right after sample 240913 (60.22825 seconds).
 First/last edge slopes relative to neighbors min: ~1.05/~1.04
 First edge is rising and last edge is falling. Deducing that a falling edge means a transition to black and a rising edge means a transition to white.

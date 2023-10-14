@@ -38,10 +38,12 @@ def _parse_arguments():
         default=0.001,
     )
     argument_parser.add_argument(
-        "--max-edge-spread-seconds",
-        help='The approximate maximum amount of time an edge can spread over before the analyzer might fail to detect it. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this higher will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing other transitions to be missed or mistimed due to drift.',
+        "--min-frequency-ratio",
+        help='The cutoff frequency of the highpass filter, relative to the nominal FPS. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this lower will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing other transitions to be missed or mistimed due to drift.',
         type=float,
-        default=0.020,
+        # The default preserves the expected fundamental and gets rid of
+        # anything below that.
+        default=0.5 / np.sqrt(2),
     )
     argument_parser.add_argument(
         "--boundary-edge-rejection-neighbor-count",
@@ -196,13 +198,7 @@ def main():
     )
     maybe_write_debug_wavfile("downsampled", recording_samples)
 
-    # If we asssume the worst-case scenario where the input signal is a
-    # perfectly smooth (in other words, perfectly sluggish) sinusoid where each
-    # edge is separated by the max threshold, Tm, then the only period in the
-    # input signal is the fundamental period which is 2*Tm (because a period is
-    # a rising edge followed by a falling edge), and the fundamental frequency
-    # is 1/(2*Tm), which is the minimum frequency we need to preserve.
-    min_frequency = 0.5 / args.max_edge_spread_seconds
+    min_frequency = nominal_fps * args.min_frequency_ratio
     print(
         f"Removing frequencies lower than {min_frequency} Hz from the recording",
         file=sys.stderr,
