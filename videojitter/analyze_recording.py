@@ -82,8 +82,8 @@ def _parse_arguments():
         default=0.6,
     )
     argument_parser.add_argument(
-        "--edge-amplitude-threshold",
-        help="The absolute amplitude threshold above which an edge will be recorded, as a ratio of the Nth highest amplitude, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
+        "--slope-prominence-threshold",
+        help="The absolute slope peak prominence threshold above which an edge will be recorded, as a ratio of the Nth highest prominence, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
         type=float,
         default=0.5,
     )
@@ -117,6 +117,23 @@ def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
         cutoff_frequency_hz,
         fs=sample_rate,
         pass_zero=False,
+    )
+
+
+def find_abs_peaks_with_prominence(x):
+    positive_peak_indexes, positive_peak_properties = scipy.signal.find_peaks(
+        x, prominence=(None, None)
+    )
+    negative_peak_indexes, negative_peak_properties = scipy.signal.find_peaks(
+        -x, prominence=(None, None)
+    )
+    return np.concatenate(
+        (positive_peak_indexes, negative_peak_indexes)
+    ), np.concatenate(
+        (
+            positive_peak_properties["prominences"],
+            -negative_peak_properties["prominences"],
+        )
     )
 
 
@@ -251,15 +268,6 @@ def main():
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_debug_wavfile("trimmed", recording_samples)
 
-    # Upsampling improves the accuracy of our zero crossing estimates (slope,
-    # position), which are based on linear interpolation. For more background
-    # on how sampling rate (and other factors) affect the accuracy of
-    # zero-crossing estimates, see Svitlov, Sergiy et al. “Accuracy assessment
-    # of the two-sample zero-crossing detection in a sinusoidal signal.”
-    # Metrologia 49 (2012): 413 - 424. We could also have tried to use more
-    # sophisticated interpolation techniques (such as cubic or splines) but it's
-    # not clear they would be worth it, given just simple 2x upsampling seems
-    # to make the calculations accurate enough for all practical purposes.
     upsampling_ratio = args.upsampling_ratio
     recording_sample_rate *= upsampling_ratio
     test_signal_start_index *= upsampling_ratio
@@ -275,104 +283,46 @@ def main():
     )
     maybe_write_debug_wavfile("upsampled", recording_samples)
 
-    zero_crossing_indexes = np.nonzero(np.diff(recording_samples > 0))[0]
+    recording_slope = np.diff(recording_samples)
+    maybe_write_debug_wavfile("slope", recording_slope)
 
-    # At this point we assume that our highpass filter did a good enough job
-    # that every frame transition results in a zero crossing. Said differently,
-    # we interpret variations outside of zero crossings as random measured light
-    # level fluctuations while a frame is being displayed (PWM being a notorious
-    # example of this) - these are not relevant to calculating transition times,
-    # therefore we throw this data away.
-    #
-    # However, in addition to the true zero crossing caused by frame
-    # transitions, noise in the recording signal can result in lots of
-    # additional spurious zero crossings. For example the transition itself
-    # could be noisy (the signal "hesitates" around the true crossing), or it
-    # could be that the last frame transition happened some time ago and the
-    # highpass filter has brought the signal back to hovering around zero.
-    #
-    # We need a way to tell the spurious zero crossings apart from the true
-    # edges. It turns out this is a surprisingly hard problem, especially if we
-    # are to be robust to many different kinds of waveforms with various kinds
-    # of noise, sudden frequency shifts and other distortion.
-    #
-    # The solution used here is based on the following observation: what
-    # distinguishes a true frame transition from just random noise is not really
-    # how fast it is (sluggish displays/instruments will produce slow
-    # transitions, but these are valid transitions nonetheless), but how strong
-    # it is, i.e. how far do we make it into the other size of the zero line
-    # before swinging back. In other words, we are interested in the amplitude
-    # of the swing, not its frequency.
-    #
-    # Therefore, we look at the peak amplitude between a given zero crossing and
-    # the next and reject the zero crossings where the metric falls below a
-    # certain threshold. The correct threshold must be below the minimum true
-    # edge peak amplitude, which which don't know, so we'll have to take a
-    # guess. We could reference our guess on the maximum peak amplitude among
-    # all zero crossings in the signal - that's pretty much guaranteed to be a
-    # valid edge - but that would make the threshold very sensitive to an
-    # isolated outlier. To avoid this problem we base our guess on the Nth
-    # peak amplitude, where N is large enough to mitigate the influence of
-    # outliers, but small enough that we can be reasonably confident we're still
-    # going to pick a valid edge even if the test signal contains fewer edges
-    # than expected. We then multiply that reference with a fudge factor to
-    # allow for edges with slightly smaller amplitudes, and that's our
-    # threshold.
-    #
-    # We need to do the above calculations separately for rising and falling
-    # edges, because real-world systems often exhibit highly asymmetrical
-    # responses where the peak amplitude can look quite different between
-    # falling and rising edges. TODO: we might be simplify this to only compute
-    # one threshold if we use "cumulative energy" (i.e. area under the curve)
-    # instead of peak amplitude, as the highpass filter should have centered
-    # that?
-    peak_amplitudes = np.maximum.reduceat(
-        np.abs(recording_samples), zero_crossing_indexes
-    ) * np.sign(recording_samples[zero_crossing_indexes + 1])
+    slope_peak_indexes, slope_prominences = find_abs_peaks_with_prominence(
+        recording_slope
+    )
     if debug_files_prefix is not None:
-        recording_peak_amplitudes = np.zeros(recording_samples.size)
-        recording_peak_amplitudes[zero_crossing_indexes] = peak_amplitudes
-        maybe_write_debug_wavfile("peak_amplitudes", recording_peak_amplitudes)
+        recording_slope_prominence = np.zeros(recording_samples.size)
+        recording_slope_prominence[slope_peak_indexes] = slope_prominences
+        maybe_write_debug_wavfile("slope_prominences", recording_slope_prominence)
 
-    rising_peak_amplitudes = peak_amplitudes[peak_amplitudes > 0]
-    falling_peak_amplitudes = peak_amplitudes[peak_amplitudes < 0]
+    positive_slope_prominences = slope_prominences[slope_prominences > 0]
+    negative_slope_prominences = slope_prominences[slope_prominences < 0]
     minimum_onesided_edge_count = 0.5 * expected_transition_count * args.min_edges_ratio
-    assert rising_peak_amplitudes.size >= minimum_onesided_edge_count
-    assert falling_peak_amplitudes.size >= minimum_onesided_edge_count
-    rising_amplitude_threshold = (
+    assert positive_slope_prominences.size >= minimum_onesided_edge_count
+    assert negative_slope_prominences.size >= minimum_onesided_edge_count
+    positive_slope_prominence_threshold = (
         np.quantile(
-            rising_peak_amplitudes,
-            1 - minimum_onesided_edge_count / rising_peak_amplitudes.size,
+            positive_slope_prominences,
+            1 - minimum_onesided_edge_count / positive_slope_prominences.size,
         )
-        * args.edge_amplitude_threshold
+        * args.slope_prominence_threshold
     )
-    falling_amplitude_threshold = (
+    negative_slope_prominence_threshold = (
         np.quantile(
-            falling_peak_amplitudes,
-            minimum_onesided_edge_count / falling_peak_amplitudes.size,
+            negative_slope_prominences,
+            minimum_onesided_edge_count / negative_slope_prominences.size,
         )
-        * args.edge_amplitude_threshold
+        * args.slope_prominence_threshold
     )
-    zero_crossing_indexes = zero_crossing_indexes[
-        np.nonzero(
-            (peak_amplitudes > rising_amplitude_threshold)
-            | (peak_amplitudes < falling_amplitude_threshold)
-        )[0]
-    ]
+    valid_slope_peak = (slope_prominences > positive_slope_prominence_threshold) | (
+        slope_prominences < negative_slope_prominence_threshold
+    )
+    slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
+    slope_prominences = slope_prominences[valid_slope_peak]
     print(
-        f"Kept {zero_crossing_indexes.size} edges whose amplitude is above ~{rising_amplitude_threshold:.3} or below ~{falling_amplitude_threshold:.3}. First edge is right after {format_index(zero_crossing_indexes[0])} and last edge is right after {format_index(zero_crossing_indexes[-1])}.",
+        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above ~{positive_slope_prominence_threshold:.3} or below ~{negative_slope_prominence_threshold:.3}. First edge is right after {format_index(slope_peak_indexes[0])} and last edge is right after {format_index(slope_peak_indexes[-1])}.",
         file=sys.stderr,
     )
-    assert zero_crossing_indexes.size > 1
-
-    recording_slope = np.diff(recording_samples)
-    zero_crossing_slopes = recording_slope[zero_crossing_indexes]
-    if debug_files_prefix is not None:
-        recording_zero_crossing_slopes = np.zeros(recording_samples.size)
-        recording_zero_crossing_slopes[zero_crossing_indexes] = zero_crossing_slopes
-        maybe_write_debug_wavfile(
-            "zero_crossing_slopes", recording_zero_crossing_slopes
-        )
+    assert slope_peak_indexes.size > 1
 
     # In the typical case, the test video would be crafted in such a way that
     # the instrument sees "grey" (or some equivalent pattern) before and after
@@ -395,11 +345,11 @@ def main():
     # edges are so weak (due to transitioning from/to grey) that they were
     # already rejected in the previous step.
     first_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        zero_crossing_slopes,
+        recording_samples[slope_peak_indexes],
         args.boundary_edge_rejection_neighbor_count,
     )
     last_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        np.flip(zero_crossing_slopes),
+        recording_samples[np.flip(slope_peak_indexes)],
         args.boundary_edge_rejection_neighbor_count,
     )
     print(
@@ -407,43 +357,27 @@ def main():
         file=sys.stderr,
     )
     if first_slope_relative < args.boundary_edge_rejection_slope_threshold:
-        zero_crossing_indexes = zero_crossing_indexes[1:]
-        zero_crossing_slopes = zero_crossing_slopes[1:]
+        slope_peak_indexes = slope_peak_indexes[1:]
+        slope_prominences = slope_prominences[1:]
     if last_slope_relative < args.boundary_edge_rejection_slope_threshold:
-        zero_crossing_indexes = zero_crossing_indexes[:-1]
-        zero_crossing_slopes = zero_crossing_slopes[:-1]
+        slope_peak_indexes = slope_peak_indexes[:-1]
+        slope_prominences = slope_prominences[:-1]
 
-    edge_is_rising = zero_crossing_slopes > 0
+    edge_is_rising = slope_prominences > 0
     if debug_files_prefix is not None:
         recording_edges = np.zeros(recording_samples.size)
-        recording_edges[zero_crossing_indexes] = edge_is_rising * 2 - 1
+        recording_edges[slope_peak_indexes] = edge_is_rising * 2 - 1
         maybe_write_debug_wavfile("edges", recording_edges)
-
-    # `zero_crossing_indexes` refers to the sample right before the zero crossing.
-    # This is an integer index whose precision is inherently limited by the
-    # sample rate. To improve the precision, we use linear interpolation
-    # between that sample and the next to compute a better estimate of the true
-    # position of the zero crossing.
-    #
-    # TODO: only using the points before and after the zero crossing can cause a
-    # lot of uncertainty in the transition timestamp if there is noise around
-    # the edge itself (e.g. PWM) or if lingers around zero before crossing. We
-    # should try to use more points, but we need to be careful to not use points
-    # beyond the neighboring edges.
-    valid_edge_positions = (
-        zero_crossing_indexes
-        - recording_samples[zero_crossing_indexes]
-        / recording_slope[zero_crossing_indexes]
-    )
 
     edges = pd.Series(
         edge_is_rising,
         index=pd.Index(
-            (valid_edge_positions + test_signal_start_index) / recording_sample_rate,
+            (slope_peak_indexes + test_signal_start_index) / recording_sample_rate,
             name="recording_timestamp_seconds",
         ),
         name="frame",
     )
+    edges.sort_index(inplace=True)
 
     first_edge = edges.iloc[0]
     last_edge = edges.iloc[-1]

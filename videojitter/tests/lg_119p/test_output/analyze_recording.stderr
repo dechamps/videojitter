@@ -4,6 +4,6 @@ Downsampling recording by 4.0x (to 2000.0 Hz)
 Removing frequencies lower than 42.3840228483445 Hz from the recording
 Test signal appears to start at sample 31018 (15.509 seconds) and end at sample 151230 (75.615 seconds) in the recording.
 Upsampling recording by 2x (to 4000.0 Hz)
-Kept 7195 edges whose amplitude is above ~0.0189 or below ~-0.0101. First edge is right after sample 111 (0.02775 seconds) and last edge is right after sample 240221 (60.05525 seconds).
-First/last edge slopes relative to neighbors min: ~0.00465/~0.789
-WARNING: the first and last edges are both rising. This doesn't make sense as the first and last frames of the test video are supposed to be both black. Unable to determine transition directions as a result.
+Kept 7193 slope peaks whose prominence is above ~0.00625 or below ~-0.00625. First edge is right after sample 244 (0.061 seconds) and last edge is right after sample 240222 (60.0555 seconds).
+First/last edge slopes relative to neighbors min: ~1.61/~82.5
+WARNING: the first and last edges are both falling. This doesn't make sense as the first and last frames of the test video are supposed to be both black. Unable to determine transition directions as a result.

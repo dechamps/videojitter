@@ -1,5 +1,4 @@
 Successfully loaded spec file containing 1438 frame transitions at 23.976023976023978 FPS
-Recording analysis contains 1439 frame transitions, with first transition at ~11.052740 seconds and last transition at ~71.044003 seconds for a total of ~59.991263 seconds
-WARNING: transition data contains 1 transitions where the previous transition is to the same color. This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".
-WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/duplicate some transitions entirely. This makes it difficult to figure out which transitions were intentionally delayed, and as such those may be incorrectly annotated.
-Valid, non-delayed transition interval standard deviation: ~0.007516 seconds
+Recording analysis contains 1438 frame transitions, with first transition at ~11.054750 seconds and last transition at ~71.042750 seconds for a total of ~59.988000 seconds
+Number of recorded transitions matches the spec. Good.
+Valid, non-delayed transition interval standard deviation: ~0.008679 seconds
