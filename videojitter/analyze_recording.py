@@ -85,7 +85,7 @@ def _parse_arguments():
         "--slope-prominence-threshold",
         help="The absolute slope peak prominence threshold above which an edge will be recorded, as a ratio of the Nth highest prominence, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
         type=float,
-        default=0.5,
+        default=0.8,
     )
     argument_parser.add_argument(
         "--output-debug-files-prefix",
