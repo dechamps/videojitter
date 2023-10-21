@@ -156,6 +156,18 @@ def _first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
     return first / (np.min if first > 0 else np.max)(x[1 : neighbor_count + 1])
 
 
+def interpolate_peaks(x, peak_indexes):
+    """Given `peak_indexes` the indexes of samples closest to peaks in `x`,
+    returns sub-sample peak location estimates.
+    """
+    # Simplest way to do this is to use quadratic interpolation. See
+    # https://ccrma.stanford.edu/~jos/sasp/Quadratic_Peak_Interpolation.html
+    alpha = x[peak_indexes - 1]
+    beta = x[peak_indexes]
+    gamma = x[peak_indexes + 1]
+    return peak_indexes + 0.5 * (alpha - gamma) / (alpha - 2 * beta + gamma)
+
+
 def main():
     args = _parse_arguments()
     with open(args.spec_file) as spec_file:
@@ -474,7 +486,11 @@ def main():
     edges = pd.Series(
         edge_is_rising,
         index=pd.Index(
-            (slope_peak_indexes + test_signal_start_index) / recording_sample_rate,
+            (
+                interpolate_peaks(recording_slope, slope_peak_indexes)
+                + test_signal_start_index
+            )
+            / recording_sample_rate,
             name="recording_timestamp_seconds",
         ),
         name="frame",
