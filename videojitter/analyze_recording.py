@@ -121,6 +121,16 @@ def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
 
 
 def find_abs_peaks_with_prominence(x):
+    """Like scipy.signal.find_peaks(), but returns both positive and negative
+    peaks, along with their prominences.
+
+    Negative prominences will be returned for negative peaks.
+
+    Note that the absolute prominences returned by this function are not the
+    same as those that would be returned by scipy.signal.find_peaks(np.abs(x)).
+    Indeed, when calculating peaks on a fully rectified signal, prominence is
+    not increased by having to go through negative values before reaching the
+    next peak, but with this function it is."""
     positive_peak_indexes, positive_peak_properties = scipy.signal.find_peaks(
         x, prominence=(None, None)
     )
