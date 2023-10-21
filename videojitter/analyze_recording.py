@@ -459,11 +459,11 @@ def main():
     # edges are so weak (due to transitioning from/to grey) that they were
     # already rejected in the previous step.
     first_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        recording_samples[slope_peak_indexes],
+        recording_slope[slope_peak_indexes],
         args.boundary_edge_rejection_neighbor_count,
     )
     last_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        recording_samples[np.flip(slope_peak_indexes)],
+        recording_slope[np.flip(slope_peak_indexes)],
         args.boundary_edge_rejection_neighbor_count,
     )
     print(
