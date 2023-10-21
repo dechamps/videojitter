@@ -290,6 +290,11 @@ def main():
         recording_slope
     )
     if debug_files_prefix is not None:
+        recording_slope_heights = np.zeros(recording_samples.size)
+        recording_slope_heights[slope_peak_indexes] = recording_slope[
+            slope_peak_indexes
+        ]
+        maybe_write_debug_wavfile("slope_heights", recording_slope_heights)
         recording_slope_prominence = np.zeros(recording_samples.size)
         recording_slope_prominence[slope_peak_indexes] = slope_prominences
         maybe_write_debug_wavfile("slope_prominences", recording_slope_prominence)
