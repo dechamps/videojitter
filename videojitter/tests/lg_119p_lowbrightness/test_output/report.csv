@@ -1,5 +1,6 @@
 recording_timestamp_seconds,frame,time_since_previous_transition_seconds,transition_from_same_frame,intentionally_delayed
-18.32646,False,,False,False
+18.318071,True,,False,False
+18.32646,False,0.008377,False,False
 18.334823,True,0.008375,False,False
 18.343181,False,0.008345,False,False
 18.351497,True,0.008328,False,False
@@ -7190,3 +7191,4 @@ recording_timestamp_seconds,frame,time_since_previous_transition_seconds,transit
 78.295807,False,0.008339,False,False
 78.304148,True,0.008354,False,False
 78.312525,False,0.008365,False,False
+78.320857,True,0.008344,False,False
