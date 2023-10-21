@@ -283,9 +283,75 @@ def main():
     )
     maybe_write_debug_wavfile("upsampled", recording_samples)
 
-    recording_slope = np.diff(recording_samples)
+    # The fundamental, core idea behind the way we detect "edges" is to look for
+    # large scale changes in overall recording signal level.
+    #
+    # One approach is to look at zero crossings; indeed, we can reasonably
+    # assume that, on a properly highpassed signal, every true edge will result
+    # in a change of sign. However, sadly the converse isn't true: due to high
+    # frequency noise the signal will tend to "hover" around zero between edges,
+    # creating spurious zero crossings. Separating the spurious zero crossings
+    # from the true ones is challenging; using a thresold on the slope at the
+    # zero crossing helps, but still fails in pathological cases such as noise
+    # causing the signal to "hesitate" (i.e. form a narrow plateau) around the
+    # zero crossing, which can result in the edge being missed. (We could work
+    # around that by computing the slope using more neighboring points, but that
+    # would require us to assume that an edge is more than 2 points wide - which
+    # basically amounts to lowpassing the signal. This would impair our ability
+    # to resolve fast "blinks".)
+    #
+    # A more promising idea is to compute the "slope" of the signal and find the
+    # steepest slopes. This approach is more flexible than looking only at zero
+    # crossings because it will find the highest rate of change even if it is
+    # located outside of a zero crossing. (In a sinusoid the highest rate of
+    # change happens at the zero crossing, but the recordings we are dealing
+    # with are not sinusoids. Even after highpass filtering, the steepest slope
+    # might not be located at the zero crossing. This is especially true given
+    # real recordings tend to have highly asymmetric shapes: in this case it's
+    # mathematically impossible for the steepest slope to be located at the
+    # zero crossing on *both* rising and falling edges at the same time.)
+    #
+    # In practice, what we do is we apply a peak finding algorithm to locate the
+    # points at which the signal reaches a local steepness extremum.
+    #
+    # One thing to watch out for is how that "slope" is computed. The simplest
+    # way to compute the slope would be to differentiate the signal (as in,
+    # np.diff()). Unfortunately, differentiation also acts as a highpass filter,
+    # causing high frequency noise to be amplified tremendously. (Intuitively,
+    # this is because the rate of change of a signal is proportional to
+    # frequency, not just amplitude.) This is a big problem; for example, high
+    # frequency PWM would normally be distinguishable from true edges by its
+    # lower amplitude, but since its frequency is much higher, a highpass filter
+    # can greatly impact our ability to discriminate between the two.
+    #
+    # To solve this problem, we can think of differentiation as a convolution
+    # with a [-1, +1] kernel. From a Fourier perspective, this operation looks
+    # like a highpass filter combined with a 90° phase shift. So, if we want
+    # differentation without the highpass filter, what we're really asking for
+    # is just the 90° phase shift. Mathematically we land directly on the
+    # definition of the Hilbert transform, so that's what we use here.
+    recording_slope = -np.imag(scipy.signal.hilbert(recording_samples))
     maybe_write_debug_wavfile("slope", recording_slope)
 
+    # High frequency noise can cause us to find spurious local extrema as the
+    # signal "wiggles around" the true peak - this results in a "forest" of
+    # peaks (with similar heights) appearing around the true edge. If we don't
+    # do anything about this, we will incorrectly report many closely spaced
+    # edges for each true edge.
+    #
+    # In each of these "forests", we need a way to select the tallest peak and
+    # ignore the others. Prominence is the ideal metric for this: basically, it
+    # indicates how far the signal has to "swing back" before a higher peak is
+    # reached in either direction. For the tallest peak in a forest, the only
+    # way to get to a higher peak is to go through the previous or next edge.
+    # Since that's by definition an opposite edge, we're looking at a full
+    # falling+rising edge swing, and the resulting prominence is the entire
+    # peak-to-peak amplitude between these edges - hence, very high. In
+    # contrast, if the peak is not the tallest in the forest, then by definition
+    # there is a higher peak in the same forest, and getting there merely
+    # requires a small "hop" through the noise. The prominence is therefore
+    # merely the peak-to-peak amplitude of the noise, which in reasonable
+    # recordings is expected to be much lower.
     slope_peak_indexes, slope_prominences = find_abs_peaks_with_prominence(
         recording_slope
     )
@@ -299,6 +365,27 @@ def main():
         recording_slope_prominence[slope_peak_indexes] = slope_prominences
         maybe_write_debug_wavfile("slope_prominences", recording_slope_prominence)
 
+    # We need to decide on a prominence threshold for what constitutes a "true"
+    # edge. The correct threshold must be below the minimum true edge peak
+    # prominence, which which don't know, so we'll have to take a guess. We
+    # could reference our guess on the maximum prominence among all peaks -
+    # that's pretty much guaranteed to be a valid edge - but that would make the
+    # threshold very sensitive to an isolated outlier. To avoid this problem we
+    # base our guess on the Nth peak prominence, where N is large enough to
+    # mitigate the influence of outliers, but small enough that we can be
+    # reasonably confident we're still going to pick a valid edge even if the
+    # test signal contains fewer edges than expected. We then multiply that
+    # reference with a fudge factor to allow for edges with slightly smaller
+    # prominences, and that's our threshold.
+    #
+    # We need to do the above calculations separately for rising and falling
+    # edges, because real-world systems often exhibit highly asymmetrical
+    # responses where the prominence can look quite different between falling
+    # and rising edges. TODO: revisit this assumption - it doesn't seem to make
+    # sense now that we're using the prominence as a metric, because the
+    # prominence is the peak-to-peak amplitude between adjacent edges, and
+    # peak-to-peak amplitude by definition doesn't depend on the direction of
+    # the edge is calculated from.
     positive_slope_prominences = slope_prominences[slope_prominences > 0]
     negative_slope_prominences = slope_prominences[slope_prominences < 0]
     minimum_onesided_edge_count = 0.5 * expected_transition_count * args.min_edges_ratio
