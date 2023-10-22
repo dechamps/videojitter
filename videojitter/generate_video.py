@@ -30,15 +30,20 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--padding-square-width-pixels",
-        help="Width of the squares used in the padding pattern, in pixels",
+        help="Width of the squares used in the padding pattern, in pixels. Ignored if --padding-fullscreen-color is set",
         default=16,
         type=int,
     )
     argument_parser.add_argument(
         "--padding-square-height-pixels",
-        help="Height of the squares used in the padding pattern, in pixels",
+        help="Height of the squares used in the padding pattern, in pixels. Ignored if --padding-fullscreen-color is set",
         default=16,
         type=int,
+    )
+    argument_parser.add_argument(
+        "--padding-fullscreen-color",
+        help="If specified, do not use a dynamic checker pattern for padding; instead, use a static frame filled with the specified color, in ffmpeg color syntax.",
+        default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--begin-padding",
@@ -60,21 +65,24 @@ def main():
 
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"
 
+    def color_input(color):
+        return ffmpeg.input(f"color=c={color}:s={args.size}:r={rate}", format="lavfi")
+
+    padding_fullscreen_color = getattr(args, "padding_fullscreen_color", None)
     padding = (
-        ffmpeg.filter(
-            [
-                ffmpeg.input(f"color=c={color}:s={args.size}:r={rate}", format="lavfi")
-                for color in ["black", "white"]
-            ],
-            "blend",
-            all_expr=f"if(eq(gte(mod(X, {args.padding_square_width_pixels*2}), {args.padding_square_width_pixels}), gte(mod(Y, {args.padding_square_height_pixels*2}), {args.padding_square_height_pixels})), A, B)",
+        (
+            ffmpeg.filter(
+                [color_input(color) for color in ["black", "white"]],
+                "blend",
+                all_expr=f"if(eq(gte(mod(X, {args.padding_square_width_pixels*2}), {args.padding_square_width_pixels}), gte(mod(Y, {args.padding_square_height_pixels*2}), {args.padding_square_height_pixels})), A, B)",
+            ).filter("negate", enable="eq(mod(n, 2), 1)")
+            # The loop is not strictly necessary, but makes the pipeline vastly
+            # faster by ensuring both frames are only computed once and then reused.
+            .filter("loop", -1, size=2, start=0)
         )
-        .filter("negate", enable="eq(mod(n, 2), 1)")
-        # The loop is not strictly necessary, but makes the pipeline vastly
-        # faster by ensuring both frames are only computed once and then reused.
-        .filter("loop", -1, size=2, start=0)
-        .filter_multi_output("split")
-    )
+        if padding_fullscreen_color is None
+        else color_input(padding_fullscreen_color)
+    ).filter_multi_output("split")
 
     ffmpeg_spec = ffmpeg.output(
         ffmpeg.concat(
