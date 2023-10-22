@@ -6,7 +6,7 @@ async def videojitter_test(test_case):
         await pipeline.run_generate_spec()
         await pipeline.run_generate_fake_recording(
             "--padding-signal-level",
-            -1,
+            0,
             "--clock-skew",
             1,
             "--pattern-count",
