@@ -46,18 +46,6 @@ def _parse_arguments():
         default=0.5 / np.sqrt(2),
     )
     argument_parser.add_argument(
-        "--boundary-edge-rejection-neighbor-count",
-        help="The number of neighboring edges that are used to calculate the reference for boundary edge rejection. See --boundary-edge-rejection-slope-threshold.",
-        type=int,
-        default=20,
-    )
-    argument_parser.add_argument(
-        "--boundary-edge-rejection-slope-threshold",
-        help="The slope below which the first or last edge will be rejected, as a ratio of the minimum of the neighboring edges. See --boundary-edge-rejection-neighbor-count. This is used to reject spurious edges from the test video padding boundary.",
-        type=float,
-        default=0.95,
-    )
-    argument_parser.add_argument(
         "--boundaries-signal-seconds",
         help="The length of the reference signal used to detect the beginning and end of the test signal within the recording.",
         type=float,
@@ -147,15 +135,6 @@ def find_abs_peaks_with_prominence(x):
             -negative_peak_properties["prominences"],
         )
     )
-
-
-def _first_relative_to_same_sign_neighbor_mean(x, neighbor_count):
-    """Out of the points in `x` that are the same sign as `x[0]`, keep the first
-    `neighbor_count` points, then return `x[0]` divided by the mean of these
-    points."""
-    first = x[0]
-    x = x[(x > 0) if (first > 0) else (x < 0)]
-    return first / (np.min if first > 0 else np.max)(x[1 : neighbor_count + 1])
 
 
 def interpolate_peaks(x, peak_indexes):
@@ -439,45 +418,6 @@ def main():
         file=sys.stderr,
     )
     assert slope_peak_indexes.size > 1
-
-    # In the typical case, the test video would be crafted in such a way that
-    # the instrument sees "grey" (or some equivalent pattern) before and after
-    # the test signal to avoid sudden DC shifts in the instrument. (See the
-    # padding-related code in the video generator.)
-    #
-    # If that is the case, then we need to be careful to avoid misinterpreting
-    # the initial transition from grey and final transition to grey as real
-    # transitions, as these would be spurious transitions as far as the spec is
-    # concerned (and their timing would likely be somewhat inconsistent with a
-    # true transition between full black and full white).
-    #
-    # To that end, we look at the first/last N slopes that have the same sign
-    # as the very first/last slope, and if that first/last slope is unusually
-    # weaker than the others, we get rid of it.
-    #
-    # Note that we can't just get rid of the first and last transitions
-    # unconditionally, for two reasons: (1) it is conceivable that the user may
-    # be using a test video without padding; and (2) in some cases the spurious
-    # edges are so weak (due to transitioning from/to grey) that they were
-    # already rejected in the previous step.
-    first_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        recording_slope[slope_peak_indexes],
-        args.boundary_edge_rejection_neighbor_count,
-    )
-    last_slope_relative = _first_relative_to_same_sign_neighbor_mean(
-        recording_slope[np.flip(slope_peak_indexes)],
-        args.boundary_edge_rejection_neighbor_count,
-    )
-    print(
-        f"First/last edge slopes relative to neighbors min: ~{first_slope_relative:.3}/~{last_slope_relative:.3}",
-        file=sys.stderr,
-    )
-    if first_slope_relative < args.boundary_edge_rejection_slope_threshold:
-        slope_peak_indexes = slope_peak_indexes[1:]
-        slope_prominences = slope_prominences[1:]
-    if last_slope_relative < args.boundary_edge_rejection_slope_threshold:
-        slope_peak_indexes = slope_peak_indexes[:-1]
-        slope_prominences = slope_prominences[:-1]
 
     edge_is_rising = slope_prominences > 0
     if debug_files_prefix is not None:
