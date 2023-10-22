@@ -110,7 +110,7 @@ def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
     )
 
 
-def find_abs_peaks_with_prominence(x):
+def _find_abs_peaks_with_prominence(x):
     """Like scipy.signal.find_peaks(), but returns both positive and negative
     peaks, along with their prominences.
 
@@ -137,7 +137,7 @@ def find_abs_peaks_with_prominence(x):
     )
 
 
-def interpolate_peaks(x, peak_indexes):
+def _interpolate_peaks(x, peak_indexes):
     """Given `peak_indexes` the indexes of samples closest to peaks in `x`,
     returns sub-sample peak location estimates.
     """
@@ -355,7 +355,7 @@ def main():
     # requires a small "hop" through the noise. The prominence is therefore
     # merely the peak-to-peak amplitude of the noise, which in reasonable
     # recordings is expected to be much lower.
-    slope_peak_indexes, slope_prominences = find_abs_peaks_with_prominence(
+    slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
         recording_slope
     )
     if debug_files_prefix is not None:
@@ -429,7 +429,7 @@ def main():
         edge_is_rising,
         index=pd.Index(
             (
-                interpolate_peaks(recording_slope, slope_peak_indexes)
+                _interpolate_peaks(recording_slope, slope_peak_indexes)
                 + test_signal_start_index
             )
             / recording_sample_rate,
