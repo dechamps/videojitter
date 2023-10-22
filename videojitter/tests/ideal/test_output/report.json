@@ -35,9 +35,14 @@
             "clipHeight": 15
           },
           "scale": {
-            "range": {
-              "field": "opacity"
-            }
+            "domain": [
+              "Normal transition",
+              "Intentionally delayed transition (ignore)"
+            ],
+            "range": [
+              1,
+              0.5
+            ]
           },
           "title": null,
           "type": "nominal"
@@ -148,10 +153,6 @@
         {
           "calculate": "if(datum.transition_from_same_frame,'no','yes')",
           "as": "valid_label"
-        },
-        {
-          "calculate": "if(datum.intentionally_delayed,0.4,1)",
-          "as": "opacity"
         },
         {
           "calculate": "if((datum.time_since_previous_transition_seconds < -0.0),'triangle-down',if((datum.time_since_previous_transition_seconds > 0.1),'triangle-up','circle'))",

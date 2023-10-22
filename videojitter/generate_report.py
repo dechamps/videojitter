@@ -101,7 +101,6 @@ def _generate_chart(
             )
             + alt.datum.frame_label,
             valid_label=alt.expr.if_(alt.datum.transition_from_same_frame, "no", "yes"),
-            opacity=alt.expr.if_(alt.datum.intentionally_delayed, 0.4, 1),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
                 < -minimum_time_between_transitions_seconds,
@@ -182,18 +181,26 @@ def _generate_chart(
         ),
     ]
     if "intentionally_delayed" in transitions:
+        normal_label = "Normal transition"
+        delayed_label = "Intentionally delayed transition (ignore)"
         chart = chart.transform_calculate(
             intentionally_delayed_label=alt.expr.if_(
                 alt.datum.intentionally_delayed,
-                "Intentionally delayed transition (ignore)",
-                "Normal transition",
+                delayed_label,
+                normal_label,
             ),
             intentionally_delayed_tooltip=alt.expr.if_(
                 alt.datum.intentionally_delayed, "yes", "no"
             ),
         ).encode(
             alt.Opacity("intentionally_delayed_label", type="nominal", title=None)
-            .scale(range=alt.FieldRange("opacity"))
+            .scale(
+                # It would be cleaner to use a field-based range instead of
+                # mapping legend labels, but we can't because of this bug:
+                # https://github.com/vega/vega-lite/issues/9150
+                domain=[normal_label, delayed_label],
+                range=[1, 0.5],
+            )
             .legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
         )
         tooltips.append(
