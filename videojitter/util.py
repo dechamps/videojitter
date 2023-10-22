@@ -2,6 +2,21 @@ import numpy as np
 import scipy.signal
 
 
+def generate_windows(indexes, lookback, lookahead):
+    """For each integer in `indexes`, returns a 2D array consisting of
+    a list of windows that each contain the `lookback` preceding indexes and
+    `lookahead` following indexes.
+
+    For example, generate_windows([10, 20], -2, 1) returns:
+    [
+        [ -8,  -9, 10, 11],
+        [-18, -19, 20, 21],
+    ]"""
+    return np.broadcast_to(
+        indexes, (indexes.size, lookback + lookahead + 1)
+    ) + np.arange(-lookback, lookahead + 1)
+
+
 def generate_frames(transition_count, delayed_transitions):
     """Generates an alternating frame sequence in the form of a boolean array.
 

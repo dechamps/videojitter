@@ -186,7 +186,7 @@
       "title": {
         "text": [
           "First transition recorded at 6.539 s; last: 66.546 s; length: 60.008 s",
-          "Recorded 1438 transitions; expected 1438 transitions",
+          "Found 1438 transitions, of which 1 are intentionally delayed; expected 1438 transitions, of which 1 are delayed",
           "The following stats exclude 0 invalid transitions and 1 intentionally delayed transitions:",
           "Time since last transition includes -6.617 ms correction in all transitions to white and +6.617 ms correction in all transitions to black",
           "Transition interval range: 33.243 ms (at 17.420 s) to 66.915 ms (at 17.572 s) - standard deviation: 849.211 \u00b5s - 99% of transitions are between 41.435 ms and 45.927 ms",

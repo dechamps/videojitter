@@ -6,6 +6,7 @@ import pandas as pd
 import sys
 from si_prefix import si_format
 from scipy import stats
+import videojitter.util
 
 
 def _parse_arguments():
@@ -53,6 +54,12 @@ def _parse_arguments():
         help="Compensate for consistent timing differences between transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
+        "--delayed-transition-max-offset",
+        help="How many transitions to use on either side of where we would expect to find each delayed transition to find the real delayed transition.",
+        type=int,
+        default=4,
     )
     argument_parser.add_argument(
         "--time-precision-seconds-decimals",
@@ -260,47 +267,83 @@ def _match_delayed_transitions(
     time_since_previous_transition_seconds,
     delayed_transition_indexes,
     expected_transition_count,
+    max_offset,
 ):
-    transition_count = time_since_previous_transition_seconds.index.size
-    if transition_count == expected_transition_count:
-        print("Number of recorded transitions matches the spec. Good.", file=sys.stderr)
-    else:
+    # Locating delayed transitions by index alone will not give satisfactory
+    # results if the recording has missing or spurious transitions, as those
+    # would offset the index. Instead, calculate the timestamp at which we would
+    # expect to find the delayed transition in an ideal recording, then locate
+    # the closest real transition. This should work in all but the most
+    # pathological cases (e.g. time-varying clock skew).
+    delayed_transition_indexes = np.array(delayed_transition_indexes)
+    delayed_transition_expected_timestamp_seconds = (
+        delayed_transition_indexes + 1 + np.arange(delayed_transition_indexes.size)
+    ) / (
+        (expected_transition_count + delayed_transition_indexes.size)
+        / (
+            time_since_previous_transition_seconds.index.max()
+            - time_since_previous_transition_seconds.index.min()
+        )
+    ) + time_since_previous_transition_seconds.index.min()
+    recording_delayed_transition_indexes = (
+        time_since_previous_transition_seconds.index.get_indexer(
+            delayed_transition_expected_timestamp_seconds, method="nearest"
+        )
+    )
+
+    # In theory we could stop there, but we shouldn't, because the delayed
+    # transition can be a few frames off (e.g. if there are spurious extra
+    # transitions at the beginning and/or end of the recording). So look at the
+    # data to produce a better guess.
+
+    # Look at a few transitions before and after the one that is closest to the
+    # expected timestamp.
+    neighbors_indexes = videojitter.util.generate_windows(
+        recording_delayed_transition_indexes, max_offset, max_offset
+    )
+    neighbors_durations_seconds = time_since_previous_transition_seconds.values[
+        neighbors_indexes
+    ]
+
+    # First, align even frames with odd frames to prevent bias from affecting
+    # the outcome.
+    # TODO: it's surprising that this is necessary, and even that it works,
+    # given that the point of delayed transitions is precisely to remove this
+    # bias??
+    even_bias = np.mean(neighbors_durations_seconds[:, ::2], axis=1) - np.mean(
+        neighbors_durations_seconds[:, 1::2], axis=1
+    )
+    neighbors_durations_seconds[:, 0::2] -= even_bias / 2
+    neighbors_durations_seconds[:, 1::2] += even_bias / 2
+
+    # Estimate the mean frame duration. The delayed transition counts for 2
+    # frames.
+    mean_frame_durations_seconds = np.sum(neighbors_durations_seconds, axis=1) / (
+        max_offset * 2 + 2
+    )
+
+    # A transition is considered a candidate if it happens significantly later
+    # than what the mean frame duration would predict.
+    candidate_transitions = (
+        neighbors_durations_seconds > 1.5 * mean_frame_durations_seconds
+    )
+
+    # We assume we found the correct delayed transition if it is the only
+    # candidate within the window.
+    transition_found = np.count_nonzero(candidate_transitions, axis=1) == 1
+    not_found_indexes = np.nonzero(~transition_found)[0]
+    if not_found_indexes.size > 0:
         print(
-            "WARNING: number of recorded transitions is inconsistent with the spec. Either the recording is corrupted, or the video player skipped/duplicate some transitions entirely. This makes it difficult to figure out which transitions were intentionally delayed, and as such those may be incorrectly annotated.",
+            f"WARNING: unable to locate the following delayed transitions: {delayed_transition_indexes[not_found_indexes]} (expected to find them around {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds). These delayed transitions will not be reported.",
             file=sys.stderr,
         )
-    delayed_transitions = np.zeros(transition_count, dtype=bool)
-    for delayed_transition_index in delayed_transition_indexes:
-        # We guess which transition was intentionally delayed using the
-        # following heuristic:
-        #  1. Based on the spec, define a window over the recorded transitions
-        #     where we expect to find the delayed transition;
-        #  2. Assume that the delayed transition is the longest one within that
-        #     window.
-        #
-        # If the recorded transition count matches the spec exactly, we assume
-        # that the transition sequence matches the spec 1:1 and use a window of
-        # size 1 centered on the delayed transition index according to the spec.
-        #
-        # If the recorded transition count is different from the spec, we use
-        # a window whose size is the delta between the transition counts. If
-        # there are too many recorded transitions, the window starts on the
-        # delayed transition index according to the spec, and we look forward
-        # for the delayed transition. If there are too few recorded transitions,
-        # the window ends on the delayed transition index according to the spec,
-        # and we look backward for the delayed transition.
-        window_begin = delayed_transition_index
-        window_end = max(
-            delayed_transition_index + transition_count - expected_transition_count, 0
-        )
-        if window_end < window_begin:
-            window_begin, window_end = window_end, window_begin
-        delayed_transitions[
-            time_since_previous_transition_seconds.iloc[
-                window_begin : window_end + 1
-            ].argmax()
-            + window_begin
-        ] = True
+
+    delayed_transitions = np.zeros(
+        time_since_previous_transition_seconds.index.size, dtype=bool
+    )
+    delayed_transitions[
+        neighbors_indexes[transition_found][candidate_transitions[transition_found]]
+    ] = True
     return delayed_transitions
 
 
@@ -353,6 +396,7 @@ def main():
             transitions["time_since_previous_transition_seconds"],
             intentionally_delayed_transitions,
             transition_count,
+            args.delayed_transition_max_offset,
         )
         transition_is_valid = transition_is_valid & ~transitions.intentionally_delayed
 
@@ -405,6 +449,9 @@ def main():
             transition_is_valid
         ].time_since_previous_transition_seconds.mean()
         mean_fps = 1 / mean_time_between_transitions
+        found_intentionally_delayed_transitions = (
+            transitions.intentionally_delayed.sum()
+        )
         chart = _generate_chart(
             rounded_transitions,
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
@@ -415,8 +462,8 @@ def main():
             ),
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
-                f"Recorded {transitions.index.size} transitions; expected {spec['transition_count']} transitions",
-                f"The following stats exclude {transitions_from_same_frame_count} invalid transitions and {len(intentionally_delayed_transitions)} intentionally delayed transitions:",
+                f"Found {transitions.index.size} transitions, of which {found_intentionally_delayed_transitions} are intentionally delayed; expected {spec['transition_count']} transitions, of which {len(intentionally_delayed_transitions)} are delayed",
+                f"The following stats exclude {transitions_from_same_frame_count} invalid transitions and {found_intentionally_delayed_transitions} intentionally delayed transitions:",
                 black_white_offset_fineprint,
                 f"Transition interval range: {si_format(transitions[transition_is_valid].loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions[transition_is_valid].loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
