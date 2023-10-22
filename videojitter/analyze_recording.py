@@ -58,10 +58,10 @@ def _parse_arguments():
         default=0.95,
     )
     argument_parser.add_argument(
-        "--boundaries-signal-periods",
-        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording, in periods (i.e. pairs of frames).",
-        type=int,
-        default=5,
+        "--boundaries-signal-seconds",
+        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording.",
+        type=float,
+        default=0.5,
     )
     argument_parser.add_argument(
         "--boundaries-score-threshold-ratio",
@@ -95,9 +95,11 @@ def _parse_arguments():
     return argument_parser.parse_args()
 
 
-def _generate_boundaries_reference_samples(period_count, fps_num, fps_den, sample_rate):
+def _generate_boundaries_reference_samples(
+    length_seconds, fps_num, fps_den, sample_rate
+):
     return videojitter.util.generate_fake_samples(
-        np.tile([False, True], period_count),
+        np.tile([False, True], int(np.ceil(0.5 * length_seconds * fps_num / fps_den))),
         fps_num,
         fps_den,
         sample_rate,
@@ -251,7 +253,7 @@ def main():
     maybe_write_debug_wavfile("highpassed", recording_samples)
 
     boundaries_reference_samples = _generate_boundaries_reference_samples(
-        args.boundaries_signal_periods,
+        args.boundaries_signal_seconds,
         spec["fps"]["num"],
         spec["fps"]["den"],
         recording_sample_rate,
