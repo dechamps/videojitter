@@ -96,7 +96,7 @@ def _generate_chart(
     fine_print,
 ):
     chart = (
-        _packed_columns_chart(transitions.reset_index(), title=title)
+        _packed_columns_chart(transitions, title=title)
         .transform_window(transition_count="row_number()")
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
@@ -265,7 +265,7 @@ def _si_format_plus(value, *kargs, **kwargs):
 
 
 def _match_delayed_transitions(
-    time_since_previous_transition_seconds,
+    transitions,
     delayed_transition_indexes,
     expected_transition_count,
     max_offset,
@@ -282,15 +282,13 @@ def _match_delayed_transitions(
     ) / (
         (expected_transition_count + delayed_transition_indexes.size)
         / (
-            time_since_previous_transition_seconds.index.max()
-            - time_since_previous_transition_seconds.index.min()
+            transitions.recording_timestamp_seconds.max()
+            - transitions.recording_timestamp_seconds.min()
         )
-    ) + time_since_previous_transition_seconds.index.min()
-    recording_delayed_transition_indexes = (
-        time_since_previous_transition_seconds.index.get_indexer(
-            delayed_transition_expected_timestamp_seconds, method="nearest"
-        )
-    )
+    ) + transitions.recording_timestamp_seconds.min()
+    recording_delayed_transition_indexes = pd.Index(
+        transitions.recording_timestamp_seconds
+    ).get_indexer(delayed_transition_expected_timestamp_seconds, method="nearest")
 
     # In theory we could stop there, but we shouldn't, because the delayed
     # transition can be a few frames off (e.g. if there are spurious extra
@@ -302,9 +300,9 @@ def _match_delayed_transitions(
     neighbors_indexes = videojitter.util.generate_windows(
         recording_delayed_transition_indexes, max_offset, max_offset
     )
-    neighbors_durations_seconds = time_since_previous_transition_seconds.values[
-        neighbors_indexes
-    ]
+    neighbors_durations_seconds = (
+        transitions.time_since_previous_transition_seconds.values[neighbors_indexes]
+    )
 
     # First, align even frames with odd frames to prevent bias from affecting
     # the outcome.
@@ -340,12 +338,14 @@ def _match_delayed_transitions(
         )
 
     return pd.Series(
-        neighbors_indexes[transition_found][candidate_transitions[transition_found]],
+        delayed_transition_indexes[transition_found],
         pd.Index(
-            delayed_transition_indexes[transition_found],
-            name="expected_delayed_transition_index",
+            neighbors_indexes[transition_found][
+                candidate_transitions[transition_found]
+            ],
+            name="transition_index",
         ),
-        name="found_delayed_transition_index",
+        name="expected_transition_index",
     )
 
 
@@ -369,10 +369,9 @@ def main():
 
     transitions = pd.read_csv(
         args.edges_csv_file,
-        index_col="recording_timestamp_seconds",
         usecols=["recording_timestamp_seconds", "edge_is_rising"],
-    )
-    transitions_interval_seconds = _interval(transitions.index)
+    ).rename_axis(index="transition_index")
+    transitions_interval_seconds = _interval(transitions.recording_timestamp_seconds)
     print(
         f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at ~{transitions_interval_seconds.left:.6f} seconds and last transition at ~{transitions_interval_seconds.right:.6f} seconds for a total of ~{transitions_interval_seconds.length:.6f} seconds",
         file=sys.stderr,
@@ -380,7 +379,7 @@ def main():
 
     transitions[
         "time_since_previous_transition_seconds"
-    ] = transitions.index.to_series().diff()
+    ] = transitions.recording_timestamp_seconds.diff()
 
     transitions["valid"] = transitions.edge_is_rising.diff() == True
     invalid_transition_count = (~transitions.valid).sum()
@@ -394,16 +393,14 @@ def main():
 
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
-        transitions["intentionally_delayed"] = False
-        transitions.iloc[
+        transitions["intentionally_delayed"] = pd.notna(
             _match_delayed_transitions(
-                transitions["time_since_previous_transition_seconds"],
+                transitions,
                 intentionally_delayed_transitions,
                 transition_count,
                 args.delayed_transition_max_offset,
-            ),
-            transitions.columns.get_loc("intentionally_delayed"),
-        ] = True
+            ).reindex_like(transitions)
+        )
         normal_transition = normal_transition & ~transitions.intentionally_delayed
 
     if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
@@ -431,8 +428,10 @@ def main():
     )
 
     rounded_transitions = transitions.copy()
-    rounded_transitions.index = rounded_transitions.index.to_series().round(
-        args.time_precision_seconds_decimals
+    rounded_transitions.recording_timestamp_seconds = (
+        rounded_transitions.recording_timestamp_seconds.round(
+            args.time_precision_seconds_decimals
+        )
     )
     rounded_transitions.time_since_previous_transition_seconds = (
         rounded_transitions.time_since_previous_transition_seconds.round(
@@ -441,17 +440,18 @@ def main():
     )
 
     if output_csv_file:
-        rounded_transitions.to_csv(output_csv_file)
+        rounded_transitions.to_csv(output_csv_file, index=False)
     if output_chart_files:
-        minimum_time_between_transitions_index = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.idxmin()
-        maximum_time_between_transitions_index = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.idxmax()
-        mean_time_between_transitions = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.mean()
+        normal_transitions = transitions[normal_transition]
+        shortest_transition = normal_transitions.iloc[
+            normal_transitions.time_since_previous_transition_seconds.argmin()
+        ]
+        longest_transition = normal_transitions.iloc[
+            normal_transitions.time_since_previous_transition_seconds.argmax()
+        ]
+        mean_time_between_transitions = (
+            normal_transitions.time_since_previous_transition_seconds.mean()
+        )
         mean_fps = 1 / mean_time_between_transitions
         found_intentionally_delayed_transitions = (
             transitions.intentionally_delayed.sum()
@@ -469,7 +469,7 @@ def main():
                 f"Found {transitions.index.size} transitions, of which {found_intentionally_delayed_transitions} are intentionally delayed; expected {spec['transition_count']} transitions, of which {len(intentionally_delayed_transitions)} are delayed",
                 f"The following stats exclude {invalid_transition_count} invalid transitions and {found_intentionally_delayed_transitions} intentionally delayed transitions:",
                 edge_direction_compensation_fineprint,
-                f"Transition interval range: {si_format(transitions[normal_transition].loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions[normal_transition].loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
+                f"Transition interval range: {si_format(shortest_transition. time_since_previous_transition_seconds, 3)}s (at {si_format(shortest_transition.recording_timestamp_seconds, 3)}s) to {si_format(longest_transition.time_since_previous_transition_seconds, 3)}s (at {si_format(longest_transition.recording_timestamp_seconds, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
                 f"{(np.abs(stats.zscore(transitions[normal_transition].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
                 "Generated by videojitter",
