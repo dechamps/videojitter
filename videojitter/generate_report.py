@@ -337,16 +337,37 @@ def _match_delayed_transitions(
             file=sys.stderr,
         )
 
-    return pd.Series(
-        delayed_transition_indexes[transition_found],
+    return pd.DataFrame(
+        {"expected_transition_index": delayed_transition_indexes[transition_found]},
         pd.Index(
             neighbors_indexes[transition_found][
                 candidate_transitions[transition_found]
             ],
             name="transition_index",
         ),
-        name="expected_transition_index",
     )
+
+
+def _is_high_white(transitions):
+    """Given zero, one or more transitions with expected transition indexes,
+    returns True if high is white (i.e. a rising edge is a transition to a white
+    frame, and a falling edge is a transition to a black frame), False is low is
+    white (i.e. a rising edge is a transition to a black frame and a falling
+    edge is a transition to a white frame), or None if the results are
+    inconclusive."""
+
+    # We assume, by convention, that the first transition as defined by the spec
+    # is a transition from black to white. That transition has index 0;
+    # therefore, an even transition index means a transition from black to
+    # white.
+    transitions_high_is_white = transitions.edge_is_rising == (
+        transitions.expected_transition_index % 2 == 0
+    )
+
+    # Only return a conclusive result if all transitions agree.
+    high_is_white = transitions_high_is_white.values.all()
+    low_is_white = (~transitions_high_is_white.values).all()
+    return None if high_is_white == low_is_white else high_is_white
 
 
 def main():
@@ -391,15 +412,38 @@ def main():
 
     normal_transition = transitions.valid
 
+    high_is_white = None
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
-        transitions["intentionally_delayed"] = pd.notna(
-            _match_delayed_transitions(
+        delayed_transitions = pd.concat(
+            [
                 transitions,
-                intentionally_delayed_transitions,
-                transition_count,
-                args.delayed_transition_max_offset,
-            ).reindex_like(transitions)
+                _match_delayed_transitions(
+                    transitions,
+                    intentionally_delayed_transitions,
+                    transition_count,
+                    args.delayed_transition_max_offset,
+                ),
+            ],
+            axis="columns",
+            join="inner",
+        )
+        # Since we know the expected transition indexes of the delayed
+        # transitions, we can use them to deduce whether rising edges are
+        # transitions to black or transitions to white.
+        high_is_white = _is_high_white(delayed_transitions)
+        if high_is_white is None:
+            print(
+                "Unable to determine rising/falling edge black/white mapping from delayed transitions",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"Deduced from delayed transitions that rising edges are transitions to {'white' if high_is_white else 'black'} and falling edges are transitions to {'black' if high_is_white else 'white'}",
+                file=sys.stderr,
+            )
+        transitions["intentionally_delayed"] = pd.notna(
+            delayed_transitions.expected_transition_index.reindex_like(transitions)
         )
         normal_transition = normal_transition & ~transitions.intentionally_delayed
 
