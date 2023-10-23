@@ -1,3 +1,4 @@
 Successfully loaded spec file containing 3596 frame transitions at 59.94005994005994 FPS
 Recording analysis contains 3276 frame transitions, with first transition at ~6.511679 seconds and last transition at ~66.509802 seconds for a total of ~59.998123 seconds
+WARNING: data contains 1 edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".
 Valid, non-delayed transition interval standard deviation: ~0.012583 seconds

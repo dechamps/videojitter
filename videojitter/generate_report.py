@@ -11,7 +11,7 @@ import videojitter.util
 
 def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given a frame transition CSV file, produces a summary of the data.",
+        description="Given an edges file, produces a summary of the data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
@@ -21,8 +21,8 @@ def _parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--frame-transitions-csv-file",
-        help="Path to the input spec file",
+        "--edges-csv-file",
+        help="Path to the CSV file containing the list of edges found in the recording",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -50,8 +50,8 @@ def _parse_arguments():
         default=0.100,
     )
     argument_parser.add_argument(
-        "--black-white-offset-compensation",
-        help="Compensate for consistent timing differences between transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
+        "--edge-direction-compensation",
+        help="Compensate for shared timing differences between all falling and rising edges, i.e. transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
     )
@@ -100,14 +100,11 @@ def _generate_chart(
         .transform_window(transition_count="row_number()")
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
-            frame_label=alt.expr.if_(alt.datum.frame, "white", "black"),
-            label=alt.expr.if_(
-                alt.datum.transition_from_same_frame,
-                "Invalid transition to ",
-                "Transition to ",
-            )
-            + alt.datum.frame_label,
-            valid_label=alt.expr.if_(alt.datum.transition_from_same_frame, "no", "yes"),
+            edge_label=alt.expr.if_(alt.datum.edge_is_rising, "rising", "falling"),
+            label=alt.expr.if_(alt.datum.valid, "Valid ", "Invalid ")
+            + alt.datum.edge_label
+            + " edge",
+            valid_label=alt.expr.if_(alt.datum.valid, "yes", "no"),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
                 < -minimum_time_between_transitions_seconds,
@@ -159,9 +156,9 @@ def _generate_chart(
             title="Recorded transition #",
         ),
         alt.Tooltip(
-            "frame_label",
+            "edge_label",
             type="nominal",
-            title="Transition to",
+            title="Edge",
         ),
         alt.Tooltip(
             "valid_label",
@@ -248,14 +245,18 @@ def _mean_without_outliers(x):
     return x[np.abs(stats.zscore(x, nan_policy="omit")) < 3].mean()
 
 
-def _estimate_black_lag_seconds(transitions):
-    # We don't use the mean to prevent an outlier from biasing all
-    # transitions of the same color, nor the median to prevent odd results
-    # when dealing with pattern changes.
+def _estimate_falling_edge_lag_seconds(transitions):
+    # We don't use the mean to prevent an outlier from biasing a given edge
+    # direction, nor the median to prevent odd results when dealing with pattern
+    # changes.
     return _mean_without_outliers(
-        transitions.loc[~transitions.frame, "time_since_previous_transition_seconds"]
+        transitions.loc[
+            ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
+        ]
     ) - _mean_without_outliers(
-        transitions.loc[transitions.frame, "time_since_previous_transition_seconds"]
+        transitions.loc[
+            transitions.edge_is_rising, "time_since_previous_transition_seconds"
+        ]
     )
 
 
@@ -366,9 +367,9 @@ def main():
     )
 
     transitions = pd.read_csv(
-        args.frame_transitions_csv_file,
+        args.edges_csv_file,
         index_col="recording_timestamp_seconds",
-        usecols=["recording_timestamp_seconds", "frame"],
+        usecols=["recording_timestamp_seconds", "edge_is_rising"],
     )
     transitions_interval_seconds = _interval(transitions.index)
     print(
@@ -380,15 +381,15 @@ def main():
         "time_since_previous_transition_seconds"
     ] = transitions.index.to_series().diff()
 
-    transitions["transition_from_same_frame"] = transitions.frame.diff() == False
-    transitions_from_same_frame_count = transitions.transition_from_same_frame.sum()
-    if transitions_from_same_frame_count > 0:
+    transitions["valid"] = transitions.edge_is_rising.diff() == True
+    invalid_transition_count = (~transitions.valid).sum()
+    if invalid_transition_count > 0:
         print(
-            f'WARNING: transition data contains {transitions_from_same_frame_count} transitions where the previous transition is to the same color. This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".',
+            f'WARNING: data contains {invalid_transition_count} edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".',
             file=sys.stderr,
         )
 
-    transition_is_valid = ~transitions.transition_from_same_frame
+    normal_transition = transitions.valid
 
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
@@ -398,28 +399,26 @@ def main():
             transition_count,
             args.delayed_transition_max_offset,
         )
-        transition_is_valid = transition_is_valid & ~transitions.intentionally_delayed
+        normal_transition = normal_transition & ~transitions.intentionally_delayed
 
-    if getattr(
-        args, "black_white_offset_compensation", intentionally_delayed_transitions
-    ):
-        black_lag_seconds = _estimate_black_lag_seconds(
-            transitions[transition_is_valid]
+    if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
+        falling_edge_lag_seconds = _estimate_falling_edge_lag_seconds(
+            transitions[normal_transition]
         )
-        black_offset_seconds = -black_lag_seconds / 2
-        white_offset_seconds = black_lag_seconds / 2
-        black_white_offset_fineprint = f"Time since last transition includes {_si_format_plus(black_offset_seconds, 3)}s correction in all transitions to white and {_si_format_plus(white_offset_seconds, 3)}s correction in all transitions to black"
+        falling_edge_offset_seconds = -falling_edge_lag_seconds / 2
+        rising_edge_offset_seconds = falling_edge_lag_seconds / 2
+        edge_direction_compensation_fineprint = f"Time since last transition includes {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s correction in all rising edges"
         transitions.loc[
-            ~transitions.frame, "time_since_previous_transition_seconds"
-        ] += black_offset_seconds
+            ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
+        ] += falling_edge_offset_seconds
         transitions.loc[
-            transitions.frame, "time_since_previous_transition_seconds"
-        ] += white_offset_seconds
+            transitions.edge_is_rising, "time_since_previous_transition_seconds"
+        ] += rising_edge_offset_seconds
     else:
-        black_white_offset_fineprint = "Consistent timing differences between black vs. white transitions have NOT been compensated for"
+        edge_direction_compensation_fineprint = "Consistent timing differences between falling and rising edges (i.e. between black vs. white transitions) have NOT been compensated for"
 
     time_between_transitions_standard_deviation_seconds = transitions[
-        transition_is_valid
+        normal_transition
     ].time_since_previous_transition_seconds.std()
     print(
         f"Valid, non-delayed transition interval standard deviation: ~{time_between_transitions_standard_deviation_seconds:.6f} seconds",
@@ -440,13 +439,13 @@ def main():
         rounded_transitions.to_csv(output_csv_file)
     if output_chart_files:
         minimum_time_between_transitions_index = transitions[
-            transition_is_valid
+            normal_transition
         ].time_since_previous_transition_seconds.idxmin()
         maximum_time_between_transitions_index = transitions[
-            transition_is_valid
+            normal_transition
         ].time_since_previous_transition_seconds.idxmax()
         mean_time_between_transitions = transitions[
-            transition_is_valid
+            normal_transition
         ].time_since_previous_transition_seconds.mean()
         mean_fps = 1 / mean_time_between_transitions
         found_intentionally_delayed_transitions = (
@@ -463,11 +462,11 @@ def main():
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
                 f"Found {transitions.index.size} transitions, of which {found_intentionally_delayed_transitions} are intentionally delayed; expected {spec['transition_count']} transitions, of which {len(intentionally_delayed_transitions)} are delayed",
-                f"The following stats exclude {transitions_from_same_frame_count} invalid transitions and {found_intentionally_delayed_transitions} intentionally delayed transitions:",
-                black_white_offset_fineprint,
-                f"Transition interval range: {si_format(transitions[transition_is_valid].loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions[transition_is_valid].loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[transition_is_valid].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
+                f"The following stats exclude {invalid_transition_count} invalid transitions and {found_intentionally_delayed_transitions} intentionally delayed transitions:",
+                edge_direction_compensation_fineprint,
+                f"Transition interval range: {si_format(transitions[normal_transition].loc[minimum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(minimum_time_between_transitions_index, 3)}s) to {si_format(transitions[normal_transition].loc[maximum_time_between_transitions_index, 'time_since_previous_transition_seconds'], 3)}s (at {si_format(maximum_time_between_transitions_index, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
-                f"{(np.abs(stats.zscore(transitions[transition_is_valid].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
+                f"{(np.abs(stats.zscore(transitions[normal_transition].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
                 "Generated by videojitter",
             ],
         )

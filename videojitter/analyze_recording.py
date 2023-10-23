@@ -10,7 +10,7 @@ import videojitter.util
 
 def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given the recorded light waveform file, analyzes the recording and writes the resulting frame transition timestamps to a CSV file.",
+        description="Given the recorded light waveform file, analyzes the recording and writes the list of detected edges (transitions) to a file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
@@ -26,8 +26,8 @@ def _parse_arguments():
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
-        "--output-frame-transitions-csv-file",
-        help="Write the frame transition information to the specified CSV file",
+        "--output-edges-csv-file",
+        help="Write the list of detected edges to the specified CSV file",
         required=True,
         default=argparse.SUPPRESS,
     )
@@ -453,26 +453,10 @@ def main():
             / recording_sample_rate,
             name="recording_timestamp_seconds",
         ),
-        name="frame",
+        name="edge_is_rising",
     )
     edges.sort_index(inplace=True)
-
-    first_edge = edges.iloc[0]
-    last_edge = edges.iloc[-1]
-    if first_edge == last_edge:
-        print(
-            f"WARNING: the first and last edges are both {'rising' if first_edge else 'falling'}. This doesn't make sense as the first and last frames of the test video are supposed to be both black. Unable to determine transition directions as a result.",
-            file=sys.stderr,
-        )
-    else:
-        print(
-            f"First edge is {'rising' if first_edge else 'falling'} and last edge is {'rising' if last_edge else 'falling'}. Deducing that a falling edge means a transition to {'black' if first_edge else 'white'} and a rising edge means a transition to {'white' if first_edge else 'black'}.",
-            file=sys.stderr,
-        )
-        if not first_edge:
-            edges = ~edges
-
-    edges.to_csv(args.output_frame_transitions_csv_file)
+    edges.to_csv(args.output_edges_csv_file)
 
 
 if __name__ == "__main__":

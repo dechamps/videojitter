@@ -5,4 +5,3 @@ Removing frequencies lower than 21.19201142417225 Hz from the recording
 Test signal appears to start at sample 33253 (16.6265 seconds) and end at sample 154481 (77.2405 seconds) in the recording.
 Upsampling recording by 2x (to 4000.0 Hz)
 Kept 3598 slope peaks whose prominence is above ~0.152 or below ~-0.152. First edge is right after sample 1149 (0.28725 seconds) and last edge is right after sample 241254 (60.3135 seconds).
-First edge is rising and last edge is falling. Deducing that a falling edge means a transition to black and a rising edge means a transition to white.

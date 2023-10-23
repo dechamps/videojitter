@@ -12,7 +12,7 @@ analyze_recording_debug_08_slope.wav
 analyze_recording_debug_09_slope_heights.wav
 analyze_recording_debug_10_slope_prominences.wav
 analyze_recording_debug_11_edges.wav
-frame_transitions.csv
+edges.csv
 generate_fake_recording.stderr
 generate_fake_recording.stdout
 generate_report.stderr
