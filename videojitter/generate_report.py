@@ -339,13 +339,14 @@ def _match_delayed_transitions(
             file=sys.stderr,
         )
 
-    delayed_transitions = np.zeros(
-        time_since_previous_transition_seconds.index.size, dtype=bool
+    return pd.Series(
+        neighbors_indexes[transition_found][candidate_transitions[transition_found]],
+        pd.Index(
+            delayed_transition_indexes[transition_found],
+            name="expected_delayed_transition_index",
+        ),
+        name="found_delayed_transition_index",
     )
-    delayed_transitions[
-        neighbors_indexes[transition_found][candidate_transitions[transition_found]]
-    ] = True
-    return delayed_transitions
 
 
 def main():
@@ -393,12 +394,16 @@ def main():
 
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
-        transitions["intentionally_delayed"] = _match_delayed_transitions(
-            transitions["time_since_previous_transition_seconds"],
-            intentionally_delayed_transitions,
-            transition_count,
-            args.delayed_transition_max_offset,
-        )
+        transitions["intentionally_delayed"] = False
+        transitions.iloc[
+            _match_delayed_transitions(
+                transitions["time_since_previous_transition_seconds"],
+                intentionally_delayed_transitions,
+                transition_count,
+                args.delayed_transition_max_offset,
+            ),
+            transitions.columns.get_loc("intentionally_delayed"),
+        ] = True
         normal_transition = normal_transition & ~transitions.intentionally_delayed
 
     if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
