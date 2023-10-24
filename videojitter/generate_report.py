@@ -369,7 +369,7 @@ def _match_delayed_transitions(
     not_found_indexes = np.nonzero(~transition_found)[0]
     if not_found_indexes.size > 0:
         print(
-            f"WARNING: unable to locate the following delayed transitions: {delayed_transition_indexes[not_found_indexes]} (expected to find them around {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds). These delayed transitions will not be reported.",
+            f"WARNING: unable to locate the following delayed transitions: {delayed_transition_indexes[not_found_indexes]} (expected to find them around {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds). These delayed transitions will not be reported, and black/white color information may not be available.",
             file=sys.stderr,
         )
 
@@ -451,37 +451,37 @@ def main():
     high_is_white = None
     intentionally_delayed_transitions = spec["delayed_transitions"]
     if intentionally_delayed_transitions:
-        delayed_transitions = pd.concat(
-            [
-                transitions,
-                _match_delayed_transitions(
-                    transitions,
-                    intentionally_delayed_transitions,
-                    transition_count,
-                    args.delayed_transition_max_offset,
-                ),
-            ],
-            axis="columns",
-            join="inner",
+        delayed_transitions = _match_delayed_transitions(
+            transitions,
+            intentionally_delayed_transitions,
+            transition_count,
+            args.delayed_transition_max_offset,
         )
-        # Since we know the expected transition indexes of the delayed
-        # transitions, we can use them to deduce whether rising edges are
-        # transitions to black or transitions to white.
-        high_is_white = _is_high_white(delayed_transitions)
-        if high_is_white is None:
-            print(
-                "Unable to determine rising/falling edge black/white mapping from delayed transitions",
-                file=sys.stderr,
+
+        if not delayed_transitions.empty:
+            delayed_transitions = pd.concat(
+                [transitions, delayed_transitions],
+                axis="columns",
+                join="inner",
             )
-        else:
-            print(
-                f"Deduced from delayed transitions that rising edges are transitions to {'white' if high_is_white else 'black'} and falling edges are transitions to {'black' if high_is_white else 'white'}",
-                file=sys.stderr,
+            # Since we know the expected transition indexes of the delayed
+            # transitions, we can use them to deduce whether rising edges are
+            # transitions to black or transitions to white.
+            high_is_white = _is_high_white(delayed_transitions)
+            if high_is_white is None:
+                print(
+                    "Unable to determine frame color information from delayed transitions",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"Deduced from delayed transitions that rising edges are transitions to {'white' if high_is_white else 'black'} and falling edges are transitions to {'black' if high_is_white else 'white'}",
+                    file=sys.stderr,
+                )
+            transitions["intentionally_delayed"] = pd.notna(
+                delayed_transitions.expected_transition_index.reindex_like(transitions)
             )
-        transitions["intentionally_delayed"] = pd.notna(
-            delayed_transitions.expected_transition_index.reindex_like(transitions)
-        )
-        normal_transition = normal_transition & ~transitions.intentionally_delayed
+            normal_transition = normal_transition & ~transitions.intentionally_delayed
 
     if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
         falling_edge_lag_seconds = _estimate_falling_edge_lag_seconds(
@@ -541,6 +541,8 @@ def main():
         mean_fps = 1 / mean_time_between_transitions
         found_intentionally_delayed_transitions = (
             transitions.intentionally_delayed.sum()
+            if "intentionally_delayed" in transitions
+            else 0
         )
         chart = _generate_chart(
             rounded_transitions,

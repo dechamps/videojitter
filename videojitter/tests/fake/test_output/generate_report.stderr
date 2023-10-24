@@ -1,6 +1,5 @@
 Successfully loaded spec file containing 1438 frame transitions at 23.976023976023978 FPS
 Recording analysis contains 1438 frame transitions, with first transition at ~5.043748 seconds and last transition at ~68.179188 seconds for a total of ~63.135440 seconds
 WARNING: data contains 1 edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".
-WARNING: unable to locate the following delayed transitions: [719] (expected to find them around [36.63340556] seconds). These delayed transitions will not be reported.
-Unable to determine rising/falling edge black/white mapping from delayed transitions
+WARNING: unable to locate the following delayed transitions: [719] (expected to find them around [36.63340556] seconds). These delayed transitions will not be reported, and black/white color information may not be available.
 Valid, non-delayed transition interval standard deviation: ~0.014602 seconds
