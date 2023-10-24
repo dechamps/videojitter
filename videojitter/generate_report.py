@@ -113,8 +113,12 @@ def _generate_chart(
                     "black",
                 )
             },
-            label=alt.expr.if_(alt.datum.valid, "Valid ", "Invalid ")
-            + alt.datum.edge_label
+            label=alt.expr.if_(
+                alt.datum.valid,
+                alt.expr.upper(alt.expr.slice(alt.datum.edge_label, 0, 1))
+                + alt.expr.slice(alt.datum.edge_label, 1),
+                "Invalid " + alt.datum.edge_label,
+            )
             + " edge"
             + (
                 ""
