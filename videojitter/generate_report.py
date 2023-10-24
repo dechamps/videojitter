@@ -442,7 +442,9 @@ def main():
         "time_since_previous_transition_seconds"
     ] = transitions.recording_timestamp_seconds.diff()
 
-    transitions["valid"] = transitions.edge_is_rising.diff() == True
+    transitions["valid"] = transitions.edge_is_rising.pipe(
+        lambda r: np.diff(r.values, prepend=not r.values[0])
+    )
     invalid_transition_count = (~transitions.valid).sum()
     if invalid_transition_count > 0:
         print(

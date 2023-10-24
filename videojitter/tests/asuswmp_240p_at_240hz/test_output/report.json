@@ -8,7 +8,7 @@
   "vconcat": [
     {
       "data": {
-        "name": "data-6622a812c0e45a88790611708c143914"
+        "name": "data-cfd0f544058b20d4c01e2f620f41df0e"
       },
       "mark": {
         "type": "point",
@@ -196,7 +196,7 @@
         "text": [
           "First transition recorded at 6.601 s; last: 66.608 s; length: 60.008 s",
           "Found 14394 transitions, of which 1 are intentionally delayed; expected 14400 transitions, of which 1 are delayed",
-          "The following stats exclude 1 invalid transitions and 1 intentionally delayed transitions:",
+          "The following stats exclude 0 invalid transitions and 1 intentionally delayed transitions:",
           "Time since last transition includes +1.059 ms correction in all falling edges and -1.059 ms correction in all rising edges",
           "Transition interval range: 1.501 ms (at 41.553 s) to 30.090 ms (at 41.547 s) - standard deviation: 228.111 \u00b5s - 99% of transitions are between 4.101 ms and 4.234 ms",
           "Mean time between transitions: 4.169 ms, i.e. 239.867270 FPS, which is 0.999447x faster than expected (clock skew)",
@@ -224,7 +224,7 @@
   },
   "$schema": "https://vega.github.io/schema/vega-lite/v5.8.0.json",
   "datasets": {
-    "data-6622a812c0e45a88790611708c143914": [
+    "data-cfd0f544058b20d4c01e2f620f41df0e": [
       {
         "recording_timestamp_seconds": [
           6.600669,
@@ -43415,7 +43415,7 @@
           0.003314
         ],
         "valid": [
-          false,
+          true,
           true,
           true,
           true,

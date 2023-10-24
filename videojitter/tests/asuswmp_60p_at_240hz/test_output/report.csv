@@ -1,5 +1,5 @@
 recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_seconds,valid,intentionally_delayed,to_white
-5.738941,True,,False,False,False
+5.738941,True,,True,False,False
 5.751414,False,0.01759,True,False,True
 5.773271,True,0.01674,True,False,False
 5.784735,False,0.016581,True,False,True
