@@ -150,7 +150,7 @@
           "as": "edge_label"
         },
         {
-          "calculate": "((if(datum.valid,'Valid ','Invalid ') + datum.edge_label) + ' edge')",
+          "calculate": "(((if(datum.valid,'Valid ','Invalid ') + datum.edge_label) + ' edge') + '')",
           "as": "label"
         },
         {

@@ -90,6 +90,7 @@ def _packed_columns_chart(data, *kargs, **kwargs):
 def _generate_chart(
     transitions,
     title,
+    high_is_white,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
     mean_time_between_transitions,
@@ -101,9 +102,29 @@ def _generate_chart(
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
             edge_label=alt.expr.if_(alt.datum.edge_is_rising, "rising", "falling"),
+            **{}
+            if high_is_white is None
+            else {
+                "frame_label": alt.expr.if_(
+                    alt.datum.edge_is_rising
+                    if high_is_white
+                    else ~alt.datum.edge_is_rising,
+                    "white",
+                    "black",
+                )
+            },
             label=alt.expr.if_(alt.datum.valid, "Valid ", "Invalid ")
             + alt.datum.edge_label
-            + " edge",
+            + " edge"
+            + (
+                ""
+                if high_is_white is None
+                else alt.expr.if_(
+                    alt.datum.valid,
+                    " (transition to " + alt.datum.frame_label + ")",
+                    "",
+                )
+            ),
             valid_label=alt.expr.if_(alt.datum.valid, "yes", "no"),
             shape=alt.expr.if_(
                 alt.datum.time_since_previous_transition_seconds
@@ -149,41 +170,56 @@ def _generate_chart(
         )
         .properties(width=1000, height=750)
     )
-    tooltips = [
-        alt.Tooltip(
-            "transition_index",
-            type="quantitative",
-            title="Recorded transition #",
-        ),
-        alt.Tooltip(
-            "edge_label",
-            type="nominal",
-            title="Edge",
-        ),
-        alt.Tooltip(
-            "valid_label",
-            type="nominal",
-            title="Valid",
-        ),
-        alt.Tooltip(
-            "recording_timestamp_seconds",
-            type="quantitative",
-            title="Recording time (s)",
-            format="~s",
-        ),
-        alt.Tooltip(
-            "time_since_previous_transition_seconds",
-            type="quantitative",
-            title="Time since last transition (s)",
-            format="~s",
-        ),
-        alt.Tooltip(
-            "time_since_previous_transition_seconds_relative_to_mean",
-            type="quantitative",
-            title="Relative to mean (s)",
-            format="+~s",
-        ),
-    ]
+    tooltips = (
+        [
+            alt.Tooltip(
+                "transition_index",
+                type="quantitative",
+                title="Recorded transition #",
+            ),
+            alt.Tooltip(
+                "edge_label",
+                type="nominal",
+                title="Edge",
+            ),
+            alt.Tooltip(
+                "valid_label",
+                type="nominal",
+                title="Valid",
+            ),
+        ]
+        + (
+            []
+            if high_is_white is None
+            else [
+                alt.Tooltip(
+                    "frame_label",
+                    type="nominal",
+                    title="Transition to",
+                )
+            ]
+        )
+        + [
+            alt.Tooltip(
+                "recording_timestamp_seconds",
+                type="quantitative",
+                title="Recording time (s)",
+                format="~s",
+            ),
+            alt.Tooltip(
+                "time_since_previous_transition_seconds",
+                type="quantitative",
+                title="Time since last transition (s)",
+                format="~s",
+            ),
+            alt.Tooltip(
+                "time_since_previous_transition_seconds_relative_to_mean",
+                type="quantitative",
+                title="Relative to mean (s)",
+                format="+~s",
+            ),
+        ]
+    )
     if "intentionally_delayed" in transitions:
         normal_label = "Normal transition"
         delayed_label = "Intentionally delayed transition (ignore)"
@@ -484,7 +520,13 @@ def main():
     )
 
     if output_csv_file:
-        rounded_transitions.to_csv(output_csv_file, index=False)
+        rounded_transitions.pipe(
+            lambda t: t
+            if high_is_white is None
+            else t.assign(
+                to_white=t.edge_is_rising if high_is_white else ~t.edge_is_rising
+            )
+        ).to_csv(output_csv_file, index=False)
     if output_chart_files:
         normal_transitions = transitions[normal_transition]
         shortest_transition = normal_transitions.iloc[
@@ -503,6 +545,7 @@ def main():
         chart = _generate_chart(
             rounded_transitions,
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
+            high_is_white,
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,
             np.round(

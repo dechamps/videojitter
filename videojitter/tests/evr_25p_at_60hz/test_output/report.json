@@ -69,6 +69,11 @@
             "type": "nominal"
           },
           {
+            "field": "frame_label",
+            "title": "Transition to",
+            "type": "nominal"
+          },
+          {
             "field": "recording_timestamp_seconds",
             "format": "~s",
             "title": "Recording time (s)",
@@ -150,7 +155,11 @@
           "as": "edge_label"
         },
         {
-          "calculate": "((if(datum.valid,'Valid ','Invalid ') + datum.edge_label) + ' edge')",
+          "calculate": "if((!datum.edge_is_rising),'white','black')",
+          "as": "frame_label"
+        },
+        {
+          "calculate": "(((if(datum.valid,'Valid ','Invalid ') + datum.edge_label) + ' edge') + if(datum.valid,((' (transition to ' + datum.frame_label) + ')'),''))",
           "as": "label"
         },
         {
