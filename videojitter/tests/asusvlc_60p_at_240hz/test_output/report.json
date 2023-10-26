@@ -126,6 +126,7 @@
         }
       },
       "height": 750,
+      "name": "view_1",
       "title": "3602 transitions at 60.000 nominal FPS",
       "transform": [
         {
@@ -208,6 +209,21 @@
         "fontSize": 10,
         "fontWeight": "lighter"
       }
+    }
+  ],
+  "params": [
+    {
+      "name": "param_1",
+      "select": {
+        "type": "interval",
+        "encodings": [
+          "x"
+        ]
+      },
+      "bind": "scales",
+      "views": [
+        "view_1"
+      ]
     }
   ],
   "resolve": {

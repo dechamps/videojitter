@@ -256,7 +256,15 @@ def _generate_chart(
         )
     return (
         alt.vconcat(
-            chart.encode(tooltip=tooltips),
+            chart.encode(tooltip=tooltips).add_params(
+                # Make the chart zoomable on the X axis.
+                # Note we don't let the user zoom the Y axis, as they would then
+                # end up scaling both axes simultaneously, which does not really
+                # make sense (the aspect ratio of this chart is arbitrary
+                # anyway) and is more annoying than useful when attempting to
+                # keep outliers within the range of the chart.
+                alt.selection_interval(encodings=["x"], bind="scales")
+            ),
             alt.Chart(
                 title=alt.TitleParams(
                     fine_print,
