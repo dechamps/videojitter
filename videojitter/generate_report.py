@@ -130,17 +130,6 @@ def _generate_chart(
                 )
             ),
             valid_label=alt.expr.if_(alt.datum.valid, "yes", "no"),
-            shape=alt.expr.if_(
-                alt.datum.time_since_previous_transition_seconds
-                < -minimum_time_between_transitions_seconds,
-                "triangle-down",
-                alt.expr.if_(
-                    alt.datum.time_since_previous_transition_seconds
-                    > maximum_time_between_transitions_seconds,
-                    "triangle-up",
-                    "circle",
-                ),
-            ),
             time_since_previous_transition_seconds_relative_to_mean=alt.datum.time_since_previous_transition_seconds
             - mean_time_between_transitions,
         )
@@ -170,7 +159,22 @@ def _generate_chart(
                 type="nominal",
                 title=None,
             ).legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
-            alt.Shape("shape", type="nominal", scale=None),
+            shape={
+                # https://github.com/altair-viz/altair/issues/2759
+                "condition": [
+                    {
+                        "test": alt.datum.time_since_previous_transition_seconds
+                        < minimum_time_between_transitions_seconds,
+                        "value": "triangle-down",
+                    },
+                    {
+                        "test": alt.datum.time_since_previous_transition_seconds
+                        > maximum_time_between_transitions_seconds,
+                        "value": "triangle-up",
+                    },
+                ],
+                "value": "circle",
+            },
         )
         .properties(width=1000, height=750)
     )

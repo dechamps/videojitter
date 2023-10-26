@@ -48,9 +48,17 @@
           "type": "nominal"
         },
         "shape": {
-          "field": "shape",
-          "scale": null,
-          "type": "nominal"
+          "condition": [
+            {
+              "test": "(datum.time_since_previous_transition_seconds < 0.0)",
+              "value": "triangle-down"
+            },
+            {
+              "test": "(datum.time_since_previous_transition_seconds > 0.1)",
+              "value": "triangle-up"
+            }
+          ],
+          "value": "circle"
         },
         "tooltip": [
           {
@@ -167,10 +175,6 @@
         {
           "calculate": "if(datum.valid,'yes','no')",
           "as": "valid_label"
-        },
-        {
-          "calculate": "if((datum.time_since_previous_transition_seconds < -0.0),'triangle-down',if((datum.time_since_previous_transition_seconds > 0.1),'triangle-up','circle'))",
-          "as": "shape"
         },
         {
           "calculate": "(datum.time_since_previous_transition_seconds - 0.04171)",
