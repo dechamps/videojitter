@@ -50,6 +50,18 @@ def _parse_arguments():
         default=0.100,
     )
     argument_parser.add_argument(
+        "--keep-first-transition",
+        help='By default the very first transition is thrown away as it may be a spurious transition from the warmup pattern instead of the first "true" transition. If this option is set, the first transition is preserved.',
+        action="store_true",
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
+        "--keep-last-transition",
+        help='By default the very last transition is thrown away as it may be a spurious transition to the cooldown pattern instead of the last "true" transition. If this option is set, the last transition is preserved.',
+        action="store_true",
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--edge-direction-compensation",
         help="Compensate for shared timing differences between all falling and rising edges, i.e. transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
         action=argparse.BooleanOptionalAction,
@@ -444,9 +456,10 @@ def main():
         args.edges_csv_file,
         usecols=["recording_timestamp_seconds", "edge_is_rising"],
     ).rename_axis(index="transition_index")
+    transition_count = transitions.index.size
     transitions_interval_seconds = _interval(transitions.recording_timestamp_seconds)
     print(
-        f"Recording analysis contains {transitions.index.size} frame transitions, with first transition at ~{transitions_interval_seconds.left:.6f} seconds and last transition at ~{transitions_interval_seconds.right:.6f} seconds for a total of ~{transitions_interval_seconds.length:.6f} seconds",
+        f"Recording analysis contains {transition_count} frame transitions, with first transition at ~{transitions_interval_seconds.left:.6f} seconds and last transition at ~{transitions_interval_seconds.right:.6f} seconds for a total of ~{transitions_interval_seconds.length:.6f} seconds",
         file=sys.stderr,
     )
 
@@ -463,8 +476,6 @@ def main():
             f'WARNING: data contains {invalid_transition_count} edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".',
             file=sys.stderr,
         )
-
-    normal_transition = transitions.valid
 
     high_is_white = None
     intentionally_delayed_transitions = spec["delayed_transitions"]
@@ -499,7 +510,17 @@ def main():
             transitions["intentionally_delayed"] = pd.notna(
                 delayed_transitions.expected_transition_index.reindex_like(transitions)
             )
-            normal_transition = normal_transition & ~transitions.intentionally_delayed
+
+    keep_first_transition = getattr(args, "keep_first_transition", False)
+    if not keep_first_transition:
+        transitions = transitions.iloc[1:]
+    keep_last_transition = getattr(args, "keep_last_transition", False)
+    if not keep_last_transition:
+        transitions = transitions.iloc[:-1]
+
+    normal_transition = transitions.valid
+    if "intentionally_delayed" in transitions:
+        normal_transition = normal_transition & ~transitions.intentionally_delayed
 
     if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
         falling_edge_lag_seconds = _estimate_falling_edge_lag_seconds(
@@ -573,8 +594,8 @@ def main():
             ),
             fine_print=[
                 f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
-                f"Found {transitions.index.size} transitions, of which {found_intentionally_delayed_transitions} are intentionally delayed; expected {spec['transition_count']} transitions, of which {len(intentionally_delayed_transitions)} are delayed",
-                f"The following stats exclude {invalid_transition_count} invalid transitions and {found_intentionally_delayed_transitions} intentionally delayed transitions:",
+                f"Detected {transition_count} transitions (expected {spec['transition_count']}); first transition was {'kept' if keep_first_transition else 'removed'}; last transition was {'kept' if keep_last_transition else 'removed'}; expecting {len(intentionally_delayed_transitions)} intentionally delayed transitions",
+                f"The following stats exclude {invalid_transition_count} invalid transitions and the {found_intentionally_delayed_transitions} intentionally delayed transitions that were found:",
                 edge_direction_compensation_fineprint,
                 f"Transition interval range: {si_format(shortest_transition. time_since_previous_transition_seconds, 3)}s (at {si_format(shortest_transition.recording_timestamp_seconds, 3)}s) to {si_format(longest_transition.time_since_previous_transition_seconds, 3)}s (at {si_format(longest_transition.recording_timestamp_seconds, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
                 f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
