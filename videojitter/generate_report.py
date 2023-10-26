@@ -147,7 +147,7 @@ def _generate_chart(
         .mark_point(filled=True)
         .encode(
             alt.X("recording_timestamp_seconds", type="quantitative")
-            .scale(zero=False)
+            .scale(zero=False, nice=False)
             .axis(
                 labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
                 title="Recording timestamp",

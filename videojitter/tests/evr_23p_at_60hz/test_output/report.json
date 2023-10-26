@@ -104,7 +104,8 @@
           },
           "field": "recording_timestamp_seconds",
           "scale": {
-            "zero": false
+            "zero": false,
+            "nice": false
           },
           "type": "quantitative"
         },
