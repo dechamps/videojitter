@@ -1,7 +1,7 @@
 analyze_recording.stderr
 analyze_recording.stdout
 analyze_recording_debug_00_downsampled.wav
-analyze_recording_debug_01_boundaries_reference.wav
+analyze_recording_debug_01_pattern.wav
 analyze_recording_debug_02_cross_correlation.wav
 analyze_recording_debug_03_boundary_candidates.wav
 analyze_recording_debug_04_trimmed.wav

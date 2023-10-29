@@ -46,14 +46,14 @@ def _parse_arguments():
         default=0.5 / np.sqrt(2),
     )
     argument_parser.add_argument(
-        "--boundaries-signal-seconds",
-        help="The length of the reference signal used to detect the beginning and end of the test signal within the recording.",
+        "--pattern-length-seconds",
+        help="The length of the reference pattern used to detect the beginning and end of the test signal within the recording.",
         type=float,
         default=0.5,
     )
     argument_parser.add_argument(
-        "--boundaries-score-threshold-ratio",
-        help="How well does a given portion of the recording have to match the reference sequence in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
+        "--pattern-score-threshold",
+        help="How well does a given portion of the recording have to match the reference pattern in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
         type=float,
         default=0.4,
     )
@@ -77,9 +77,7 @@ def _parse_arguments():
     return argument_parser.parse_args()
 
 
-def _generate_boundaries_reference_samples(
-    length_seconds, fps_num, fps_den, sample_rate
-):
+def _generate_pattern_samples(length_seconds, fps_num, fps_den, sample_rate):
     return videojitter.util.generate_fake_samples(
         np.tile([False, True], int(np.ceil(0.5 * length_seconds * fps_num / fps_den))),
         fps_num,
@@ -283,38 +281,35 @@ def main():
     )
     maybe_write_debug_wavfile("downsampled", recording_samples)
 
-    boundaries_reference_samples = _generate_boundaries_reference_samples(
-        args.boundaries_signal_seconds,
+    pattern_samples = _generate_pattern_samples(
+        args.pattern_length_seconds,
         spec["fps"]["num"],
         spec["fps"]["den"],
         recording_sample_rate,
     )
-    maybe_write_debug_wavfile("boundaries_reference", boundaries_reference_samples)
+    maybe_write_debug_wavfile("pattern", pattern_samples)
 
-    cross_correlation = scipy.signal.correlate(
+    pattern_cross_correlation = scipy.signal.correlate(
         recording_samples,
-        boundaries_reference_samples.astype(recording_samples.dtype)
-        / boundaries_reference_samples.size,
+        pattern_samples.astype(recording_samples.dtype) / pattern_samples.size,
         mode="valid",
     )
     maybe_write_debug_wavfile(
         "cross_correlation",
-        cross_correlation,
+        pattern_cross_correlation,
     )
 
-    abs_cross_correlation = np.abs(cross_correlation)
+    abs_pattern_cross_correlation = np.abs(pattern_cross_correlation)
     boundary_candidates = (
-        abs_cross_correlation
-        >= np.max(abs_cross_correlation) * args.boundaries_score_threshold_ratio
+        abs_pattern_cross_correlation
+        >= np.max(abs_pattern_cross_correlation) * args.pattern_score_threshold
     )
     maybe_write_debug_wavfile("boundary_candidates", boundary_candidates)
 
     boundary_candidate_indexes = np.nonzero(boundary_candidates)[0]
     assert boundary_candidate_indexes.size > 1
     test_signal_start_index = boundary_candidate_indexes[0]
-    test_signal_end_index = (
-        boundary_candidate_indexes[-1] + boundaries_reference_samples.size
-    )
+    test_signal_end_index = boundary_candidate_indexes[-1] + pattern_samples.size
     print(
         f"Test signal appears to start at {format_index(test_signal_start_index)} and end at {format_index(test_signal_end_index)} in the recording.",
         file=sys.stderr,
