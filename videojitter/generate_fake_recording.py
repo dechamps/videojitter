@@ -38,13 +38,13 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--begin-padding-seconds",
-        help="Duration of the padding before the test signal",
+        help="Duration of the padding before the test signal. If negative, will truncate the beginning of the test signal.",
         type=float,
         default=5,
     )
     argument_parser.add_argument(
         "--end-padding-seconds",
-        help="Duration of the padding after the test signal",
+        help="Duration of the padding after the test signal. If negative, will truncate the beginning of the test signal.",
         type=float,
         default=5,
     )
@@ -258,21 +258,38 @@ def main():
         + frames * args.white_duration_overshoot
         + (np.arange(frames.size) % 2 == 0) * args.even_duration_overshoot,
     )
+    begin_padding_samples = int(np.round(args.begin_padding_seconds * sample_rate))
+    end_padding_samples = int(np.round(args.end_padding_seconds * sample_rate))
     samples = np.concatenate(
         (
-            np.ones(
-                int(np.round(args.begin_padding_seconds * sample_rate)),
-                dtype=samples.dtype,
+            (
+                np.ones(
+                    int(np.round(args.begin_padding_seconds * sample_rate)),
+                    dtype=samples.dtype,
+                )
+                * args.padding_signal_level
             )
-            * args.padding_signal_level,
+            if begin_padding_samples > 0
+            else [],
             samples,
-            np.ones(
-                int(np.round(args.end_padding_seconds * sample_rate)),
-                dtype=samples.dtype,
+            (
+                np.ones(
+                    int(np.round(args.end_padding_seconds * sample_rate)),
+                    dtype=samples.dtype,
+                )
+                * args.padding_signal_level
             )
-            * args.padding_signal_level,
+            if end_padding_samples > 0
+            else [],
         )
     ).astype(np.float32)
+    samples = samples[
+        -begin_padding_samples
+        if begin_padding_samples < 0
+        else 0 : end_padding_samples
+        if end_padding_samples < 0
+        else None
+    ]
     if args.pwm_frequency_fps != 0:
         samples = (samples + 1) * (
             scipy.signal.square(
