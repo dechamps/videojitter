@@ -141,6 +141,7 @@ def _generate_chart(
                     "",
                 )
             ),
+            label_order=(~alt.datum.valid) * 2 + (~alt.datum.edge_is_rising),
             valid_label=alt.expr.if_(alt.datum.valid, "yes", "no"),
             time_since_previous_transition_seconds_relative_to_mean=alt.datum.time_since_previous_transition_seconds
             - mean_time_between_transitions,
@@ -170,6 +171,7 @@ def _generate_chart(
                 "label",
                 type="nominal",
                 title=None,
+                sort=alt.SortField("label_order"),
             ).legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
             shape={
                 # https://github.com/altair-viz/altair/issues/2759
