@@ -319,6 +319,14 @@ def main():
         f"Test signal appears to start at {format_index(test_signal_start_index)} and end at {format_index(test_signal_end_index)} in the recording.",
         file=sys.stderr,
     )
+    if (
+        test_signal_start_index < recording_sample_rate
+        and test_signal_end_index > recording_samples.size - recording_sample_rate
+    ):
+        print(
+            "WARNING: test signal boundaries are very close to recording boundaries. This may mean the recording is truncated or the boundaries were not detected correctly (e.g. because the recording is corrupted or doesn't match the spec). This warning can be ignored the recording was trimmed manually (you shouldn't need to do that though - the analyzer can detect where the test signal begins and ends automatically!).",
+            file=sys.stderr,
+        )
 
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_debug_wavfile("trimmed", recording_samples)
