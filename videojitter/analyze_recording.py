@@ -134,47 +134,51 @@ def _generate_slope_kernel(min_frequency_hz, sample_rate):
     ) * scipy.signal.windows.blackmanharris(slope_kernel.size)
 
 
-def _find_abs_peaks_with_prominence(x):
-    """Like scipy.signal.find_peaks(), but returns both positive and negative
-    peaks, along with their prominences.
-
-    Negative prominences will be returned for negative peaks.
-
-    Note that the absolute prominences returned by this function are not the
-    same as those that would be returned by find_peaks_no_borders(np.abs(x)).
-    Indeed, when calculating peaks on a fully rectified signal, prominence is
-    not increased by having to go through negative values before reaching the
-    next peak, but with this function it is.
-
-    Contrary to scipy.signal.find_peaks(), the prominence is calculated under
-    the assumption that the borders are mirror images of the signal; this
-    ensures that the first/last peaks do not end up with an unfairly low
-    prominence just because they don't have an opposite peak on *both* sides."""
+def _find_peaks_with_prominence_mirrored(x):
+    """Like scipy.signal.find_peaks(), but calculates prominences under the
+    assumption that the borders are mirror images of the signal; this ensures
+    that the first/last peaks do not end up with an unfairly low prominence just
+    because they don't have an opposite peak on *both* sides."""
     # TODO: this is hilariously inefficient; surely we can find a better way to
     # simulate the mirroring.
     flipped = np.flip(x)
     mirrored = np.concatenate((flipped, x, flipped))
-    positive_peak_indexes, positive_peak_properties = scipy.signal.find_peaks(
+    peak_indexes, peak_properties = scipy.signal.find_peaks(
         mirrored, prominence=(None, None)
     )
-    negative_peak_indexes, negative_peak_properties = scipy.signal.find_peaks(
-        -mirrored, prominence=(None, None)
-    )
-    valid_positive_peak = (positive_peak_indexes >= x.size) & (
-        positive_peak_indexes < x.size * 2
-    )
-    valid_negative_peak = (negative_peak_indexes >= x.size) & (
-        negative_peak_indexes < x.size * 2
-    )
+    valid_peak = (peak_indexes >= x.size) & (peak_indexes < x.size * 2)
+    return peak_indexes[valid_peak] - x.size, peak_properties["prominences"][valid_peak]
+
+
+def _find_abs_peaks_with_prominence(x):
+    """Like _find_peaks_with_prominence_mirrored(), but considers both positive
+    and negative peaks.
+
+    Negative prominences will be returned for negative peaks.
+
+    Note that the absolute prominences returned by this function are not the
+    same as those that would be returned by
+    _find_peaks_with_prominence_mirrored(np.abs(x)). Indeed, when calculating
+    peaks on a fully rectified signal, prominence is not increased by having to
+    go through negative values before reaching the next peak, but with this
+    function it is."""
+    (
+        positive_peak_indexes,
+        positive_peak_prominences,
+    ) = _find_peaks_with_prominence_mirrored(x)
+    (
+        negative_peak_indexes,
+        negative_peak_prominences,
+    ) = _find_peaks_with_prominence_mirrored(-x)
     return np.concatenate(
         (
-            positive_peak_indexes[valid_positive_peak] - x.size,
-            negative_peak_indexes[valid_negative_peak] - x.size,
+            positive_peak_indexes,
+            negative_peak_indexes,
         )
     ), np.concatenate(
         (
-            positive_peak_properties["prominences"][valid_positive_peak],
-            -negative_peak_properties["prominences"][valid_negative_peak],
+            positive_peak_prominences,
+            -negative_peak_prominences,
         )
     )
 
