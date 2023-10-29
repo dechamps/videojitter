@@ -8,7 +8,7 @@
   "vconcat": [
     {
       "data": {
-        "name": "data-0c677cba5126fe9448c2b1a11ca6f61d"
+        "name": "data-9db61ef4a64a1ae730a8ae3c77f15cef"
       },
       "mark": {
         "type": "point",
@@ -219,7 +219,7 @@
   },
   "$schema": "https://vega.github.io/schema/vega-lite/v5.8.0.json",
   "datasets": {
-    "data-0c677cba5126fe9448c2b1a11ca6f61d": [
+    "data-9db61ef4a64a1ae730a8ae3c77f15cef": [
       {
         "recording_timestamp_seconds": [
           10.0,
@@ -246,7 +246,7 @@
           false
         ],
         "time_since_previous_transition_seconds": [
-          NaN,
+          null,
           0.01,
           0.01,
           0.01,

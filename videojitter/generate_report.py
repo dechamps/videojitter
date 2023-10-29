@@ -109,7 +109,12 @@ def _generate_chart(
     fine_print,
 ):
     chart = (
-        _packed_columns_chart(transitions, title=title)
+        _packed_columns_chart(
+            # Stop Altair from outputting NaNs, which is not valid JSON. See
+            # https://github.com/altair-viz/altair/issues/2301
+            transitions.replace({np.nan: None}),
+            title=title,
+        )
         .transform_window(transition_count="row_number()")
         .transform_calculate(
             transition_index=alt.expr.datum.transition_count - 1,
