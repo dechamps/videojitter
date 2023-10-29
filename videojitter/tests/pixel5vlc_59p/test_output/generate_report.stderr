@@ -1,4 +1,4 @@
 Successfully loaded spec file containing 3596 frame transitions at 59.94005994005994 FPS
-Recording analysis contains 3274 frame transitions, with first transition at ~6.511654 seconds and last transition at ~66.509792 seconds for a total of ~59.998138 seconds
-WARNING: unable to locate the following delayed transitions: [1798] (expected to find them around [39.46940961] seconds). These delayed transitions will not be reported, and black/white color information may not be available.
+Recording analysis contains 3274 frame transitions, with first transition at ~6.511904 seconds and last transition at ~66.510042 seconds for a total of ~59.998138 seconds
+WARNING: unable to locate the following delayed transitions: [1798] (expected to find them around [39.46965961] seconds). These delayed transitions will not be reported, and black/white color information may not be available.
 Valid, non-delayed transition interval standard deviation: ~0.013019 seconds

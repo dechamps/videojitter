@@ -263,19 +263,6 @@ def main():
     )
     maybe_write_debug_wavfile("downsampled", recording_samples)
 
-    min_frequency = nominal_fps * args.min_frequency_ratio
-    print(
-        f"Removing frequencies lower than {min_frequency} Hz from the recording",
-        file=sys.stderr,
-    )
-
-    highpass_kernel = _generate_highpass_kernel(min_frequency, recording_sample_rate)
-    maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
-    recording_samples = scipy.signal.convolve(
-        recording_samples, highpass_kernel.astype(recording_samples.dtype), "same"
-    )
-    maybe_write_debug_wavfile("highpassed", recording_samples)
-
     boundaries_reference_samples = _generate_boundaries_reference_samples(
         args.boundaries_signal_seconds,
         spec["fps"]["num"],
@@ -315,6 +302,19 @@ def main():
 
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_debug_wavfile("trimmed", recording_samples)
+
+    min_frequency = nominal_fps * args.min_frequency_ratio
+    print(
+        f"Removing frequencies lower than {min_frequency} Hz from the recording",
+        file=sys.stderr,
+    )
+
+    highpass_kernel = _generate_highpass_kernel(min_frequency, recording_sample_rate)
+    maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
+    recording_samples = scipy.signal.convolve(
+        recording_samples, highpass_kernel.astype(recording_samples.dtype), "valid"
+    )
+    maybe_write_debug_wavfile("highpassed", recording_samples)
 
     # The fundamental, core idea behind the way we detect "edges" is to look for
     # large scale changes in overall recording signal level.
@@ -428,6 +428,7 @@ def main():
             (
                 _interpolate_peaks(recording_slope, slope_peak_indexes)
                 + test_signal_start_index
+                + highpass_kernel.size / 2
             )
             / recording_sample_rate,
             name="recording_timestamp_seconds",

@@ -1,6 +1,6 @@
 Successfully loaded spec file describing 3602 frames at 60.0 FPS (60.03333333333333 seconds)
 Successfully loaded recording containing 565120 samples at 8000 Hz (70.64 seconds)
 Downsampling recording by 4.0x (to 2000.0 Hz)
+Test signal appears to start at sample 10936 (5.468 seconds) and end at sample 132110 (66.055 seconds) in the recording.
 Removing frequencies lower than 21.213203435596423 Hz from the recording
-Test signal appears to start at sample 10903 (5.4515 seconds) and end at sample 132140 (66.07 seconds) in the recording.
-Kept 3602 slope peaks whose prominence is above ~0.157. First edge is right after sample 575 (0.2875 seconds) and last edge is right after sample 120637 (60.3185 seconds).
+Kept 3602 slope peaks whose prominence is above ~0.157. First edge is right after sample 494 (0.247 seconds) and last edge is right after sample 120556 (60.278 seconds).

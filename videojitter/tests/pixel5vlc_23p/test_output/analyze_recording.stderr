@@ -1,6 +1,6 @@
 Successfully loaded spec file describing 1440 frames at 23.976023976023978 FPS (60.059999999999995 seconds)
 Successfully loaded recording containing 551840 samples at 8000 Hz (68.98 seconds)
 Downsampling recording by 4.0x (to 2000.0 Hz)
+Test signal appears to start at sample 12204 (6.102 seconds) and end at sample 133342 (66.671 seconds) in the recording.
 Removing frequencies lower than 8.476804569668902 Hz from the recording
-Test signal appears to start at sample 12204 (6.102 seconds) and end at sample 133341 (66.6705 seconds) in the recording.
-Kept 1438 slope peaks whose prominence is above ~0.0646. First edge is right after sample 666 (0.333 seconds) and last edge is right after sample 120457 (60.2285 seconds).
+Kept 1438 slope peaks whose prominence is above ~0.0646. First edge is right after sample 548 (0.274 seconds) and last edge is right after sample 120339 (60.1695 seconds).
