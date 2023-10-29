@@ -351,10 +351,21 @@ def main():
     # points at which the signal reaches a local steepness extremum.
     slope_kernel = _generate_slope_kernel(min_frequency, recording_sample_rate)
     maybe_write_debug_wavfile("slope_kernel", slope_kernel)
+    recording_samples = np.concatenate(
+        (
+            np.full(int(slope_kernel.size / 2), recording_samples[0]),
+            recording_samples,
+            np.full(int(slope_kernel.size / 2), recording_samples[-1]),
+        )
+    )
+    maybe_write_debug_wavfile("padded", recording_samples)
     recording_slope = scipy.signal.convolve(
-        recording_samples, slope_kernel.astype(recording_samples.dtype), "valid"
+        recording_samples,
+        slope_kernel.astype(recording_samples.dtype),
+        "valid",
     )
     maybe_write_debug_wavfile("slope", recording_slope)
+    assert recording_slope.size == test_signal_end_index - test_signal_start_index
 
     # High frequency noise can cause us to find spurious local extrema as the
     # signal "wiggles around" the true peak - this results in a "forest" of
@@ -431,7 +442,6 @@ def main():
             (
                 _interpolate_peaks(recording_slope, slope_peak_indexes)
                 + test_signal_start_index
-                + slope_kernel.size / 2
             )
             / recording_sample_rate,
             name="recording_timestamp_seconds",

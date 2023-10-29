@@ -1,4 +1,4 @@
 Successfully loaded spec file containing 3600 frame transitions at 60.0 FPS
-Recording analysis contains 3602 frame transitions, with first transition at ~5.739172 seconds and last transition at ~65.770221 seconds for a total of ~60.031049 seconds
+Recording analysis contains 3602 frame transitions, with first transition at ~5.738922 seconds and last transition at ~65.769971 seconds for a total of ~60.031049 seconds
 Deduced from delayed transitions that rising edges are transitions to black and falling edges are transitions to white
 Valid, non-delayed transition interval standard deviation: ~0.000137 seconds
