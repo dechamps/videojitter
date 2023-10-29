@@ -1,5 +1,6 @@
 Successfully loaded spec file describing 1440 frames at 23.976023976023978 FPS (60.059999999999995 seconds)
 Successfully loaded recording containing 3514611 samples at 48000 Hz (73.2210625 seconds)
+WARNING: it looks like the recording may be clipping around sample 3010473 (62.7181875 seconds). You may want to re-record at a lower input gain/volume.
 Downsampling recording by 24.0x (to 2000.0 Hz)
 Test signal appears to start at sample 9488 (4.744 seconds) and end at sample 137017 (68.5085 seconds) in the recording.
 Removing frequencies lower than 8.476804569668902 Hz from the recording

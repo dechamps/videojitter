@@ -234,6 +234,13 @@ def main():
     def format_index(index):
         return f"sample {index} ({index / recording_sample_rate} seconds)"
 
+    max_index = np.argmax(np.abs(recording_samples))
+    if recording_samples[max_index] > 0.9:
+        print(
+            f"WARNING: it looks like the recording may be clipping around {format_index(max_index)}. You may want to re-record at a lower input gain/volume.",
+            file=sys.stderr,
+        )
+
     wavfile_index = 0
     debug_files_prefix = getattr(args, "output_debug_files_prefix", None)
 
