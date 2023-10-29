@@ -12,9 +12,7 @@ def generate_windows(indexes, lookback, lookahead):
         [ -8,  -9, 10, 11],
         [-18, -19, 20, 21],
     ]"""
-    return np.broadcast_to(
-        indexes, (indexes.size, lookback + lookahead + 1)
-    ) + np.arange(-lookback, lookahead + 1)
+    return indexes[:, None] + np.arange(-lookback, lookahead + 1)[None, :]
 
 
 def generate_frames(transition_count, delayed_transitions):

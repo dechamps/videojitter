@@ -23,7 +23,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 10.23,False,0.01,True,False,False
 10.24,True,0.01,True,False,True
 10.25,False,0.01,True,False,False
-10.27,True,0.02,True,False,True
+10.27,True,0.02,True,True,True
 10.28,False,0.01,True,False,False
 10.29,True,0.01,True,False,True
 10.3,False,0.01,True,False,False

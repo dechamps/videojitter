@@ -379,9 +379,10 @@ def _match_delayed_transitions(
     # TODO: it's surprising that this is necessary, and even that it works,
     # given that the point of delayed transitions is precisely to remove this
     # bias??
-    even_bias = np.mean(neighbors_durations_seconds[:, ::2], axis=1) - np.mean(
-        neighbors_durations_seconds[:, 1::2], axis=1
-    )
+    even_bias = (
+        np.mean(neighbors_durations_seconds[:, ::2], axis=1)
+        - np.mean(neighbors_durations_seconds[:, 1::2], axis=1)
+    )[:, None]
     neighbors_durations_seconds[:, 0::2] -= even_bias / 2
     neighbors_durations_seconds[:, 1::2] += even_bias / 2
 
@@ -394,7 +395,7 @@ def _match_delayed_transitions(
     # A transition is considered a candidate if it happens significantly later
     # than what the mean frame duration would predict.
     candidate_transitions = (
-        neighbors_durations_seconds > 1.5 * mean_frame_durations_seconds
+        neighbors_durations_seconds > 1.5 * mean_frame_durations_seconds[:, None]
     )
 
     # We assume we found the correct delayed transition if it is the only
