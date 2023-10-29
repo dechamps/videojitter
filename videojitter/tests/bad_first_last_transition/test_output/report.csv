@@ -1,5 +1,5 @@
 recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_seconds,valid
-10.0,True,0.05,True
+10.0,True,,True
 10.01,False,0.01,True
 10.02,True,0.01,True
 10.03,False,0.01,True

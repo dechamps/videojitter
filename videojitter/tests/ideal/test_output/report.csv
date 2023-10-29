@@ -1,5 +1,5 @@
 recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_seconds,valid,intentionally_delayed,to_white
-5.041924,True,0.041675,True,False,True
+5.041924,True,,True,False,True
 5.083691,False,0.041767,True,False,False
 5.125336,True,0.041645,True,False,True
 5.167118,False,0.041782,True,False,False
@@ -729,7 +729,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 35.405658,False,0.041784,True,False,False
 35.447304,True,0.041645,True,False,True
 35.489066,False,0.041763,True,False,False
-35.530748,True,0.041682,True,False,True
+35.530748,True,0.041681,True,False,True
 35.572424,False,0.041676,True,False,False
 35.614191,True,0.041767,True,False,True
 35.655836,False,0.041645,True,False,False
@@ -741,7 +741,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 35.906158,False,0.041784,True,False,False
 35.947804,True,0.041645,True,False,True
 35.989566,False,0.041763,True,False,False
-36.031248,True,0.041682,True,False,True
+36.031248,True,0.041681,True,False,True
 36.072924,False,0.041676,True,False,False
 36.114691,True,0.041767,True,False,True
 36.156336,False,0.041645,True,False,False
@@ -753,7 +753,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 36.406658,False,0.041784,True,False,False
 36.448304,True,0.041645,True,False,True
 36.490066,False,0.041763,True,False,False
-36.531748,True,0.041682,True,False,True
+36.531748,True,0.041681,True,False,True
 36.573424,False,0.041676,True,False,False
 36.615191,True,0.041767,True,False,True
 36.656836,False,0.041645,True,False,False
@@ -765,7 +765,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 36.907158,False,0.041784,True,False,False
 36.948804,True,0.041645,True,False,True
 36.990566,False,0.041763,True,False,False
-37.032248,True,0.041682,True,False,True
+37.032248,True,0.041681,True,False,True
 37.073924,False,0.041676,True,False,False
 37.115691,True,0.041767,True,False,True
 37.157336,False,0.041645,True,False,False
@@ -777,7 +777,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 37.407658,False,0.041784,True,False,False
 37.449304,True,0.041645,True,False,True
 37.491066,False,0.041763,True,False,False
-37.532748,True,0.041682,True,False,True
+37.532748,True,0.041681,True,False,True
 37.574424,False,0.041676,True,False,False
 37.616191,True,0.041767,True,False,True
 37.657836,False,0.041645,True,False,False
@@ -789,7 +789,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 37.908158,False,0.041784,True,False,False
 37.949804,True,0.041645,True,False,True
 37.991566,False,0.041763,True,False,False
-38.033248,True,0.041682,True,False,True
+38.033248,True,0.041681,True,False,True
 38.074924,False,0.041676,True,False,False
 38.116691,True,0.041767,True,False,True
 38.158336,False,0.041645,True,False,False
@@ -801,7 +801,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 38.408658,False,0.041784,True,False,False
 38.450304,True,0.041645,True,False,True
 38.492066,False,0.041763,True,False,False
-38.533748,True,0.041682,True,False,True
+38.533748,True,0.041681,True,False,True
 38.575424,False,0.041676,True,False,False
 38.617191,True,0.041767,True,False,True
 38.658836,False,0.041645,True,False,False
@@ -813,7 +813,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 38.909158,False,0.041784,True,False,False
 38.950804,True,0.041645,True,False,True
 38.992566,False,0.041763,True,False,False
-39.034248,True,0.041682,True,False,True
+39.034248,True,0.041681,True,False,True
 39.075924,False,0.041676,True,False,False
 39.117691,True,0.041767,True,False,True
 39.159336,False,0.041645,True,False,False
@@ -825,7 +825,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 39.409658,False,0.041784,True,False,False
 39.451304,True,0.041645,True,False,True
 39.493066,False,0.041763,True,False,False
-39.534748,True,0.041682,True,False,True
+39.534748,True,0.041681,True,False,True
 39.576424,False,0.041676,True,False,False
 39.618191,True,0.041767,True,False,True
 39.659836,False,0.041645,True,False,False
@@ -837,7 +837,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 39.910158,False,0.041784,True,False,False
 39.951804,True,0.041645,True,False,True
 39.993566,False,0.041763,True,False,False
-40.035248,True,0.041682,True,False,True
+40.035248,True,0.041681,True,False,True
 40.076924,False,0.041676,True,False,False
 40.118691,True,0.041767,True,False,True
 40.160336,False,0.041645,True,False,False
@@ -849,7 +849,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 40.410658,False,0.041784,True,False,False
 40.452304,True,0.041645,True,False,True
 40.494066,False,0.041763,True,False,False
-40.535748,True,0.041682,True,False,True
+40.535748,True,0.041681,True,False,True
 40.577424,False,0.041676,True,False,False
 40.619191,True,0.041767,True,False,True
 40.660836,False,0.041645,True,False,False
@@ -861,7 +861,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 40.911158,False,0.041784,True,False,False
 40.952804,True,0.041645,True,False,True
 40.994566,False,0.041763,True,False,False
-41.036248,True,0.041682,True,False,True
+41.036248,True,0.041681,True,False,True
 41.077924,False,0.041676,True,False,False
 41.119691,True,0.041767,True,False,True
 41.161336,False,0.041645,True,False,False
@@ -873,7 +873,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 41.411658,False,0.041784,True,False,False
 41.453304,True,0.041645,True,False,True
 41.495066,False,0.041763,True,False,False
-41.536748,True,0.041682,True,False,True
+41.536748,True,0.041681,True,False,True
 41.578424,False,0.041676,True,False,False
 41.620191,True,0.041767,True,False,True
 41.661836,False,0.041645,True,False,False
@@ -885,7 +885,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 41.912158,False,0.041784,True,False,False
 41.953804,True,0.041645,True,False,True
 41.995566,False,0.041763,True,False,False
-42.037248,True,0.041682,True,False,True
+42.037248,True,0.041681,True,False,True
 42.078924,False,0.041676,True,False,False
 42.120691,True,0.041767,True,False,True
 42.162336,False,0.041645,True,False,False
@@ -897,7 +897,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 42.412658,False,0.041784,True,False,False
 42.454304,True,0.041645,True,False,True
 42.496066,False,0.041763,True,False,False
-42.537748,True,0.041682,True,False,True
+42.537748,True,0.041681,True,False,True
 42.579424,False,0.041676,True,False,False
 42.621191,True,0.041767,True,False,True
 42.662836,False,0.041645,True,False,False
@@ -909,7 +909,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 42.913158,False,0.041784,True,False,False
 42.954804,True,0.041645,True,False,True
 42.996566,False,0.041763,True,False,False
-43.038248,True,0.041682,True,False,True
+43.038248,True,0.041681,True,False,True
 43.079924,False,0.041676,True,False,False
 43.121691,True,0.041767,True,False,True
 43.163336,False,0.041645,True,False,False
@@ -921,7 +921,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 43.413658,False,0.041784,True,False,False
 43.455304,True,0.041645,True,False,True
 43.497066,False,0.041763,True,False,False
-43.538748,True,0.041682,True,False,True
+43.538748,True,0.041681,True,False,True
 43.580424,False,0.041676,True,False,False
 43.622191,True,0.041767,True,False,True
 43.663836,False,0.041645,True,False,False
@@ -933,7 +933,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 43.914158,False,0.041784,True,False,False
 43.955804,True,0.041645,True,False,True
 43.997566,False,0.041763,True,False,False
-44.039248,True,0.041682,True,False,True
+44.039248,True,0.041681,True,False,True
 44.080924,False,0.041676,True,False,False
 44.122691,True,0.041767,True,False,True
 44.164336,False,0.041645,True,False,False
@@ -945,7 +945,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 44.414658,False,0.041784,True,False,False
 44.456304,True,0.041645,True,False,True
 44.498066,False,0.041763,True,False,False
-44.539748,True,0.041682,True,False,True
+44.539748,True,0.041681,True,False,True
 44.581424,False,0.041676,True,False,False
 44.623191,True,0.041767,True,False,True
 44.664836,False,0.041645,True,False,False
@@ -957,7 +957,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 44.915158,False,0.041784,True,False,False
 44.956804,True,0.041645,True,False,True
 44.998566,False,0.041763,True,False,False
-45.040248,True,0.041682,True,False,True
+45.040248,True,0.041681,True,False,True
 45.081924,False,0.041676,True,False,False
 45.123691,True,0.041767,True,False,True
 45.165336,False,0.041645,True,False,False
@@ -969,7 +969,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 45.415658,False,0.041784,True,False,False
 45.457304,True,0.041645,True,False,True
 45.499066,False,0.041763,True,False,False
-45.540748,True,0.041682,True,False,True
+45.540748,True,0.041681,True,False,True
 45.582424,False,0.041676,True,False,False
 45.624191,True,0.041767,True,False,True
 45.665836,False,0.041645,True,False,False
@@ -981,7 +981,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 45.916158,False,0.041784,True,False,False
 45.957804,True,0.041645,True,False,True
 45.999566,False,0.041763,True,False,False
-46.041248,True,0.041682,True,False,True
+46.041248,True,0.041681,True,False,True
 46.082924,False,0.041676,True,False,False
 46.124691,True,0.041767,True,False,True
 46.166336,False,0.041645,True,False,False
@@ -993,7 +993,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 46.416658,False,0.041784,True,False,False
 46.458304,True,0.041645,True,False,True
 46.500066,False,0.041763,True,False,False
-46.541748,True,0.041682,True,False,True
+46.541748,True,0.041681,True,False,True
 46.583424,False,0.041676,True,False,False
 46.625191,True,0.041767,True,False,True
 46.666836,False,0.041645,True,False,False
@@ -1005,7 +1005,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 46.917158,False,0.041784,True,False,False
 46.958804,True,0.041645,True,False,True
 47.000566,False,0.041763,True,False,False
-47.042248,True,0.041682,True,False,True
+47.042248,True,0.041681,True,False,True
 47.083924,False,0.041676,True,False,False
 47.125691,True,0.041767,True,False,True
 47.167336,False,0.041645,True,False,False
@@ -1017,7 +1017,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 47.417658,False,0.041784,True,False,False
 47.459304,True,0.041645,True,False,True
 47.501066,False,0.041763,True,False,False
-47.542748,True,0.041682,True,False,True
+47.542748,True,0.041681,True,False,True
 47.584424,False,0.041676,True,False,False
 47.626191,True,0.041767,True,False,True
 47.667836,False,0.041645,True,False,False
@@ -1029,7 +1029,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 47.918158,False,0.041784,True,False,False
 47.959804,True,0.041645,True,False,True
 48.001566,False,0.041763,True,False,False
-48.043248,True,0.041682,True,False,True
+48.043248,True,0.041681,True,False,True
 48.084924,False,0.041676,True,False,False
 48.126691,True,0.041767,True,False,True
 48.168336,False,0.041645,True,False,False
@@ -1041,7 +1041,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 48.418658,False,0.041784,True,False,False
 48.460304,True,0.041645,True,False,True
 48.502066,False,0.041763,True,False,False
-48.543748,True,0.041682,True,False,True
+48.543748,True,0.041681,True,False,True
 48.585424,False,0.041676,True,False,False
 48.627191,True,0.041767,True,False,True
 48.668836,False,0.041645,True,False,False
@@ -1053,7 +1053,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 48.919158,False,0.041784,True,False,False
 48.960804,True,0.041645,True,False,True
 49.002566,False,0.041763,True,False,False
-49.044248,True,0.041682,True,False,True
+49.044248,True,0.041681,True,False,True
 49.085924,False,0.041676,True,False,False
 49.127691,True,0.041767,True,False,True
 49.169336,False,0.041645,True,False,False
@@ -1065,7 +1065,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 49.419658,False,0.041784,True,False,False
 49.461304,True,0.041645,True,False,True
 49.503066,False,0.041763,True,False,False
-49.544748,True,0.041682,True,False,True
+49.544748,True,0.041681,True,False,True
 49.586424,False,0.041676,True,False,False
 49.628191,True,0.041767,True,False,True
 49.669836,False,0.041645,True,False,False
@@ -1077,7 +1077,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 49.920158,False,0.041784,True,False,False
 49.961804,True,0.041645,True,False,True
 50.003566,False,0.041763,True,False,False
-50.045248,True,0.041682,True,False,True
+50.045248,True,0.041681,True,False,True
 50.086924,False,0.041676,True,False,False
 50.128691,True,0.041767,True,False,True
 50.170336,False,0.041645,True,False,False
@@ -1089,7 +1089,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 50.420658,False,0.041784,True,False,False
 50.462304,True,0.041645,True,False,True
 50.504066,False,0.041763,True,False,False
-50.545748,True,0.041682,True,False,True
+50.545748,True,0.041681,True,False,True
 50.587424,False,0.041676,True,False,False
 50.629191,True,0.041767,True,False,True
 50.670836,False,0.041645,True,False,False
@@ -1101,7 +1101,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 50.921158,False,0.041784,True,False,False
 50.962804,True,0.041645,True,False,True
 51.004566,False,0.041763,True,False,False
-51.046248,True,0.041682,True,False,True
+51.046248,True,0.041681,True,False,True
 51.087924,False,0.041676,True,False,False
 51.129691,True,0.041767,True,False,True
 51.171336,False,0.041645,True,False,False
@@ -1113,7 +1113,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 51.421658,False,0.041784,True,False,False
 51.463304,True,0.041645,True,False,True
 51.505066,False,0.041763,True,False,False
-51.546748,True,0.041682,True,False,True
+51.546748,True,0.041681,True,False,True
 51.588424,False,0.041676,True,False,False
 51.630191,True,0.041767,True,False,True
 51.671836,False,0.041645,True,False,False
@@ -1125,7 +1125,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 51.922158,False,0.041784,True,False,False
 51.963804,True,0.041645,True,False,True
 52.005566,False,0.041763,True,False,False
-52.047248,True,0.041682,True,False,True
+52.047248,True,0.041681,True,False,True
 52.088924,False,0.041676,True,False,False
 52.130691,True,0.041767,True,False,True
 52.172336,False,0.041645,True,False,False
@@ -1137,7 +1137,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 52.422658,False,0.041784,True,False,False
 52.464304,True,0.041645,True,False,True
 52.506066,False,0.041763,True,False,False
-52.547748,True,0.041682,True,False,True
+52.547748,True,0.041681,True,False,True
 52.589424,False,0.041676,True,False,False
 52.631191,True,0.041767,True,False,True
 52.672836,False,0.041645,True,False,False
@@ -1149,7 +1149,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 52.923158,False,0.041784,True,False,False
 52.964804,True,0.041645,True,False,True
 53.006566,False,0.041763,True,False,False
-53.048248,True,0.041682,True,False,True
+53.048248,True,0.041681,True,False,True
 53.089924,False,0.041676,True,False,False
 53.131691,True,0.041767,True,False,True
 53.173336,False,0.041645,True,False,False
@@ -1161,7 +1161,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 53.423658,False,0.041784,True,False,False
 53.465304,True,0.041645,True,False,True
 53.507066,False,0.041763,True,False,False
-53.548748,True,0.041682,True,False,True
+53.548748,True,0.041681,True,False,True
 53.590424,False,0.041676,True,False,False
 53.632191,True,0.041767,True,False,True
 53.673836,False,0.041645,True,False,False
@@ -1173,7 +1173,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 53.924158,False,0.041784,True,False,False
 53.965804,True,0.041645,True,False,True
 54.007566,False,0.041763,True,False,False
-54.049248,True,0.041682,True,False,True
+54.049248,True,0.041681,True,False,True
 54.090924,False,0.041676,True,False,False
 54.132691,True,0.041767,True,False,True
 54.174336,False,0.041645,True,False,False
@@ -1185,7 +1185,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 54.424658,False,0.041784,True,False,False
 54.466304,True,0.041645,True,False,True
 54.508066,False,0.041763,True,False,False
-54.549748,True,0.041682,True,False,True
+54.549748,True,0.041681,True,False,True
 54.591424,False,0.041676,True,False,False
 54.633191,True,0.041767,True,False,True
 54.674836,False,0.041645,True,False,False
@@ -1197,7 +1197,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 54.925158,False,0.041784,True,False,False
 54.966804,True,0.041645,True,False,True
 55.008566,False,0.041763,True,False,False
-55.050248,True,0.041682,True,False,True
+55.050248,True,0.041681,True,False,True
 55.091924,False,0.041676,True,False,False
 55.133691,True,0.041767,True,False,True
 55.175336,False,0.041645,True,False,False
@@ -1209,7 +1209,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 55.425658,False,0.041784,True,False,False
 55.467304,True,0.041645,True,False,True
 55.509066,False,0.041763,True,False,False
-55.550748,True,0.041682,True,False,True
+55.550748,True,0.041681,True,False,True
 55.592424,False,0.041676,True,False,False
 55.634191,True,0.041767,True,False,True
 55.675836,False,0.041645,True,False,False
@@ -1221,7 +1221,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 55.926158,False,0.041784,True,False,False
 55.967804,True,0.041645,True,False,True
 56.009566,False,0.041763,True,False,False
-56.051248,True,0.041682,True,False,True
+56.051248,True,0.041681,True,False,True
 56.092924,False,0.041676,True,False,False
 56.134691,True,0.041767,True,False,True
 56.176336,False,0.041645,True,False,False
@@ -1233,7 +1233,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 56.426658,False,0.041784,True,False,False
 56.468304,True,0.041645,True,False,True
 56.510066,False,0.041763,True,False,False
-56.551748,True,0.041682,True,False,True
+56.551748,True,0.041681,True,False,True
 56.593424,False,0.041676,True,False,False
 56.635191,True,0.041767,True,False,True
 56.676836,False,0.041645,True,False,False
@@ -1245,7 +1245,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 56.927158,False,0.041784,True,False,False
 56.968804,True,0.041645,True,False,True
 57.010566,False,0.041763,True,False,False
-57.052248,True,0.041682,True,False,True
+57.052248,True,0.041681,True,False,True
 57.093924,False,0.041676,True,False,False
 57.135691,True,0.041767,True,False,True
 57.177336,False,0.041645,True,False,False
@@ -1257,7 +1257,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 57.427658,False,0.041784,True,False,False
 57.469304,True,0.041645,True,False,True
 57.511066,False,0.041763,True,False,False
-57.552748,True,0.041682,True,False,True
+57.552748,True,0.041681,True,False,True
 57.594424,False,0.041676,True,False,False
 57.636191,True,0.041767,True,False,True
 57.677836,False,0.041645,True,False,False
@@ -1269,7 +1269,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 57.928158,False,0.041784,True,False,False
 57.969804,True,0.041645,True,False,True
 58.011566,False,0.041763,True,False,False
-58.053248,True,0.041682,True,False,True
+58.053248,True,0.041681,True,False,True
 58.094924,False,0.041676,True,False,False
 58.136691,True,0.041767,True,False,True
 58.178336,False,0.041645,True,False,False
@@ -1281,7 +1281,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 58.428658,False,0.041784,True,False,False
 58.470304,True,0.041645,True,False,True
 58.512066,False,0.041763,True,False,False
-58.553748,True,0.041682,True,False,True
+58.553748,True,0.041681,True,False,True
 58.595424,False,0.041676,True,False,False
 58.637191,True,0.041767,True,False,True
 58.678836,False,0.041645,True,False,False
@@ -1293,7 +1293,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 58.929158,False,0.041784,True,False,False
 58.970804,True,0.041645,True,False,True
 59.012566,False,0.041763,True,False,False
-59.054248,True,0.041682,True,False,True
+59.054248,True,0.041681,True,False,True
 59.095924,False,0.041676,True,False,False
 59.137691,True,0.041767,True,False,True
 59.179336,False,0.041645,True,False,False
@@ -1305,7 +1305,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 59.429658,False,0.041784,True,False,False
 59.471304,True,0.041645,True,False,True
 59.513066,False,0.041763,True,False,False
-59.554748,True,0.041682,True,False,True
+59.554748,True,0.041681,True,False,True
 59.596424,False,0.041676,True,False,False
 59.638191,True,0.041767,True,False,True
 59.679836,False,0.041645,True,False,False
@@ -1317,7 +1317,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 59.930158,False,0.041784,True,False,False
 59.971804,True,0.041645,True,False,True
 60.013566,False,0.041763,True,False,False
-60.055248,True,0.041682,True,False,True
+60.055248,True,0.041681,True,False,True
 60.096924,False,0.041676,True,False,False
 60.138691,True,0.041767,True,False,True
 60.180336,False,0.041645,True,False,False
@@ -1329,7 +1329,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 60.430658,False,0.041784,True,False,False
 60.472304,True,0.041645,True,False,True
 60.514066,False,0.041763,True,False,False
-60.555748,True,0.041682,True,False,True
+60.555748,True,0.041681,True,False,True
 60.597424,False,0.041676,True,False,False
 60.639191,True,0.041767,True,False,True
 60.680836,False,0.041645,True,False,False
@@ -1341,7 +1341,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 60.931158,False,0.041784,True,False,False
 60.972804,True,0.041645,True,False,True
 61.014566,False,0.041763,True,False,False
-61.056248,True,0.041682,True,False,True
+61.056248,True,0.041681,True,False,True
 61.097924,False,0.041676,True,False,False
 61.139691,True,0.041767,True,False,True
 61.181336,False,0.041645,True,False,False
@@ -1353,7 +1353,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 61.431658,False,0.041784,True,False,False
 61.473304,True,0.041645,True,False,True
 61.515066,False,0.041763,True,False,False
-61.556748,True,0.041682,True,False,True
+61.556748,True,0.041681,True,False,True
 61.598424,False,0.041676,True,False,False
 61.640191,True,0.041767,True,False,True
 61.681836,False,0.041645,True,False,False
@@ -1365,7 +1365,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 61.932158,False,0.041784,True,False,False
 61.973804,True,0.041645,True,False,True
 62.015566,False,0.041763,True,False,False
-62.057248,True,0.041682,True,False,True
+62.057248,True,0.041681,True,False,True
 62.098924,False,0.041676,True,False,False
 62.140691,True,0.041767,True,False,True
 62.182336,False,0.041645,True,False,False
@@ -1377,7 +1377,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 62.432658,False,0.041784,True,False,False
 62.474304,True,0.041645,True,False,True
 62.516066,False,0.041763,True,False,False
-62.557748,True,0.041682,True,False,True
+62.557748,True,0.041681,True,False,True
 62.599424,False,0.041676,True,False,False
 62.641191,True,0.041767,True,False,True
 62.682836,False,0.041645,True,False,False
@@ -1389,7 +1389,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 62.933158,False,0.041784,True,False,False
 62.974804,True,0.041645,True,False,True
 63.016566,False,0.041763,True,False,False
-63.058248,True,0.041682,True,False,True
+63.058248,True,0.041681,True,False,True
 63.099924,False,0.041676,True,False,False
 63.141691,True,0.041767,True,False,True
 63.183336,False,0.041645,True,False,False
@@ -1401,7 +1401,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 63.433658,False,0.041784,True,False,False
 63.475304,True,0.041645,True,False,True
 63.517066,False,0.041763,True,False,False
-63.558748,True,0.041682,True,False,True
+63.558748,True,0.041681,True,False,True
 63.600424,False,0.041676,True,False,False
 63.642191,True,0.041767,True,False,True
 63.683836,False,0.041645,True,False,False
@@ -1413,7 +1413,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 63.934158,False,0.041784,True,False,False
 63.975804,True,0.041645,True,False,True
 64.017566,False,0.041763,True,False,False
-64.059248,True,0.041682,True,False,True
+64.059248,True,0.041681,True,False,True
 64.100924,False,0.041676,True,False,False
 64.142691,True,0.041767,True,False,True
 64.184336,False,0.041645,True,False,False
@@ -1425,7 +1425,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 64.434658,False,0.041784,True,False,False
 64.476304,True,0.041645,True,False,True
 64.518066,False,0.041763,True,False,False
-64.559748,True,0.041682,True,False,True
+64.559748,True,0.041681,True,False,True
 64.601424,False,0.041676,True,False,False
 64.643191,True,0.041767,True,False,True
 64.684836,False,0.041645,True,False,False

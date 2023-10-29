@@ -526,6 +526,7 @@ def main():
     keep_first_transition = getattr(args, "keep_first_transition", False)
     if not keep_first_transition:
         transitions = transitions.iloc[1:]
+        transitions.time_since_previous_transition_seconds.iloc[0] = np.nan
     keep_last_transition = getattr(args, "keep_last_transition", False)
     if not keep_last_transition:
         transitions = transitions.iloc[:-1]
