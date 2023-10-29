@@ -15,6 +15,8 @@ async def videojitter_test(test_case):
             0,
             "--even-duration-overshoot",
             0,
+            "--pwm-frequency-fps",
+            0,
             "--dc-offset",
             0,
             "--gaussian-filter-stddev-seconds",

@@ -85,6 +85,18 @@ def _parse_arguments():
         default=0,
     )
     argument_parser.add_argument(
+        "--pwm-frequency-fps",
+        help="Modulate the light waveform with PWM at this frequency times nominal FPS. Used to simulate PWM brightness modulation from real displays. Set to zero to disable.",
+        type=float,
+        default=7.6,  # Non-round to ensure PWM does not coincide with frames
+    )
+    argument_parser.add_argument(
+        "--pwm-duty-cycle",
+        help="PWM duty cycle. See --pwm-frequency-fps.",
+        type=float,
+        default=0.9,
+    )
+    argument_parser.add_argument(
         "--dc-offset",
         help="Add a DC offset.",
         type=float,
@@ -229,7 +241,7 @@ def main():
     frames = videojitter.util.generate_frames(
         spec["transition_count"], spec["delayed_transitions"]
     )
-    test_signal_samples = videojitter.util.generate_fake_samples(
+    samples = videojitter.util.generate_fake_samples(
         frames,
         spec["fps"]["num"],
         spec["fps"]["den"],
@@ -246,23 +258,41 @@ def main():
         + frames * args.white_duration_overshoot
         + (np.arange(frames.size) % 2 == 0) * args.even_duration_overshoot,
     )
+    samples = np.concatenate(
+        (
+            np.ones(
+                int(np.round(args.begin_padding_seconds * sample_rate)),
+                dtype=samples.dtype,
+            )
+            * args.padding_signal_level,
+            samples,
+            np.ones(
+                int(np.round(args.end_padding_seconds * sample_rate)),
+                dtype=samples.dtype,
+            )
+            * args.padding_signal_level,
+        )
+    ).astype(np.float32)
+    if args.pwm_frequency_fps != 0:
+        samples = (samples + 1) * (
+            scipy.signal.square(
+                np.arange(samples.size)
+                * (
+                    2
+                    * np.pi
+                    * args.pwm_frequency_fps
+                    * spec["fps"]["num"]
+                    / spec["fps"]["den"]
+                    / sample_rate
+                ),
+                args.pwm_duty_cycle,
+            )
+            * 0.5
+            + 0.5
+        ) - 1
     samples = (
         scipy.signal.resample_poly(
-            np.concatenate(
-                (
-                    np.ones(
-                        int(np.round(args.begin_padding_seconds * sample_rate)),
-                        dtype=test_signal_samples.dtype,
-                    )
-                    * args.padding_signal_level,
-                    test_signal_samples,
-                    np.ones(
-                        int(np.round(args.end_padding_seconds * sample_rate)),
-                        dtype=test_signal_samples.dtype,
-                    )
-                    * args.padding_signal_level,
-                )
-            ).astype(np.float32),
+            samples,
             up=1,
             down=downsample_ratio,
         )
