@@ -104,6 +104,39 @@ def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
     )
 
 
+def _generate_slope_kernel(cutoff_frequency_hz, sample_rate):
+    # The simplest way to compute signal slope would be to differentiate the
+    # signal (as in, np.diff()). Unfortunately, differentiation also acts as a
+    # highpass filter, causing high frequency noise to be amplified
+    # tremendously. (Intuitively, this is because the rate of change of a signal
+    # is proportional to frequency, not just amplitude.) This is a big problem;
+    # for example, high frequency PWM would normally be distinguishable from
+    # true edges by its lower amplitude, but since its frequency is much higher,
+    # a highpass filter can greatly impact our ability to discriminate between
+    # the two.
+    #
+    # To solve this problem, we can think of differentiation as a convolution
+    # with a [-1, +1] kernel. From a Fourier perspective, this operation looks
+    # like a highpass filter combined with a 90° phase shift. So, if we want
+    # differentation without the highpass filter, what we're really asking for
+    # is just the 90° phase shift.
+    #
+    # A 90° phase shift happens to be the mathematical definition of the Hilbert
+    # transform, so that's what we end up with here. This code is conceptually
+    # equivalent to -np.imag(scipy.signal.hilbert(x)), which provides a
+    # "perfect" frequency response, but is inefficient as it computes an FFT
+    # over the entire input. We can get practically equivalent results by
+    # convolving with a relatively short kernel. This generates a type III FIR
+    # hilbert transformer following the principles described at:
+    #   https://en.wikipedia.org/wiki/Hilbert_transform#Discrete_Hilbert_transform
+    half_length = int(np.ceil(sample_rate / cutoff_frequency_hz / 2)) * 2
+    kernel = np.zeros(half_length * 2 + 1)
+    kernel[1::2] = (-2 / np.pi) / np.arange(
+        start=-half_length + 1, stop=half_length + 1, step=2
+    )
+    return kernel
+
+
 def _find_abs_peaks_with_prominence(x):
     """Like scipy.signal.find_peaks(), but returns both positive and negative
     peaks, along with their prominences.
@@ -313,24 +346,11 @@ def main():
     #
     # In practice, what we do is we apply a peak finding algorithm to locate the
     # points at which the signal reaches a local steepness extremum.
-    #
-    # One thing to watch out for is how that "slope" is computed. The simplest
-    # way to compute the slope would be to differentiate the signal (as in,
-    # np.diff()). Unfortunately, differentiation also acts as a highpass filter,
-    # causing high frequency noise to be amplified tremendously. (Intuitively,
-    # this is because the rate of change of a signal is proportional to
-    # frequency, not just amplitude.) This is a big problem; for example, high
-    # frequency PWM would normally be distinguishable from true edges by its
-    # lower amplitude, but since its frequency is much higher, a highpass filter
-    # can greatly impact our ability to discriminate between the two.
-    #
-    # To solve this problem, we can think of differentiation as a convolution
-    # with a [-1, +1] kernel. From a Fourier perspective, this operation looks
-    # like a highpass filter combined with a 90° phase shift. So, if we want
-    # differentation without the highpass filter, what we're really asking for
-    # is just the 90° phase shift. Mathematically we land directly on the
-    # definition of the Hilbert transform, so that's what we use here.
-    recording_slope = -np.imag(scipy.signal.hilbert(recording_samples))
+    slope_kernel = _generate_slope_kernel(min_frequency, recording_sample_rate)
+    maybe_write_debug_wavfile("slope_kernel", slope_kernel)
+    recording_slope = scipy.signal.convolve(
+        recording_samples, slope_kernel.astype(recording_samples.dtype), "same"
+    )
     maybe_write_debug_wavfile("slope", recording_slope)
 
     # High frequency noise can cause us to find spurious local extrema as the
