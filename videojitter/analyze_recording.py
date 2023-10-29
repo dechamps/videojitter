@@ -139,15 +139,24 @@ def _find_peaks_with_prominence_mirrored(x):
     assumption that the borders are mirror images of the signal; this ensures
     that the first/last peaks do not end up with an unfairly low prominence just
     because they don't have an opposite peak on *both* sides."""
-    # TODO: this is hilariously inefficient; surely we can find a better way to
-    # simulate the mirroring.
-    flipped = np.flip(x)
-    mirrored = np.concatenate((flipped, x, flipped))
-    peak_indexes, peak_properties = scipy.signal.find_peaks(
-        mirrored, prominence=(None, None)
-    )
-    valid_peak = (peak_indexes >= x.size) & (peak_indexes < x.size * 2)
-    return peak_indexes[valid_peak] - x.size, peak_properties["prominences"][valid_peak]
+    # This makes sure that, if scipy.signal.peak_prominences() hits a signal
+    # border, the resulting base will always be lower than the one on the other
+    # side of the peak. Therefore, the lowest contour line (which determines the
+    # prominence) will always be on the other side of the peak.
+    #
+    # Note that using a lower value (such as -infinity) would result in
+    # incorrect prominence for the tallest peak in the signal, which is computed
+    # based on the global minimum.
+    xmin = np.min(x)
+    x = np.insert(x, [0, x.size], [xmin, xmin])
+
+    peak_indexes, peak_properties = scipy.signal.find_peaks(x, prominence=(None, None))
+
+    # Our modification may have created spurious peaks at the 2nd and/or
+    # second-to-last samples, so make sure to reject those.
+    valid_peak = (peak_indexes > 1) & (peak_indexes < x.size - 2)
+
+    return peak_indexes[valid_peak] - 1, peak_properties["prominences"][valid_peak]
 
 
 def _find_abs_peaks_with_prominence(x):
