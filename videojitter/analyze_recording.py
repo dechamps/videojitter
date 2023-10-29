@@ -397,41 +397,21 @@ def main():
     # test signal contains fewer edges than expected. We then multiply that
     # reference with a fudge factor to allow for edges with slightly smaller
     # prominences, and that's our threshold.
-    #
-    # We need to do the above calculations separately for rising and falling
-    # edges, because real-world systems often exhibit highly asymmetrical
-    # responses where the prominence can look quite different between falling
-    # and rising edges. TODO: revisit this assumption - it doesn't seem to make
-    # sense now that we're using the prominence as a metric, because the
-    # prominence is the peak-to-peak amplitude between adjacent edges, and
-    # peak-to-peak amplitude by definition doesn't depend on the direction of
-    # the edge is calculated from.
-    positive_slope_prominences = slope_prominences[slope_prominences > 0]
-    negative_slope_prominences = slope_prominences[slope_prominences < 0]
-    minimum_onesided_edge_count = 0.5 * expected_transition_count * args.min_edges_ratio
-    assert positive_slope_prominences.size >= minimum_onesided_edge_count
-    assert negative_slope_prominences.size >= minimum_onesided_edge_count
-    positive_slope_prominence_threshold = (
+    abs_slope_prominences = np.abs(slope_prominences)
+    minimum_edge_count = expected_transition_count * args.min_edges_ratio
+    assert abs_slope_prominences.size >= minimum_edge_count
+    slope_prominence_threshold = (
         np.quantile(
-            positive_slope_prominences,
-            1 - minimum_onesided_edge_count / positive_slope_prominences.size,
+            abs_slope_prominences,
+            1 - minimum_edge_count / abs_slope_prominences.size,
         )
         * args.slope_prominence_threshold
     )
-    negative_slope_prominence_threshold = (
-        np.quantile(
-            negative_slope_prominences,
-            minimum_onesided_edge_count / negative_slope_prominences.size,
-        )
-        * args.slope_prominence_threshold
-    )
-    valid_slope_peak = (slope_prominences > positive_slope_prominence_threshold) | (
-        slope_prominences < negative_slope_prominence_threshold
-    )
+    valid_slope_peak = abs_slope_prominences > slope_prominence_threshold
     slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
     slope_prominences = slope_prominences[valid_slope_peak]
     print(
-        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above ~{positive_slope_prominence_threshold:.3} or below ~{negative_slope_prominence_threshold:.3}. First edge is right after {format_index(slope_peak_indexes[0])} and last edge is right after {format_index(slope_peak_indexes[-1])}.",
+        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above ~{slope_prominence_threshold:.3}. First edge is right after {format_index(slope_peak_indexes[0])} and last edge is right after {format_index(slope_peak_indexes[-1])}.",
         file=sys.stderr,
     )
     assert slope_peak_indexes.size > 1
