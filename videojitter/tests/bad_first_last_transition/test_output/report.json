@@ -1,0 +1,278 @@
+{
+  "config": {
+    "view": {
+      "continuousWidth": 300,
+      "continuousHeight": 300
+    }
+  },
+  "vconcat": [
+    {
+      "data": {
+        "name": "data-64b4cf448d4929b7fb6d4366f9bf516f"
+      },
+      "mark": {
+        "type": "point",
+        "filled": true
+      },
+      "encoding": {
+        "color": {
+          "field": "label",
+          "legend": {
+            "orient": "bottom",
+            "columns": 1,
+            "labelLimit": 0,
+            "clipHeight": 15
+          },
+          "scale": {
+            "range": [
+              "#1f77b4",
+              "#2ca02c",
+              "#ff7f0e",
+              "#d62728"
+            ]
+          },
+          "sort": {
+            "field": "label_order"
+          },
+          "title": null,
+          "type": "nominal"
+        },
+        "opacity": {
+          "value": 1
+        },
+        "shape": {
+          "condition": [
+            {
+              "test": "(datum.time_since_previous_transition_seconds < 0.0)",
+              "value": "triangle-down"
+            },
+            {
+              "test": "(datum.time_since_previous_transition_seconds > 0.1)",
+              "value": "triangle-up"
+            }
+          ],
+          "value": "circle"
+        },
+        "tooltip": [
+          {
+            "field": "transition_index",
+            "title": "Recorded transition #",
+            "type": "quantitative"
+          },
+          {
+            "field": "edge_label",
+            "title": "Edge",
+            "type": "nominal"
+          },
+          {
+            "field": "valid_label",
+            "title": "Valid",
+            "type": "nominal"
+          },
+          {
+            "field": "recording_timestamp_seconds",
+            "format": "~s",
+            "title": "Recording time (s)",
+            "type": "quantitative"
+          },
+          {
+            "field": "time_since_previous_transition_seconds",
+            "format": "~s",
+            "title": "Time since last transition (s)",
+            "type": "quantitative"
+          },
+          {
+            "field": "time_since_previous_transition_seconds_relative_to_mean",
+            "format": "+~s",
+            "title": "Relative to mean (s)",
+            "type": "quantitative"
+          }
+        ],
+        "x": {
+          "axis": {
+            "labelExpr": "(format(datum.value,'~s') + 's')",
+            "title": "Recording timestamp"
+          },
+          "field": "recording_timestamp_seconds",
+          "scale": {
+            "zero": false,
+            "nice": false
+          },
+          "type": "quantitative"
+        },
+        "y": {
+          "axis": {
+            "labelExpr": "(format(datum.value,'~s') + 's')",
+            "title": "Time since previous transition"
+          },
+          "field": "time_since_previous_transition_seconds",
+          "scale": {
+            "zero": false,
+            "domain": [
+              0.0,
+              0.1
+            ],
+            "clamp": true
+          },
+          "type": "quantitative"
+        }
+      },
+      "height": 750,
+      "name": "view_1",
+      "title": "10 transitions at 100.000 nominal FPS",
+      "transform": [
+        {
+          "flatten": [
+            "recording_timestamp_seconds",
+            "edge_is_rising",
+            "time_since_previous_transition_seconds",
+            "valid"
+          ]
+        },
+        {
+          "window": [
+            {
+              "op": "row_number",
+              "field": "",
+              "as": "transition_count"
+            }
+          ]
+        },
+        {
+          "calculate": "(datum.transition_count - 1)",
+          "as": "transition_index"
+        },
+        {
+          "calculate": "if(datum.edge_is_rising,'rising','falling')",
+          "as": "edge_label"
+        },
+        {
+          "calculate": "((if(datum.valid,(upper(slice(datum.edge_label,0,1)) + slice(datum.edge_label,1)),('Invalid ' + datum.edge_label)) + ' edge') + '')",
+          "as": "label"
+        },
+        {
+          "calculate": "(((!datum.valid) * 2) + (!datum.edge_is_rising))",
+          "as": "label_order"
+        },
+        {
+          "calculate": "if(datum.valid,'yes','no')",
+          "as": "valid_label"
+        },
+        {
+          "calculate": "(datum.time_since_previous_transition_seconds - 0.014)",
+          "as": "time_since_previous_transition_seconds_relative_to_mean"
+        }
+      ],
+      "width": 1000
+    },
+    {
+      "data": {
+        "name": "empty"
+      },
+      "mark": {
+        "type": "text"
+      },
+      "title": {
+        "text": [
+          "First transition recorded at 9.950 s; last: 10.150 s; length: 200.000 ms",
+          "Detected 12 transitions (expected 10); first transition was removed; last transition was removed; expecting 0 intentionally delayed transitions",
+          "The following stats exclude 0 invalid transitions and the 0 intentionally delayed transitions that were found:",
+          "Consistent timing differences between falling and rising edges (i.e. between black vs. white transitions) have NOT been compensated for",
+          "Transition interval range: 10.000 ms (at 10.010 s) to 50.000 ms (at 10.000 s) - standard deviation: 12.649 ms - 99% of transitions are between 10.000 ms and 48.200 ms",
+          "Mean time between transitions: 14.000 ms, i.e. 71.428571 FPS, which is 0.714286x faster than expected (clock skew)",
+          "0 transitions are outliers (more than 3 standard deviations away from the mean)",
+          "Generated by videojitter"
+        ],
+        "anchor": "start",
+        "color": "gray",
+        "fontSize": 10,
+        "fontWeight": "lighter"
+      }
+    }
+  ],
+  "params": [
+    {
+      "name": "param_1",
+      "select": {
+        "type": "interval",
+        "encodings": [
+          "x"
+        ]
+      },
+      "bind": "scales",
+      "views": [
+        "view_1"
+      ]
+    }
+  ],
+  "resolve": {
+    "scale": {
+      "color": "independent",
+      "opacity": "independent"
+    }
+  },
+  "usermeta": {
+    "embedOptions": {
+      "downloadFileName": "videojitter",
+      "scaleFactor": 2
+    }
+  },
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.8.0.json",
+  "datasets": {
+    "data-64b4cf448d4929b7fb6d4366f9bf516f": [
+      {
+        "recording_timestamp_seconds": [
+          10.0,
+          10.01,
+          10.02,
+          10.03,
+          10.04,
+          10.05,
+          10.06,
+          10.07,
+          10.08,
+          10.09
+        ],
+        "edge_is_rising": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "time_since_previous_transition_seconds": [
+          0.05,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01
+        ],
+        "valid": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      }
+    ],
+    "empty": [
+      {}
+    ]
+  }
+}
