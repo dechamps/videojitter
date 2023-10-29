@@ -26,6 +26,9 @@
           "title": null,
           "type": "nominal"
         },
+        "opacity": {
+          "value": 1
+        },
         "shape": {
           "condition": [
             {

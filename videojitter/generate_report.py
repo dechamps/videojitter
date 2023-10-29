@@ -240,7 +240,9 @@ def _generate_chart(
             ),
         ]
     )
-    if "intentionally_delayed" in transitions:
+    if "intentionally_delayed" not in transitions:
+        chart = chart.encode(opacity=alt.value(1))
+    else:
         normal_label = "Normal transition"
         delayed_label = "Intentionally delayed transition (ignore)"
         chart = chart.transform_calculate(
