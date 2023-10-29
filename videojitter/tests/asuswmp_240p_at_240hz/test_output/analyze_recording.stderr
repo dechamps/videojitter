@@ -3,4 +3,4 @@ Successfully loaded recording containing 553920 samples at 8000 Hz (69.24 second
 Downsampling recording by 4.0x (to 2000.0 Hz)
 Test signal appears to start at sample 12716 (6.358 seconds) and end at sample 133701 (66.8505 seconds) in the recording.
 Removing frequencies lower than 84.85281374238569 Hz from the recording
-Kept 14398 slope peaks whose prominence is above ~0.00513. First edge is right after sample 473 (0.2365 seconds) and last edge is right after sample 120489 (60.2445 seconds).
+Kept 14398 slope peaks whose prominence is above ~0.00539. First edge is right after sample 461 (0.2305 seconds) and last edge is right after sample 120477 (60.2385 seconds).

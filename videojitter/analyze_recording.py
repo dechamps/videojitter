@@ -88,32 +88,16 @@ def _generate_boundaries_reference_samples(
     )
 
 
-def _generate_highpass_kernel(cutoff_frequency_hz, sample_rate):
-    # A naive highpass filter can cause massive ringing in the time domain,
-    # creating additional spurious zero crossings. To avoid ringing we choose a
-    # very short FIR filter length that only lets in the main lobe of the sinc
-    # function.
-    #
-    # TODO: one would expect this filter to be down -3 dB at the cutoff
-    # frequency, but it's actually down approx. -8 dB. Investigate.
-    return videojitter.util.firwin(
-        int(np.ceil(sample_rate / cutoff_frequency_hz / 2)) * 2 + 1,
-        cutoff_frequency_hz,
-        fs=sample_rate,
-        pass_zero=False,
-    )
-
-
-def _generate_slope_kernel(cutoff_frequency_hz, sample_rate):
+def _generate_slope_kernel(min_frequency_hz, sample_rate):
     # The simplest way to compute signal slope would be to differentiate the
     # signal (as in, np.diff()). Unfortunately, differentiation also acts as a
-    # highpass filter, causing high frequency noise to be amplified
-    # tremendously. (Intuitively, this is because the rate of change of a signal
-    # is proportional to frequency, not just amplitude.) This is a big problem;
-    # for example, high frequency PWM would normally be distinguishable from
-    # true edges by its lower amplitude, but since its frequency is much higher,
-    # a highpass filter can greatly impact our ability to discriminate between
-    # the two.
+    # highpass filter with a constant +6dB/octave slope, causing high frequency
+    # noise to be amplified tremendously. (Intuitively, this is because the rate
+    # of change of a signal is proportional to frequency, not just amplitude.)
+    # This is a big problem; for example, high frequency PWM would normally be
+    # distinguishable from true edges by its lower amplitude, but since its
+    # frequency is much higher, a highpass filter can greatly impact our ability
+    # to discriminate between the two.
     #
     # To solve this problem, we can think of differentiation as a convolution
     # with a [-1, +1] kernel. From a Fourier perspective, this operation looks
@@ -129,12 +113,25 @@ def _generate_slope_kernel(cutoff_frequency_hz, sample_rate):
     # convolving with a relatively short kernel. This generates a type III FIR
     # hilbert transformer following the principles described at:
     #   https://en.wikipedia.org/wiki/Hilbert_transform#Discrete_Hilbert_transform
-    half_length = int(np.ceil(sample_rate / cutoff_frequency_hz / 2)) * 2
-    kernel = np.zeros(half_length * 2 + 1)
-    kernel[1::2] = (-2 / np.pi) / np.arange(
+    half_length = int(np.ceil(sample_rate / min_frequency_hz / 2)) * 2
+    slope_kernel = np.zeros(half_length * 2 + 1)
+    slope_kernel[1::2] = (-2 / np.pi) / np.arange(
         start=-half_length + 1, stop=half_length + 1, step=2
     )
-    return kernel
+    # Apply a gentle highpass filter to reject frequencies we don't care about.
+    # We use a very short filter to mitigate ringing artefacts, which could be
+    # mistaken for edges.
+    return scipy.signal.convolve(
+        slope_kernel,
+        videojitter.util.firwin(
+            half_length * 2 + 1,
+            min_frequency_hz,
+            fs=sample_rate,
+            pass_zero=False,
+            window="boxcar",
+        ),
+        "same",
+    ) * scipy.signal.windows.blackmanharris(slope_kernel.size)
 
 
 def _find_abs_peaks_with_prominence(x):
@@ -309,13 +306,6 @@ def main():
         file=sys.stderr,
     )
 
-    highpass_kernel = _generate_highpass_kernel(min_frequency, recording_sample_rate)
-    maybe_write_debug_wavfile("highpass_kernel", highpass_kernel)
-    recording_samples = scipy.signal.convolve(
-        recording_samples, highpass_kernel.astype(recording_samples.dtype), "valid"
-    )
-    maybe_write_debug_wavfile("highpassed", recording_samples)
-
     # The fundamental, core idea behind the way we detect "edges" is to look for
     # large scale changes in overall recording signal level.
     #
@@ -349,7 +339,7 @@ def main():
     slope_kernel = _generate_slope_kernel(min_frequency, recording_sample_rate)
     maybe_write_debug_wavfile("slope_kernel", slope_kernel)
     recording_slope = scipy.signal.convolve(
-        recording_samples, slope_kernel.astype(recording_samples.dtype), "same"
+        recording_samples, slope_kernel.astype(recording_samples.dtype), "valid"
     )
     maybe_write_debug_wavfile("slope", recording_slope)
 
@@ -428,7 +418,7 @@ def main():
             (
                 _interpolate_peaks(recording_slope, slope_peak_indexes)
                 + test_signal_start_index
-                + highpass_kernel.size / 2
+                + slope_kernel.size / 2
             )
             / recording_sample_rate,
             name="recording_timestamp_seconds",
