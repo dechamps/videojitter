@@ -222,6 +222,9 @@ def main():
     recording_samples, recording_sample_rate = soundfile.read(
         args.recording_file, dtype=np.float32
     )
+    assert (
+        recording_samples.ndim == 1
+    ), f"Recording file contains {recording_samples.shape[1]} channels - only mono files are supported. Extract the correct channel and try again."
     recording_duration_seconds = recording_samples.size / recording_sample_rate
     print(
         f"Successfully loaded recording containing {recording_samples.size} samples at {recording_sample_rate} Hz ({recording_duration_seconds} seconds)",
