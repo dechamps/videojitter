@@ -1,0 +1,431 @@
+{
+  "config": {
+    "view": {
+      "continuousWidth": 300,
+      "continuousHeight": 300
+    }
+  },
+  "vconcat": [
+    {
+      "data": {
+        "name": "data-799a6adc0a88f188fb500b70961f936a"
+      },
+      "mark": {
+        "type": "point",
+        "filled": true
+      },
+      "encoding": {
+        "color": {
+          "field": "label",
+          "legend": {
+            "orient": "bottom",
+            "columns": 1,
+            "labelLimit": 0,
+            "clipHeight": 15
+          },
+          "scale": {
+            "range": [
+              "#1f77b4",
+              "#2ca02c",
+              "#ff7f0e",
+              "#d62728"
+            ]
+          },
+          "sort": {
+            "field": "label_order"
+          },
+          "title": null,
+          "type": "nominal"
+        },
+        "opacity": {
+          "field": "intentionally_delayed_label",
+          "legend": {
+            "orient": "bottom",
+            "columns": 1,
+            "labelLimit": 0,
+            "clipHeight": 15
+          },
+          "scale": {
+            "domain": [
+              "Normal transition",
+              "Intentionally delayed transition (ignore)"
+            ],
+            "range": [
+              1,
+              0.5
+            ]
+          },
+          "title": null,
+          "type": "nominal"
+        },
+        "shape": {
+          "condition": [
+            {
+              "test": "(datum.time_since_previous_transition_seconds < 0.0)",
+              "value": "triangle-down"
+            },
+            {
+              "test": "(datum.time_since_previous_transition_seconds > 0.1)",
+              "value": "triangle-up"
+            }
+          ],
+          "value": "circle"
+        },
+        "tooltip": [
+          {
+            "field": "transition_index",
+            "title": "Recorded transition #",
+            "type": "quantitative"
+          },
+          {
+            "field": "edge_label",
+            "title": "Edge",
+            "type": "nominal"
+          },
+          {
+            "field": "valid_label",
+            "title": "Valid",
+            "type": "nominal"
+          },
+          {
+            "field": "frame_label",
+            "title": "Transition to",
+            "type": "nominal"
+          },
+          {
+            "field": "recording_timestamp_seconds",
+            "format": "~s",
+            "title": "Recording time (s)",
+            "type": "quantitative"
+          },
+          {
+            "field": "time_since_previous_transition_seconds",
+            "format": "~s",
+            "title": "Time since last transition (s)",
+            "type": "quantitative"
+          },
+          {
+            "field": "time_since_previous_transition_seconds_relative_to_mean",
+            "format": "+~s",
+            "title": "Relative to mean (s)",
+            "type": "quantitative"
+          },
+          {
+            "field": "intentionally_delayed_tooltip",
+            "title": "Intentionally delayed",
+            "type": "nominal"
+          }
+        ],
+        "x": {
+          "axis": {
+            "labelExpr": "(format(datum.value,'~s') + 's')",
+            "title": "Recording timestamp"
+          },
+          "field": "recording_timestamp_seconds",
+          "scale": {
+            "zero": false,
+            "nice": false
+          },
+          "type": "quantitative"
+        },
+        "y": {
+          "axis": {
+            "labelExpr": "(format(datum.value,'~s') + 's')",
+            "title": "Time since previous transition"
+          },
+          "field": "time_since_previous_transition_seconds",
+          "scale": {
+            "zero": false,
+            "domain": [
+              0.0,
+              0.1
+            ],
+            "clamp": true
+          },
+          "type": "quantitative"
+        }
+      },
+      "height": 750,
+      "name": "view_1",
+      "title": "30 transitions at 100.000 nominal FPS",
+      "transform": [
+        {
+          "flatten": [
+            "recording_timestamp_seconds",
+            "edge_is_rising",
+            "time_since_previous_transition_seconds",
+            "valid",
+            "intentionally_delayed"
+          ]
+        },
+        {
+          "window": [
+            {
+              "op": "row_number",
+              "field": "",
+              "as": "transition_count"
+            }
+          ]
+        },
+        {
+          "calculate": "(datum.transition_count - 1)",
+          "as": "transition_index"
+        },
+        {
+          "calculate": "if(datum.edge_is_rising,'rising','falling')",
+          "as": "edge_label"
+        },
+        {
+          "calculate": "if(datum.edge_is_rising,'white','black')",
+          "as": "frame_label"
+        },
+        {
+          "calculate": "((if(datum.valid,(upper(slice(datum.edge_label,0,1)) + slice(datum.edge_label,1)),('Invalid ' + datum.edge_label)) + ' edge') + if(datum.valid,((' (transition to ' + datum.frame_label) + ')'),''))",
+          "as": "label"
+        },
+        {
+          "calculate": "(((!datum.valid) * 2) + (!datum.edge_is_rising))",
+          "as": "label_order"
+        },
+        {
+          "calculate": "if(datum.valid,'yes','no')",
+          "as": "valid_label"
+        },
+        {
+          "calculate": "(datum.time_since_previous_transition_seconds - 0.010714)",
+          "as": "time_since_previous_transition_seconds_relative_to_mean"
+        },
+        {
+          "calculate": "if(datum.intentionally_delayed,'Intentionally delayed transition (ignore)','Normal transition')",
+          "as": "intentionally_delayed_label"
+        },
+        {
+          "calculate": "if(datum.intentionally_delayed,'yes','no')",
+          "as": "intentionally_delayed_tooltip"
+        }
+      ],
+      "width": 1000
+    },
+    {
+      "data": {
+        "name": "empty"
+      },
+      "mark": {
+        "type": "text"
+      },
+      "title": {
+        "text": [
+          "First transition recorded at 10.000 s; last: 10.320 s; length: 320.000 ms",
+          "Detected 30 transitions (expected 30); first transition was kept; last transition was kept; expecting 1 intentionally delayed transitions",
+          "The following stats exclude 0 invalid transitions and the 1 intentionally delayed transitions that were found:",
+          "Time since last transition includes -116.226 as correction in all falling edges and +116.226 as correction in all rising edges",
+          "Transition interval range: 10.000 ms (at 10.010 s) to 20.000 ms (at 10.270 s) - standard deviation: 2.623 ms - 99% of transitions are between 10.000 ms and 20.000 ms",
+          "Mean time between transitions: 10.714 ms, i.e. 93.333333 FPS, which is 0.933333x faster than expected (clock skew)",
+          "2 transitions are outliers (more than 3 standard deviations away from the mean)",
+          "Generated by videojitter"
+        ],
+        "anchor": "start",
+        "color": "gray",
+        "fontSize": 10,
+        "fontWeight": "lighter"
+      }
+    }
+  ],
+  "params": [
+    {
+      "name": "param_1",
+      "select": {
+        "type": "interval",
+        "encodings": [
+          "x"
+        ]
+      },
+      "bind": "scales",
+      "views": [
+        "view_1"
+      ]
+    }
+  ],
+  "resolve": {
+    "scale": {
+      "color": "independent",
+      "opacity": "independent"
+    }
+  },
+  "usermeta": {
+    "embedOptions": {
+      "downloadFileName": "videojitter",
+      "scaleFactor": 2
+    }
+  },
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.8.0.json",
+  "datasets": {
+    "data-799a6adc0a88f188fb500b70961f936a": [
+      {
+        "recording_timestamp_seconds": [
+          10.0,
+          10.01,
+          10.02,
+          10.03,
+          10.04,
+          10.05,
+          10.07,
+          10.08,
+          10.09,
+          10.1,
+          10.11,
+          10.12,
+          10.13,
+          10.14,
+          10.15,
+          10.17,
+          10.18,
+          10.19,
+          10.2,
+          10.21,
+          10.22,
+          10.23,
+          10.24,
+          10.25,
+          10.27,
+          10.28,
+          10.29,
+          10.3,
+          10.31,
+          10.32
+        ],
+        "edge_is_rising": [
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false,
+          true,
+          false
+        ],
+        "time_since_previous_transition_seconds": [
+          NaN,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.02,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.02,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.02,
+          0.01,
+          0.01,
+          0.01,
+          0.01,
+          0.01
+        ],
+        "valid": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "intentionally_delayed": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ]
+      }
+    ],
+    "empty": [
+      {}
+    ]
+  }
+}
