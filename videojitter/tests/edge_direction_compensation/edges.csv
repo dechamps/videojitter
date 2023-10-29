@@ -1,0 +1,11 @@
+recording_timestamp_seconds,edge_is_rising
+10.000,True
+10.015,False
+10.020,True
+10.035,False
+10.040,True
+10.055,False
+10.060,True
+10.075,False
+10.080,True
+10.095,False
