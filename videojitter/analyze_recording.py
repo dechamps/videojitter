@@ -58,12 +58,6 @@ def _parse_arguments():
         default=0.4,
     )
     argument_parser.add_argument(
-        "--upsampling-ratio",
-        help="How much to upsample the signal before attempting to find edges. Upsampling reduces interpolation error, thereby improving the precision of zero crossing calculations (timestamp and slope), but makes processing slower.",
-        type=int,
-        default=2,
-    )
-    argument_parser.add_argument(
         "--min-edges-ratio",
         help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-amplitude-threshold.",
         type=float,
@@ -288,21 +282,6 @@ def main():
 
     recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
     maybe_write_debug_wavfile("trimmed", recording_samples)
-
-    upsampling_ratio = args.upsampling_ratio
-    recording_sample_rate *= upsampling_ratio
-    test_signal_start_index *= upsampling_ratio
-    test_signal_end_index *= upsampling_ratio
-    print(
-        f"Upsampling recording by {upsampling_ratio}x (to {recording_sample_rate} Hz)",
-        file=sys.stderr,
-    )
-    recording_samples = scipy.signal.resample_poly(
-        recording_samples,
-        up=upsampling_ratio,
-        down=1,
-    )
-    maybe_write_debug_wavfile("upsampled", recording_samples)
 
     # The fundamental, core idea behind the way we detect "edges" is to look for
     # large scale changes in overall recording signal level.
