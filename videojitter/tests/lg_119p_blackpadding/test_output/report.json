@@ -23,6 +23,14 @@
             "labelLimit": 0,
             "clipHeight": 15
           },
+          "scale": {
+            "range": [
+              "#1f77b4",
+              "#2ca02c",
+              "#ff7f0e",
+              "#d62728"
+            ]
+          },
           "sort": {
             "field": "label_order"
           },

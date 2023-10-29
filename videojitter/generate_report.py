@@ -172,7 +172,9 @@ def _generate_chart(
                 type="nominal",
                 title=None,
                 sort=alt.SortField("label_order"),
-            ).legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
+            )
+            .scale(range=["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"])
+            .legend(orient="bottom", columns=1, labelLimit=0, clipHeight=15),
             shape={
                 # https://github.com/altair-viz/altair/issues/2759
                 "condition": [
