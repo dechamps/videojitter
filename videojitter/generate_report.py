@@ -304,7 +304,9 @@ def _generate_chart(
                 # make sense (the aspect ratio of this chart is arbitrary
                 # anyway) and is more annoying than useful when attempting to
                 # keep outliers within the range of the chart.
-                alt.selection_interval(encodings=["x"], bind="scales"),
+                alt.selection_interval(
+                    name="x_interval", encodings=["x"], bind="scales"
+                ),
             ),
             alt.Chart(
                 title=alt.TitleParams(

@@ -247,7 +247,7 @@
       "value": 24.068085444502533
     },
     {
-      "name": "param_1",
+      "name": "x_interval",
       "select": {
         "type": "interval",
         "encodings": [
