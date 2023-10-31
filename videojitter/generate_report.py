@@ -102,12 +102,17 @@ def _packed_columns_chart(data, *kargs, **kwargs):
 def _generate_chart(
     transitions,
     title,
+    first_transition_recording_timestamp_seconds,
     high_is_white,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
     mean_time_between_transitions,
     fine_print,
 ):
+    first_transition_recording_timestamp_seconds = alt.param(
+        name="first_transition_recording_timestamp_seconds",
+        value=first_transition_recording_timestamp_seconds,
+    )
     chart = (
         _packed_columns_chart(
             # Stop Altair from outputting NaNs, which is not valid JSON. See
@@ -117,6 +122,8 @@ def _generate_chart(
         )
         .transform_window(transition_count="row_number()")
         .transform_calculate(
+            time_since_first_transition=alt.datum.recording_timestamp_seconds
+            - first_transition_recording_timestamp_seconds,
             transition_index=alt.expr.datum.transition_count - 1,
             edge_label=alt.expr.if_(alt.datum.edge_is_rising, "rising", "falling"),
             **{}
@@ -153,11 +160,11 @@ def _generate_chart(
         )
         .mark_point(filled=True)
         .encode(
-            alt.X("recording_timestamp_seconds", type="quantitative")
+            alt.X("time_since_first_transition", type="quantitative")
             .scale(zero=False, nice=False)
             .axis(
                 labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
-                title="Recording timestamp",
+                title="Time since first transition",
             ),
             alt.Y("time_since_previous_transition_seconds", type="quantitative")
             .scale(
@@ -236,6 +243,12 @@ def _generate_chart(
                 format="~s",
             ),
             alt.Tooltip(
+                "time_since_first_transition",
+                type="quantitative",
+                title="Time since first transition (s)",
+                format="~s",
+            ),
+            alt.Tooltip(
                 "time_since_previous_transition_seconds",
                 type="quantitative",
                 title="Time since last transition (s)",
@@ -284,13 +297,14 @@ def _generate_chart(
     return (
         alt.vconcat(
             chart.encode(tooltip=tooltips).add_params(
+                first_transition_recording_timestamp_seconds,
                 # Make the chart zoomable on the X axis.
                 # Note we don't let the user zoom the Y axis, as they would then
                 # end up scaling both axes simultaneously, which does not really
                 # make sense (the aspect ratio of this chart is arbitrary
                 # anyway) and is more annoying than useful when attempting to
                 # keep outliers within the range of the chart.
-                alt.selection_interval(encodings=["x"], bind="scales")
+                alt.selection_interval(encodings=["x"], bind="scales"),
             ),
             alt.Chart(
                 title=alt.TitleParams(
@@ -599,6 +613,7 @@ def main():
         chart = _generate_chart(
             rounded_transitions,
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
+            transitions_interval_seconds.left,
             high_is_white,
             args.chart_minimum_time_between_transitions_seconds,
             args.chart_maximum_time_between_transitions_seconds,

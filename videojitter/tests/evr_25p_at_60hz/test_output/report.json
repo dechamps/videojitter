@@ -99,6 +99,12 @@
             "type": "quantitative"
           },
           {
+            "field": "time_since_first_transition",
+            "format": "~s",
+            "title": "Time since first transition (s)",
+            "type": "quantitative"
+          },
+          {
             "field": "time_since_previous_transition_seconds",
             "format": "~s",
             "title": "Time since last transition (s)",
@@ -119,9 +125,9 @@
         "x": {
           "axis": {
             "labelExpr": "(format(datum.value,'~s') + 's')",
-            "title": "Recording timestamp"
+            "title": "Time since first transition"
           },
-          "field": "recording_timestamp_seconds",
+          "field": "time_since_first_transition",
           "scale": {
             "zero": false,
             "nice": false
@@ -166,6 +172,10 @@
               "as": "transition_count"
             }
           ]
+        },
+        {
+          "calculate": "(datum.recording_timestamp_seconds - first_transition_recording_timestamp_seconds)",
+          "as": "time_since_first_transition"
         },
         {
           "calculate": "(datum.transition_count - 1)",
@@ -232,6 +242,10 @@
     }
   ],
   "params": [
+    {
+      "name": "first_transition_recording_timestamp_seconds",
+      "value": 10.129518596392124
+    },
     {
       "name": "param_1",
       "select": {
