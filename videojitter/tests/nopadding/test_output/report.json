@@ -84,7 +84,7 @@
           {
             "field": "time_since_previous_transition_seconds",
             "format": "~s",
-            "title": "Time since last transition (s)",
+            "title": "Time since prev. transition (s)",
             "type": "quantitative"
           },
           {
@@ -187,7 +187,7 @@
           "First transition recorded at 13.593 ms; last: 63.149 s; length: 63.135 s",
           "Detected 1438 transitions (expected 1438); first transition was kept; last transition was kept; expecting 1 intentionally delayed transitions",
           "The following stats exclude 0 invalid transitions and the 0 intentionally delayed transitions that were found:",
-          "Time since last transition includes -2.153 ms correction in all falling edges and +2.153 ms correction in all rising edges",
+          "Time since previous transition includes -2.153 ms correction in all falling edges and +2.153 ms correction in all rising edges",
           "Transition interval range: 21.805 ms (at 4.626 s) to 82.375 ms (at 28.881 s) - standard deviation: 14.604 ms - 99% of transitions are between 21.972 ms and 76.698 ms",
           "Mean time between transitions: 43.934 ms, i.e. 22.761371 FPS, which is 0.949339x faster than expected (clock skew)",
           "0 transitions are outliers (more than 3 standard deviations away from the mean)",

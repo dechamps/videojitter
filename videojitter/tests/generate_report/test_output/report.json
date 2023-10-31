@@ -84,7 +84,7 @@
           {
             "field": "time_since_previous_transition_seconds",
             "format": "~s",
-            "title": "Time since last transition (s)",
+            "title": "Time since prev. transition (s)",
             "type": "quantitative"
           },
           {

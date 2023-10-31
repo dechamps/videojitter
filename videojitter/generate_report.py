@@ -248,7 +248,7 @@ def _generate_chart(
             alt.Tooltip(
                 "time_since_previous_transition_seconds",
                 type="quantitative",
-                title="Time since last transition (s)",
+                title="Time since prev. transition (s)",
                 format="~s",
             ),
             alt.Tooltip(
@@ -553,7 +553,7 @@ def main():
         )
         falling_edge_offset_seconds = -falling_edge_lag_seconds / 2
         rising_edge_offset_seconds = falling_edge_lag_seconds / 2
-        edge_direction_compensation_fineprint = f"Time since last transition includes {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s correction in all rising edges"
+        edge_direction_compensation_fineprint = f"Time since previous transition includes {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s correction in all rising edges"
         transitions.loc[
             ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
         ] += falling_edge_offset_seconds
