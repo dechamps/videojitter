@@ -109,10 +109,6 @@ def _generate_chart(
     mean_time_between_transitions,
     fine_print,
 ):
-    first_transition_recording_timestamp_seconds = alt.param(
-        name="first_transition_recording_timestamp_seconds",
-        value=first_transition_recording_timestamp_seconds,
-    )
     chart = (
         _packed_columns_chart(
             # Stop Altair from outputting NaNs, which is not valid JSON. See
@@ -298,7 +294,6 @@ def _generate_chart(
     return (
         alt.vconcat(
             chart.encode(tooltip=tooltips).add_params(
-                first_transition_recording_timestamp_seconds,
                 # Make the chart zoomable on the X axis.
                 # Note we don't let the user zoom the Y axis, as they would then
                 # end up scaling both axes simultaneously, which does not really

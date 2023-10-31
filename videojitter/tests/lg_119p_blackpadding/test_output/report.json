@@ -174,7 +174,7 @@
           ]
         },
         {
-          "calculate": "(datum.recording_timestamp_seconds - first_transition_recording_timestamp_seconds)",
+          "calculate": "(datum.recording_timestamp_seconds - 18.42854168082774)",
           "as": "time_since_first_transition"
         },
         {
@@ -242,10 +242,6 @@
     }
   ],
   "params": [
-    {
-      "name": "first_transition_recording_timestamp_seconds",
-      "value": 18.42854168082774
-    },
     {
       "name": "x_interval",
       "select": {
