@@ -152,7 +152,7 @@
         }
       },
       "height": 750,
-      "name": "view_1",
+      "name": "chart",
       "title": "3596 transitions at 59.940 nominal FPS",
       "transform": [
         {
@@ -256,7 +256,7 @@
       },
       "bind": "scales",
       "views": [
-        "view_1"
+        "chart"
       ]
     }
   ],

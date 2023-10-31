@@ -119,6 +119,7 @@ def _generate_chart(
             # https://github.com/altair-viz/altair/issues/2301
             transitions.replace({np.nan: None}),
             title=title,
+            name="chart",
         )
         .transform_window(transition_count="row_number()")
         .transform_calculate(
