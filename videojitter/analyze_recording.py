@@ -242,7 +242,7 @@ def _interpolate_peaks(x, peak_indexes):
 
 def main():
     args = _parse_arguments()
-    with open(args.spec_file) as spec_file:
+    with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     expected_transition_count = spec["transition_count"]

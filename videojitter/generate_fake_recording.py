@@ -290,7 +290,7 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
 def main():
     args = _parse_arguments()
     sample_rate = args.internal_sample_rate_hz
-    with open(args.spec_file) as spec_file:
+    with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)
 
     assert args.internal_sample_rate_hz > args.output_sample_rate_hz

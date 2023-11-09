@@ -513,7 +513,7 @@ def main():
         output_chart_files or output_csv_file
     ), "At least one of --output-chart-file or --output-csv-file must be specified"
 
-    with open(args.spec_file) as spec_file:
+    with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     transition_count = spec["transition_count"]

@@ -76,7 +76,7 @@ def _parse_arguments():
 
 def main():
     args = _parse_arguments()
-    with open(args.spec_file) as spec_file:
+    with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)
 
     rate = f"{spec['fps']['num']}/{spec['fps']['den']}"

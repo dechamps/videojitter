@@ -56,7 +56,7 @@ def main():
         file=sys.stderr,
     )
 
-    with open(args.output_spec_file, "w") as spec_file:
+    with open(args.output_spec_file, "w", encoding="utf-8") as spec_file:
         json.dump(
             {
                 "fps": {"num": args.fps_num, "den": args.fps_den},

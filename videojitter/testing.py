@@ -3,9 +3,9 @@ import sys
 
 
 def prettify_json(path):
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         contents = json.load(file)
-    with open(path, "w") as file:
+    with open(path, "w", encoding="utf-8") as file:
         json.dump(contents, file, indent=2)
 
 
@@ -18,7 +18,7 @@ def _reset_directory(path):
 def _write_directory_listing(path):
     file_names = [child.name for child in path.iterdir()]
     file_names.sort()
-    with open(path / "file_list.txt", "w") as listing_file:
+    with open(path / "file_list.txt", "w", encoding="utf-8") as listing_file:
         for file_name in file_names:
             listing_file.write(f"{file_name}\n")
 
