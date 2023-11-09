@@ -1,8 +1,8 @@
 import argparse
 import json
+import sys
 import numpy as np
 import ffmpeg
-import sys
 import videojitter.util
 
 

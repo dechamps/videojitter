@@ -1,9 +1,9 @@
-import altair as alt
 import argparse
-import numpy as np
 import json
-import pandas as pd
 import sys
+import altair as alt
+import numpy as np
+import pandas as pd
 from si_prefix import si_format
 from scipy import stats
 import videojitter.util

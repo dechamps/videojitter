@@ -1,10 +1,10 @@
 import argparse
-import numpy as np
 import json
+import sys
+import numpy as np
 import pandas as pd
 import soundfile
 import scipy.signal
-import sys
 import videojitter.util
 
 
