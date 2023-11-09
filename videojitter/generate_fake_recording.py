@@ -9,7 +9,10 @@ import videojitter.util
 
 def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Generates a light waveform recording faking what a real instrument would output.",
+        description=(
+            "Generates a light waveform recording faking what a real instrument would"
+            " output."
+        ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
@@ -26,7 +29,10 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--internal-sample-rate-hz",
-        help="The (minimum) internal sample rate used for generating the signal. Directly determines the time resolution of the frame transitions.",
+        help=(
+            "The (minimum) internal sample rate used for generating the signal."
+            " Directly determines the time resolution of the frame transitions."
+        ),
         type=int,
         default=100000,
     )
@@ -38,55 +44,89 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--begin-padding-seconds",
-        help="Duration of the padding before the test signal. If negative, will truncate the beginning of the test signal.",
+        help=(
+            "Duration of the padding before the test signal. If negative, will truncate"
+            " the beginning of the test signal."
+        ),
         type=float,
         default=5,
     )
     argument_parser.add_argument(
         "--end-padding-seconds",
-        help="Duration of the padding after the test signal. If negative, will truncate the beginning of the test signal.",
+        help=(
+            "Duration of the padding after the test signal. If negative, will truncate"
+            " the beginning of the test signal."
+        ),
         type=float,
         default=5,
     )
     argument_parser.add_argument(
         "--padding-signal-level",
-        help="The signal level of the padding (before --dc-offset, --invert and --amplitude). -1, 0, and 1 can be used to simulate black, grey and white padding, respectively.",
+        help=(
+            "The signal level of the padding (before --dc-offset, --invert and"
+            " --amplitude). -1, 0, and 1 can be used to simulate black, grey and white"
+            " padding, respectively."
+        ),
         type=float,
         default=0.2,
     )
     argument_parser.add_argument(
         "--clock-skew",
-        help="Simulate clock skew, i.e. the test signal will be stretched by this amount. Note this doesn't affect padding.",
+        help=(
+            "Simulate clock skew, i.e. the test signal will be stretched by this"
+            " amount. Note this doesn't affect padding."
+        ),
         type=float,
         default=0.95,
     )
     argument_parser.add_argument(
         "--pattern-count",
-        help="Modulates the frame durations in such a way as to create a visible pattern on the resulting charts. This occurs before the overshoots are added. This option sets the number of times the pattern repeats; fractional numbers can be used to add padding at the beginning and end of the test signal. Set to zero to disable.",
+        help=(
+            "Modulates the frame durations in such a way as to create a visible pattern"
+            " on the resulting charts. This occurs before the overshoots are added."
+            " This option sets the number of times the pattern repeats; fractional"
+            " numbers can be used to add padding at the beginning and end of the test"
+            " signal. Set to zero to disable."
+        ),
         type=float,
         default=3.5,
     )
     argument_parser.add_argument(
         "--pattern-min-interval",
-        help="The minimum frame interval to use when generating the pattern (see --pattern-count), as a ratio of the nominal frame duration.",
+        help=(
+            "The minimum frame interval to use when generating the pattern (see"
+            " --pattern-count), as a ratio of the nominal frame duration."
+        ),
         type=float,
         default=0.5,
     )
     argument_parser.add_argument(
         "--white-duration-overshoot",
-        help="Make white frames overshoot into the next frame by this amount of time, relative to the nominal frame duration. Can be used to simulate asymmetry.",
+        help=(
+            "Make white frames overshoot into the next frame by this amount of time,"
+            " relative to the nominal frame duration. Can be used to simulate"
+            " asymmetry."
+        ),
         type=float,
         default=0.05,
     )
     argument_parser.add_argument(
         "--even-duration-overshoot",
-        help="Make even frames overshoot into odd frames by this amount of time, relative to the nominal frame duration. Set to 0.2 (or -0.2) to simulate a 3:2 (or 2:3) 24p@60Hz-like pattern.",
+        help=(
+            "Make even frames overshoot into odd frames by this amount of time,"
+            " relative to the nominal frame duration. Set to 0.2 (or -0.2) to simulate"
+            " a 3:2 (or 2:3) 24p@60Hz-like pattern."
+        ),
         type=float,
         default=0,
     )
     argument_parser.add_argument(
         "--pwm-frequency-fps",
-        help="Modulate the light waveform with PWM at this frequency times nominal FPS. Used to simulate PWM brightness modulation from real displays. Set to zero to disable.",
+        help=(
+            "Modulate the light waveform with PWM at this frequency times nominal FPS."
+            " Used to simulate PWM brightness modulation from real displays. Set to"
+            " zero to disable."
+        ),
         type=float,
         default=7.6,  # Non-round to ensure PWM does not coincide with frames
     )
@@ -104,36 +144,58 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--invert",
-        help="Invert the test signal (after the DC offset), i.e. white is low and black is high",
+        help=(
+            "Invert the test signal (after the DC offset), i.e. white is low and black"
+            " is high"
+        ),
         action="store_true",
     )
     argument_parser.add_argument(
         "--amplitude",
-        help="Amplitude of the resulting signal, where 1.0 (plus the DC offset) is full scale.",
+        help=(
+            "Amplitude of the resulting signal, where 1.0 (plus the DC offset) is full"
+            " scale."
+        ),
         type=float,
         default=0.5,
     )
     argument_parser.add_argument(
         "--gaussian-filter-stddev-seconds",
-        help="Run the signal through a gaussian filter with this specific standard deviation. Can be used to simulate the response of a typical light sensor. As an approximate rule of thumb, to simulate a light sensor that takes N seconds to reach steady state, set this option to N/2.6. Set to zero to disable.",
+        help=(
+            "Run the signal through a gaussian filter with this specific standard"
+            " deviation. Can be used to simulate the response of a typical light"
+            " sensor. As an approximate rule of thumb, to simulate a light sensor that"
+            " takes N seconds to reach steady state, set this option to N/2.6. Set to"
+            " zero to disable."
+        ),
         type=float,
         default=0.001,
     )
     argument_parser.add_argument(
         "--high-pass-filter-hz",
-        help="Run the signal through a single-pole Butterworth high-pass IIR filter with the specified cutoff frequency. Can be used to simulate an AC-coupled instrument. Set to zero to disable.",
+        help=(
+            "Run the signal through a single-pole Butterworth high-pass IIR filter with"
+            " the specified cutoff frequency. Can be used to simulate an AC-coupled"
+            " instrument. Set to zero to disable."
+        ),
         type=float,
         default=10,
     )
     argument_parser.add_argument(
         "--noise-rms-per-hz",
-        help="Add gaussian noise of the specified RMS amplitude multiplied by half the sample rate. This is done as the last step. Set to zero to disable.",
+        help=(
+            "Add gaussian noise of the specified RMS amplitude multiplied by half the"
+            " sample rate. This is done as the last step. Set to zero to disable."
+        ),
         type=float,
         default=0.00000005,
     )
     argument_parser.add_argument(
         "--output-sample-type",
-        help='Output sample format as a python-soundfile subtype, e.g. "PCM_16", "PCM_24", "FLOAT".',
+        help=(
+            'Output sample format as a python-soundfile subtype, e.g. "PCM_16",'
+            ' "PCM_24", "FLOAT".'
+        ),
         default="FLOAT",
     )
     return argument_parser.parse_args()
@@ -263,32 +325,34 @@ def main():
     samples = np.concatenate(
         (
             (
-                np.ones(
-                    int(np.round(args.begin_padding_seconds * sample_rate)),
-                    dtype=samples.dtype,
+                (
+                    np.ones(
+                        int(np.round(args.begin_padding_seconds * sample_rate)),
+                        dtype=samples.dtype,
+                    )
+                    * args.padding_signal_level
                 )
-                * args.padding_signal_level
-            )
-            if begin_padding_samples > 0
-            else [],
+                if begin_padding_samples > 0
+                else []
+            ),
             samples,
             (
-                np.ones(
-                    int(np.round(args.end_padding_seconds * sample_rate)),
-                    dtype=samples.dtype,
+                (
+                    np.ones(
+                        int(np.round(args.end_padding_seconds * sample_rate)),
+                        dtype=samples.dtype,
+                    )
+                    * args.padding_signal_level
                 )
-                * args.padding_signal_level
-            )
-            if end_padding_samples > 0
-            else [],
+                if end_padding_samples > 0
+                else []
+            ),
         )
     ).astype(np.float32)
     samples = samples[
-        -begin_padding_samples
-        if begin_padding_samples < 0
-        else 0 : end_padding_samples
-        if end_padding_samples < 0
-        else None
+        -begin_padding_samples if begin_padding_samples < 0 else 0 : (
+            end_padding_samples if end_padding_samples < 0 else None
+        )
     ]
     if args.pwm_frequency_fps != 0:
         samples = (samples + 1) * (

@@ -28,7 +28,13 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--output-chart-file",
-        help="Output the results as a graphical chart to the specified file. Format is determined from the file extension. Recommended format is HTML. Information on other formats is available at https://altair-viz.github.io/user_guide/saving_charts.html. Can be specified multiple times to save to multiple formats at once.",
+        help=(
+            "Output the results as a graphical chart to the specified file. Format is"
+            " determined from the file extension. Recommended format is HTML."
+            " Information on other formats is available at"
+            " https://altair-viz.github.io/user_guide/saving_charts.html. Can be"
+            " specified multiple times to save to multiple formats at once."
+        ),
         default=argparse.SUPPRESS,
         action="append",
     )
@@ -39,43 +45,70 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--chart-minimum-time-between-transitions-seconds",
-        help="The minimum time since previous transition that will be shown on the chart before the points are clamped",
+        help=(
+            "The minimum time since previous transition that will be shown on the chart"
+            " before the points are clamped"
+        ),
         type=float,
         default=0.000,
     )
     argument_parser.add_argument(
         "--chart-maximum-time-between-transitions-seconds",
-        help="The maximum time since previous transition that will be shown on the chart before the points are clamped",
+        help=(
+            "The maximum time since previous transition that will be shown on the chart"
+            " before the points are clamped"
+        ),
         type=float,
         default=0.100,
     )
     argument_parser.add_argument(
         "--keep-first-transition",
-        help='By default the very first transition is thrown away as it may be a spurious transition from the warmup pattern instead of the first "true" transition. If this option is set, the first transition is preserved.',
+        help=(
+            "By default the very first transition is thrown away as it may be a"
+            ' spurious transition from the warmup pattern instead of the first "true"'
+            " transition. If this option is set, the first transition is preserved."
+        ),
         action="store_true",
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--keep-last-transition",
-        help='By default the very last transition is thrown away as it may be a spurious transition to the cooldown pattern instead of the last "true" transition. If this option is set, the last transition is preserved.',
+        help=(
+            "By default the very last transition is thrown away as it may be a spurious"
+            ' transition to the cooldown pattern instead of the last "true" transition.'
+            " If this option is set, the last transition is preserved."
+        ),
         action="store_true",
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--edge-direction-compensation",
-        help="Compensate for shared timing differences between all falling and rising edges, i.e. transitions to black vs. transitions to white (usually caused by subtly different black-to-white vs. white-to-black response in the playback system or the recording system). (default: enabled if the spec was generated with a delayed transition)",
+        help=(
+            "Compensate for shared timing differences between all falling and rising"
+            " edges, i.e. transitions to black vs. transitions to white (usually caused"
+            " by subtly different black-to-white vs. white-to-black response in the"
+            " playback system or the recording system). (default: enabled if the spec"
+            " was generated with a delayed transition)"
+        ),
         action=argparse.BooleanOptionalAction,
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--delayed-transition-max-offset",
-        help="How many transitions to use on either side of where we would expect to find each delayed transition to find the real delayed transition.",
+        help=(
+            "How many transitions to use on either side of where we would expect to"
+            " find each delayed transition to find the real delayed transition."
+        ),
         type=int,
         default=4,
     )
     argument_parser.add_argument(
         "--time-precision-seconds-decimals",
-        help="How many decimals to round to when producing timestamps (and differences between timestamps). Used to avoid producing overly long floating point numbers where there is no actual precision benefit.",
+        help=(
+            "How many decimals to round to when producing timestamps (and differences"
+            " between timestamps). Used to avoid producing overly long floating point"
+            " numbers where there is no actual precision benefit."
+        ),
         default=6,  # Microsecond precision
     )
     return argument_parser.parse_args()
@@ -123,17 +156,21 @@ def _generate_chart(
             - first_transition_recording_timestamp_seconds,
             transition_index=alt.expr.datum.transition_count - 1,
             edge_label=alt.expr.if_(alt.datum.edge_is_rising, "rising", "falling"),
-            **{}
-            if high_is_white is None
-            else {
-                "frame_label": alt.expr.if_(
-                    alt.datum.edge_is_rising
-                    if high_is_white
-                    else ~alt.datum.edge_is_rising,
-                    "white",
-                    "black",
-                )
-            },
+            **(
+                {}
+                if high_is_white is None
+                else {
+                    "frame_label": alt.expr.if_(
+                        (
+                            alt.datum.edge_is_rising
+                            if high_is_white
+                            else ~alt.datum.edge_is_rising
+                        ),
+                        "white",
+                        "black",
+                    )
+                }
+            ),
             label=alt.expr.if_(
                 alt.datum.valid,
                 alt.expr.upper(alt.expr.slice(alt.datum.edge_label, 0, 1))
@@ -188,13 +225,17 @@ def _generate_chart(
                 # https://github.com/altair-viz/altair/issues/2759
                 "condition": [
                     {
-                        "test": alt.datum.time_since_previous_transition_seconds
-                        < minimum_time_between_transitions_seconds,
+                        "test": (
+                            alt.datum.time_since_previous_transition_seconds
+                            < minimum_time_between_transitions_seconds
+                        ),
                         "value": "triangle-down",
                     },
                     {
-                        "test": alt.datum.time_since_previous_transition_seconds
-                        > maximum_time_between_transitions_seconds,
+                        "test": (
+                            alt.datum.time_since_previous_transition_seconds
+                            > maximum_time_between_transitions_seconds
+                        ),
                         "value": "triangle-up",
                     },
                 ],
@@ -421,7 +462,12 @@ def _match_delayed_transitions(
     not_found_indexes = np.nonzero(~transition_found)[0]
     if not_found_indexes.size > 0:
         print(
-            f"WARNING: unable to locate the following delayed transitions: {delayed_transition_indexes[not_found_indexes]} (expected to find them around {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds). These delayed transitions will not be reported, and black/white color information may not be available.",
+            "WARNING: unable to locate the following delayed transitions:"
+            f" {delayed_transition_indexes[not_found_indexes]} (expected to find them"
+            " around"
+            f" {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds)."
+            " These delayed transitions will not be reported, and black/white color"
+            " information may not be available.",
             file=sys.stderr,
         )
 
@@ -472,7 +518,8 @@ def main():
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     transition_count = spec["transition_count"]
     print(
-        f"Successfully loaded spec file containing {transition_count} frame transitions at {nominal_fps} FPS",
+        f"Successfully loaded spec file containing {transition_count} frame transitions"
+        f" at {nominal_fps} FPS",
         file=sys.stderr,
     )
 
@@ -483,13 +530,16 @@ def main():
     transition_count = transitions.index.size
     transitions_interval_seconds = _interval(transitions.recording_timestamp_seconds)
     print(
-        f"Recording analysis contains {transition_count} frame transitions, with first transition at ~{transitions_interval_seconds.left:.6f} seconds and last transition at ~{transitions_interval_seconds.right:.6f} seconds for a total of ~{transitions_interval_seconds.length:.6f} seconds",
+        f"Recording analysis contains {transition_count} frame transitions, with first"
+        f" transition at ~{transitions_interval_seconds.left:.6f} seconds and last"
+        f" transition at ~{transitions_interval_seconds.right:.6f} seconds for a total"
+        f" of ~{transitions_interval_seconds.length:.6f} seconds",
         file=sys.stderr,
     )
 
-    transitions[
-        "time_since_previous_transition_seconds"
-    ] = transitions.recording_timestamp_seconds.diff()
+    transitions["time_since_previous_transition_seconds"] = (
+        transitions.recording_timestamp_seconds.diff()
+    )
 
     transitions["valid"] = transitions.edge_is_rising.pipe(
         lambda r: np.diff(r.values, prepend=not r.values[0])
@@ -497,7 +547,10 @@ def main():
     invalid_transition_count = (~transitions.valid).sum()
     if invalid_transition_count > 0:
         print(
-            f'WARNING: data contains {invalid_transition_count} edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".',
+            f"WARNING: data contains {invalid_transition_count} edges where the"
+            " previous edge is the same direction (i.e. transition from one color to"
+            " the same color). This usually means the analyzer failed to make sense of"
+            ' some of the recording. These transitions will be reported as "invalid".',
             file=sys.stderr,
         )
 
@@ -523,12 +576,16 @@ def main():
             high_is_white = _is_high_white(delayed_transitions)
             if high_is_white is None:
                 print(
-                    "Unable to determine frame color information from delayed transitions",
+                    "Unable to determine frame color information from delayed"
+                    " transitions",
                     file=sys.stderr,
                 )
             else:
                 print(
-                    f"Deduced from delayed transitions that rising edges are transitions to {'white' if high_is_white else 'black'} and falling edges are transitions to {'black' if high_is_white else 'white'}",
+                    "Deduced from delayed transitions that rising edges are"
+                    f" transitions to {'white' if high_is_white else 'black'} and"
+                    " falling edges are transitions to"
+                    f" {'black' if high_is_white else 'white'}",
                     file=sys.stderr,
                 )
             transitions["intentionally_delayed"] = pd.notna(
@@ -553,7 +610,12 @@ def main():
         )
         falling_edge_offset_seconds = -falling_edge_lag_seconds / 2
         rising_edge_offset_seconds = falling_edge_lag_seconds / 2
-        edge_direction_compensation_fineprint = f"Time since previous transition includes {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s correction in all rising edges"
+        edge_direction_compensation_fineprint = (
+            "Time since previous transition includes"
+            f" {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all"
+            f" falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s"
+            " correction in all rising edges"
+        )
         transitions.loc[
             ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
         ] += falling_edge_offset_seconds
@@ -561,13 +623,17 @@ def main():
             transitions.edge_is_rising, "time_since_previous_transition_seconds"
         ] += rising_edge_offset_seconds
     else:
-        edge_direction_compensation_fineprint = "Consistent timing differences between falling and rising edges (i.e. between black vs. white transitions) have NOT been compensated for"
+        edge_direction_compensation_fineprint = (
+            "Consistent timing differences between falling and rising edges (i.e."
+            " between black vs. white transitions) have NOT been compensated for"
+        )
 
     time_between_transitions_standard_deviation_seconds = transitions[
         normal_transition
     ].time_since_previous_transition_seconds.std()
     print(
-        f"Valid, non-delayed transition interval standard deviation: ~{time_between_transitions_standard_deviation_seconds:.6f} seconds",
+        "Valid, non-delayed transition interval standard deviation:"
+        f" ~{time_between_transitions_standard_deviation_seconds:.6f} seconds",
         file=sys.stderr,
     )
 
@@ -585,10 +651,12 @@ def main():
 
     if output_csv_file:
         rounded_transitions.pipe(
-            lambda t: t
-            if high_is_white is None
-            else t.assign(
-                to_white=t.edge_is_rising if high_is_white else ~t.edge_is_rising
+            lambda t: (
+                t
+                if high_is_white is None
+                else t.assign(
+                    to_white=t.edge_is_rising if high_is_white else ~t.edge_is_rising
+                )
             )
         ).to_csv(output_csv_file, index=False)
     if output_chart_files:
@@ -619,13 +687,53 @@ def main():
                 mean_time_between_transitions, args.time_precision_seconds_decimals
             ),
             fine_print=[
-                f"First transition recorded at {si_format(transitions_interval_seconds.left, 3)}s; last: {si_format(transitions_interval_seconds.right, 3)}s; length: {si_format(transitions_interval_seconds.length, 3)}s",
-                f"Detected {transition_count} transitions (expected {spec['transition_count']}); first transition was {'kept' if keep_first_transition else 'removed'}; last transition was {'kept' if keep_last_transition else 'removed'}; expecting {len(intentionally_delayed_transitions)} intentionally delayed transitions",
-                f"The following stats exclude {invalid_transition_count} invalid transitions and the {found_intentionally_delayed_transitions} intentionally delayed transitions that were found:",
+                (
+                    "First transition recorded at"
+                    f" {si_format(transitions_interval_seconds.left, 3)}s; last:"
+                    f" {si_format(transitions_interval_seconds.right, 3)}s; length:"
+                    f" {si_format(transitions_interval_seconds.length, 3)}s"
+                ),
+                (
+                    f"Detected {transition_count} transitions (expected"
+                    f" {spec['transition_count']}); first transition was"
+                    f" {'kept' if keep_first_transition else 'removed'}; last"
+                    f" transition was {'kept' if keep_last_transition else 'removed'};"
+                    f" expecting {len(intentionally_delayed_transitions)} intentionally"
+                    " delayed transitions"
+                ),
+                (
+                    f"The following stats exclude {invalid_transition_count} invalid"
+                    " transitions and the"
+                    f" {found_intentionally_delayed_transitions} intentionally delayed"
+                    " transitions that were found:"
+                ),
                 edge_direction_compensation_fineprint,
-                f"Transition interval range: {si_format(shortest_transition. time_since_previous_transition_seconds, 3)}s (at {si_format(shortest_transition.recording_timestamp_seconds, 3)}s) to {si_format(longest_transition.time_since_previous_transition_seconds, 3)}s (at {si_format(longest_transition.recording_timestamp_seconds, 3)}s) - standard deviation: {si_format(time_between_transitions_standard_deviation_seconds, 3)}s - 99% of transitions are between {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s and {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s",
-                f"Mean time between transitions: {si_format(mean_time_between_transitions, 3)}s, i.e. {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster than expected (clock skew)",
-                f"{(np.abs(stats.zscore(transitions[normal_transition].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions are outliers (more than 3 standard deviations away from the mean)",
+                (
+                    "Transition interval range:"
+                    f" {si_format(shortest_transition. time_since_previous_transition_seconds, 3)}s"
+                    " (at"
+                    f" {si_format(shortest_transition.recording_timestamp_seconds, 3)}s)"
+                    f" to {si_format(longest_transition.time_since_previous_transition_seconds, 3)}s"
+                    " (at"
+                    f" {si_format(longest_transition.recording_timestamp_seconds, 3)}s)"
+                    " - standard deviation:"
+                    f" {si_format(time_between_transitions_standard_deviation_seconds, 3)}s"
+                    " - 99% of transitions are between"
+                    f" {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s"
+                    " and"
+                    f" {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s"
+                ),
+                (
+                    "Mean time between transitions:"
+                    f" {si_format(mean_time_between_transitions, 3)}s, i.e."
+                    f" {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster"
+                    " than expected (clock skew)"
+                ),
+                (
+                    f"{(np.abs(stats.zscore(transitions[normal_transition].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions"
+                    " are outliers (more than 3 standard deviations away from the"
+                    " mean)"
+                ),
                 "Generated by videojitter",
             ],
         )

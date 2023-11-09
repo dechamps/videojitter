@@ -15,7 +15,10 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--test-case",
-        help="Run the specified test case. Can be specified multiple times. If not set, runs all test cases.",
+        help=(
+            "Run the specified test case. Can be specified multiple times. If not set,"
+            " runs all test cases."
+        ),
         action="append",
         default=argparse.SUPPRESS,
     )

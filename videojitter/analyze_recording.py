@@ -10,7 +10,10 @@ import videojitter.util
 
 def _parse_arguments():
     argument_parser = argparse.ArgumentParser(
-        description="Given the recorded light waveform file, analyzes the recording and writes the list of detected edges (transitions) to a file.",
+        description=(
+            "Given the recorded light waveform file, analyzes the recording and writes"
+            " the list of detected edges (transitions) to a file."
+        ),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     argument_parser.add_argument(
@@ -33,13 +36,27 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--min-edge-separation-seconds",
-        help="The approximate minimum time interval between edges that the analyzer is expected to resolve. If the interval between two edges is shorter than this, the analyzer might become unable to precisely estimate timing differences between the two edges; if the interval is half as short, both edges may be missed entirely. On the other hand, setting this lower lets more high frequency noise in, possibly causing edge detection false positives.",
+        help=(
+            "The approximate minimum time interval between edges that the analyzer is"
+            " expected to resolve. If the interval between two edges is shorter than"
+            " this, the analyzer might become unable to precisely estimate timing"
+            " differences between the two edges; if the interval is half as short, both"
+            " edges may be missed entirely. On the other hand, setting this lower lets"
+            " more high frequency noise in, possibly causing edge detection false"
+            " positives."
+        ),
         type=float,
         default=0.001,
     )
     argument_parser.add_argument(
         "--min-frequency-ratio",
-        help='The cutoff frequency of the highpass filter, relative to the nominal FPS. This determines how "sluggish" the system response (including the instrument) is allowed to be. Setting this lower will allow slower transitions to be detected, but lets more low frequency noise in, possibly causing other transitions to be missed or mistimed due to drift.',
+        help=(
+            "The cutoff frequency of the highpass filter, relative to the nominal FPS."
+            ' This determines how "sluggish" the system response (including the'
+            " instrument) is allowed to be. Setting this lower will allow slower"
+            " transitions to be detected, but lets more low frequency noise in,"
+            " possibly causing other transitions to be missed or mistimed due to drift."
+        ),
         type=float,
         # The default preserves the expected fundamental and gets rid of
         # anything below that.
@@ -47,31 +64,52 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--pattern-length-seconds",
-        help="The length of the reference pattern used to detect the beginning and end of the test signal within the recording.",
+        help=(
+            "The length of the reference pattern used to detect the beginning and end"
+            " of the test signal within the recording."
+        ),
         type=float,
         default=0.5,
     )
     argument_parser.add_argument(
         "--pattern-score-threshold",
-        help="How well does a given portion of the recording have to match the reference pattern in order for it to be considered as the beginning or end of the test signal, as a ratio of the best match anywhere in the recording.",
+        help=(
+            "How well does a given portion of the recording have to match the reference"
+            " pattern in order for it to be considered as the beginning or end of the"
+            " test signal, as a ratio of the best match anywhere in the recording."
+        ),
         type=float,
         default=0.4,
     )
     argument_parser.add_argument(
         "--min-edges-ratio",
-        help="The minimum number of edges that can be assumed to be present in the test signal, as a ratio of the number of transitions implied by the spec. Used in combination with --edge-amplitude-threshold.",
+        help=(
+            "The minimum number of edges that can be assumed to be present in the test"
+            " signal, as a ratio of the number of transitions implied by the spec. Used"
+            " in combination with --edge-amplitude-threshold."
+        ),
         type=float,
         default=0.6,
     )
     argument_parser.add_argument(
         "--slope-prominence-threshold",
-        help="The absolute slope peak prominence threshold above which an edge will be recorded, as a ratio of the Nth highest prominence, where N is dictated by --min-edges-ratio. Determines how sensitive the analyzer is when detecting edges.",
+        help=(
+            "The absolute slope peak prominence threshold above which an edge will be"
+            " recorded, as a ratio of the Nth highest prominence, where N is dictated"
+            " by --min-edges-ratio. Determines how sensitive the analyzer is when"
+            " detecting edges."
+        ),
         type=float,
         default=0.6,
     )
     argument_parser.add_argument(
         "--output-debug-files-prefix",
-        help="If set, will write a bunch of files that describe the internal state of the analyzer at various stages of the pipeline under the specified file name prefix. Interpreting this data requires some familiarity with analyzer internals.",
+        help=(
+            "If set, will write a bunch of files that describe the internal state of"
+            " the analyzer at various stages of the pipeline under the specified file"
+            " name prefix. Interpreting this data requires some familiarity with"
+            " analyzer internals."
+        ),
         default=argparse.SUPPRESS,
     )
     return argument_parser.parse_args()
@@ -213,19 +251,22 @@ def main():
     )
     reference_duration_seconds = len(frames) / nominal_fps
     print(
-        f"Successfully loaded spec file describing {len(frames)} frames at {nominal_fps} FPS ({reference_duration_seconds} seconds)",
+        f"Successfully loaded spec file describing {len(frames)} frames at"
+        f" {nominal_fps} FPS ({reference_duration_seconds} seconds)",
         file=sys.stderr,
     )
 
     recording_samples, recording_sample_rate = soundfile.read(
         args.recording_file, dtype=np.float32
     )
-    assert (
-        recording_samples.ndim == 1
-    ), f"Recording file contains {recording_samples.shape[1]} channels - only mono files are supported. Extract the correct channel and try again."
+    assert recording_samples.ndim == 1, (
+        f"Recording file contains {recording_samples.shape[1]} channels - only mono"
+        " files are supported. Extract the correct channel and try again."
+    )
     recording_duration_seconds = recording_samples.size / recording_sample_rate
     print(
-        f"Successfully loaded recording containing {recording_samples.size} samples at {recording_sample_rate} Hz ({recording_duration_seconds} seconds)",
+        f"Successfully loaded recording containing {recording_samples.size} samples at"
+        f" {recording_sample_rate} Hz ({recording_duration_seconds} seconds)",
         file=sys.stderr,
     )
 
@@ -235,7 +276,9 @@ def main():
     max_index = np.argmax(np.abs(recording_samples))
     if recording_samples[max_index] > 0.9:
         print(
-            f"WARNING: it looks like the recording may be clipping around {format_index(max_index)}. You may want to re-record at a lower input gain/volume.",
+            "WARNING: it looks like the recording may be clipping around"
+            f" {format_index(max_index)}. You may want to re-record at a lower input"
+            " gain/volume.",
             file=sys.stderr,
         )
 
@@ -271,7 +314,8 @@ def main():
     )
     recording_sample_rate /= downsampling_ratio
     print(
-        f"Downsampling recording by {downsampling_ratio}x (to {recording_sample_rate} Hz)",
+        f"Downsampling recording by {downsampling_ratio}x (to"
+        f" {recording_sample_rate} Hz)",
         file=sys.stderr,
     )
     recording_samples = scipy.signal.resample_poly(
@@ -311,7 +355,8 @@ def main():
     test_signal_start_index = boundary_candidate_indexes[0]
     test_signal_end_index = boundary_candidate_indexes[-1] + pattern_samples.size
     print(
-        f"Test signal appears to start at {format_index(test_signal_start_index)} and end at {format_index(test_signal_end_index)} in the recording.",
+        f"Test signal appears to start at {format_index(test_signal_start_index)} and"
+        f" end at {format_index(test_signal_end_index)} in the recording.",
         file=sys.stderr,
     )
     if (
@@ -319,7 +364,12 @@ def main():
         and test_signal_end_index > recording_samples.size - recording_sample_rate
     ):
         print(
-            "WARNING: test signal boundaries are very close to recording boundaries. This may mean the recording is truncated or the boundaries were not detected correctly (e.g. because the recording is corrupted or doesn't match the spec). This warning can be ignored the recording was trimmed manually (you shouldn't need to do that though - the analyzer can detect where the test signal begins and ends automatically!).",
+            "WARNING: test signal boundaries are very close to recording boundaries."
+            " This may mean the recording is truncated or the boundaries were not"
+            " detected correctly (e.g. because the recording is corrupted or doesn't"
+            " match the spec). This warning can be ignored the recording was trimmed"
+            " manually (you shouldn't need to do that though - the analyzer can detect"
+            " where the test signal begins and ends automatically!).",
             file=sys.stderr,
         )
 
@@ -438,7 +488,10 @@ def main():
     slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
     slope_prominences = slope_prominences[valid_slope_peak]
     print(
-        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above ~{slope_prominence_threshold:.3}. First edge is right after {format_index(slope_peak_indexes[0])} and last edge is right after {format_index(slope_peak_indexes[-1])}.",
+        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above"
+        f" ~{slope_prominence_threshold:.3}. First edge is right after"
+        f" {format_index(slope_peak_indexes[0])} and last edge is right after"
+        f" {format_index(slope_peak_indexes[-1])}.",
         file=sys.stderr,
     )
     assert slope_peak_indexes.size > 1

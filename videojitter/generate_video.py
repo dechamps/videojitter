@@ -30,29 +30,45 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--padding-square-width-pixels",
-        help="Width of the squares used in the padding pattern, in pixels. Ignored if --padding-fullscreen-color is set",
+        help=(
+            "Width of the squares used in the padding pattern, in pixels. Ignored if"
+            " --padding-fullscreen-color is set"
+        ),
         default=16,
         type=int,
     )
     argument_parser.add_argument(
         "--padding-square-height-pixels",
-        help="Height of the squares used in the padding pattern, in pixels. Ignored if --padding-fullscreen-color is set",
+        help=(
+            "Height of the squares used in the padding pattern, in pixels. Ignored if"
+            " --padding-fullscreen-color is set"
+        ),
         default=16,
         type=int,
     )
     argument_parser.add_argument(
         "--padding-fullscreen-color",
-        help="If specified, do not use a dynamic checker pattern for padding; instead, use a static frame filled with the specified color, in ffmpeg color syntax.",
+        help=(
+            "If specified, do not use a dynamic checker pattern for padding; instead,"
+            " use a static frame filled with the specified color, in ffmpeg color"
+            " syntax."
+        ),
         default=argparse.SUPPRESS,
     )
     argument_parser.add_argument(
         "--begin-padding",
-        help="How long to display the padding pattern at the beginning of the video before the test signal, in ffmpeg time format",
+        help=(
+            "How long to display the padding pattern at the beginning of the video"
+            " before the test signal, in ffmpeg time format"
+        ),
         default="5",
     )
     argument_parser.add_argument(
         "--end-padding",
-        help="How long to display the padding pattern at the end of the video after the test signal, in ffmpeg time format",
+        help=(
+            "How long to display the padding pattern at the end of the video after the"
+            " test signal, in ffmpeg time format"
+        ),
         default="5",
     )
     return argument_parser.parse_args()
@@ -74,7 +90,12 @@ def main():
             ffmpeg.filter(
                 [color_input(color) for color in ["black", "white"]],
                 "blend",
-                all_expr=f"if(eq(gte(mod(X, {args.padding_square_width_pixels*2}), {args.padding_square_width_pixels}), gte(mod(Y, {args.padding_square_height_pixels*2}), {args.padding_square_height_pixels})), A, B)",
+                all_expr=(
+                    f"if(eq(gte(mod(X, {args.padding_square_width_pixels*2}),"
+                    f" {args.padding_square_width_pixels}), gte(mod(Y,"
+                    f" {args.padding_square_height_pixels*2}),"
+                    f" {args.padding_square_height_pixels})), A, B)"
+                ),
             ).filter("negate", enable="eq(mod(n, 2), 1)")
             # The loop is not strictly necessary, but makes the pipeline vastly
             # faster by ensuring both frames are only computed once and then reused.
