@@ -1,3 +1,6 @@
+[tool.black]
+preview = true  # For long string line breaks
+
 [tool.pylint.main]
 disable = [
     "missing-module-docstring",
