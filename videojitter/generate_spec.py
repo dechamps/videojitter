@@ -1,5 +1,4 @@
 import argparse
-import math
 import json
 import sys
 
@@ -43,7 +42,7 @@ def main():
 
     delayed_transition = not args.no_delayed_transition
 
-    transition_count = math.floor(args.duration_seconds * args.fps_num / args.fps_den)
+    transition_count = int(args.duration_seconds * args.fps_num // args.fps_den)
     if delayed_transition:
         transition_count -= 1
     if transition_count % 2 != 0:
@@ -62,7 +61,7 @@ def main():
                 "fps": {"num": args.fps_num, "den": args.fps_den},
                 "transition_count": transition_count,
                 "delayed_transitions": (
-                    [int(transition_count / 2)] if delayed_transition else []
+                    [transition_count // 2] if delayed_transition else []
                 ),
             },
             spec_file,

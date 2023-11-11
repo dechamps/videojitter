@@ -416,9 +416,9 @@ def main():
     maybe_write_debug_wavfile("slope_kernel", slope_kernel)
     recording_samples = np.concatenate(
         (
-            np.full(int(slope_kernel.size / 2), recording_samples[0]),
+            np.full(slope_kernel.size // 2, recording_samples[0]),
             recording_samples,
-            np.full(int(slope_kernel.size / 2), recording_samples[-1]),
+            np.full(slope_kernel.size // 2, recording_samples[-1]),
         )
     )
     maybe_write_debug_wavfile("padded", recording_samples)

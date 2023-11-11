@@ -267,7 +267,7 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     # notebook for an overview of the math that was used to arrive at the
     # formulas for Y(n) (`frame_offset_adjustments`) and `end` that are used in
     # this code.
-    period_frames = int(np.floor(frame_count / pattern_count))
+    period_frames = frame_count // pattern_count
     offset_into_cycle = np.arange(0, period_frames) / period_frames
     end = -np.real(scipy.special.lambertw(-start * np.exp(-start), -1))
     frame_offset_adjustments = np.tile(
@@ -279,7 +279,7 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
         int(pattern_count),
     )
 
-    frame_index = int((frame_count - frame_offset_adjustments.size) / 2)
+    frame_index = (frame_count - frame_offset_adjustments.size) // 2
     all_frame_offset_adjustments = np.zeros(frame_count)
     all_frame_offset_adjustments[
         frame_index : frame_index + frame_offset_adjustments.size

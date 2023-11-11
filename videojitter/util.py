@@ -68,5 +68,5 @@ def firwin(*kargs, pass_zero=True, **kwargs):
     kernel = scipy.signal.firwin(*kargs, **kwargs)
     if not pass_zero:
         kernel = -kernel
-        kernel[int(kernel.size / 2)] += 1
+        kernel[kernel.size // 2] += 1
     return kernel
