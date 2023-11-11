@@ -37,7 +37,7 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--output-sample-rate-hz",
-        help="Sample rate to resample to before writing the recording.",
+        help="Sample rate to resample to before writing the signal.",
         type=int,
         default=48000,
     )
@@ -286,87 +286,136 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     return all_frame_offset_adjustments
 
 
-def main():
-    args = _parse_arguments()
-    with open(args.spec_file, encoding="utf-8") as spec_file:
-        spec = json.load(spec_file)
+class _Generator:
+    def __init__(self, args):
+        self._args = args
+        with open(args.spec_file, encoding="utf-8") as spec_file:
+            self._spec = json.load(spec_file)
 
-    assert args.internal_sample_rate_hz > args.output_sample_rate_hz
-    downsample_ratio = int(
-        np.ceil(args.internal_sample_rate_hz / args.output_sample_rate_hz)
-    )
-    internal_sample_rate = args.output_sample_rate_hz * downsample_ratio
-    print(f"Using internal sample rate of {internal_sample_rate} Hz", file=sys.stderr)
+    def generate(self):
+        frames = self._generate_frames()
 
-    frames = _util.generate_frames(
-        spec["transition_count"], spec["delayed_transitions"]
-    )
-    signal = _util.generate_fake_signal(
-        frames,
-        spec["fps"]["num"],
-        spec["fps"]["den"],
-        internal_sample_rate / args.clock_skew,
-        frame_offsets=(
-            _get_pattern_frame_offset_adjustments(
-                frames.size,
-                args.pattern_count,
-                args.pattern_min_interval,
+        assert self._args.internal_sample_rate_hz > self._args.output_sample_rate_hz
+        downsample_ratio = int(
+            np.ceil(
+                self._args.internal_sample_rate_hz / self._args.output_sample_rate_hz
             )
-            if args.pattern_count
-            else 0
         )
-        + frames * args.white_duration_overshoot
-        + (np.arange(frames.size) % 2 == 0) * args.even_duration_overshoot,
-    )
-    signal = signal._replace(sample_rate=internal_sample_rate)
-    begin_padding_samples = int(
-        np.round(args.begin_padding_seconds * signal.sample_rate)
-    )
-    end_padding_samples = int(np.round(args.end_padding_seconds * signal.sample_rate))
-    signal = signal._replace(
-        samples=np.concatenate(
-            (
-                (
-                    (
-                        np.ones(
-                            int(
-                                np.round(
-                                    args.begin_padding_seconds * signal.sample_rate
-                                )
-                            ),
-                            dtype=signal.samples.dtype,
-                        )
-                        * args.padding_signal_level
-                    )
-                    if begin_padding_samples > 0
-                    else []
-                ),
-                signal.samples,
-                (
-                    (
-                        np.ones(
-                            int(
-                                np.round(args.end_padding_seconds * signal.sample_rate)
-                            ),
-                            dtype=signal.samples.dtype,
-                        )
-                        * args.padding_signal_level
-                    )
-                    if end_padding_samples > 0
-                    else []
-                ),
-            )
-        ).astype(np.float32)
-    )
-    signal = signal._replace(
-        samples=signal.samples[
-            -begin_padding_samples if begin_padding_samples < 0 else 0 : (
-                end_padding_samples if end_padding_samples < 0 else None
-            )
-        ]
-    )
-    if args.pwm_frequency_fps != 0:
+        internal_sample_rate = self._args.output_sample_rate_hz * downsample_ratio
+        print(
+            f"Using internal sample rate of {internal_sample_rate} Hz", file=sys.stderr
+        )
+
+        signal = self._generate_ideal_recording(
+            frames, self._get_frame_offsets(frames), internal_sample_rate
+        )
+        signal = self._add_padding(signal)
+        signal = self._add_pwm(signal)
+        signal = _signal.downsample(signal, downsample_ratio)
+        signal = self._add_dc_offset(signal)
         signal = signal._replace(
+            samples=signal.samples
+            * (-1 if self._args.invert else 1)
+            * self._args.amplitude
+        )
+        signal = self._gaussian_filter(signal)
+        signal = self._high_pass_filter(signal)
+        signal = self._add_noise(signal)
+
+        _signal.tofile(
+            signal,
+            file=self._args.output_recording_file,
+            subtype=self._args.output_sample_type,
+        )
+
+    def _generate_frames(self):
+        return _util.generate_frames(
+            self._spec["transition_count"], self._spec["delayed_transitions"]
+        )
+
+    def _get_frame_offsets(self, frames):
+        return (
+            (
+                _get_pattern_frame_offset_adjustments(
+                    frames.size,
+                    self._args.pattern_count,
+                    self._args.pattern_min_interval,
+                )
+                if self._args.pattern_count
+                else 0
+            )
+            + frames * self._args.white_duration_overshoot
+            + (np.arange(frames.size) % 2 == 0) * self._args.even_duration_overshoot
+        )
+
+    def _generate_ideal_recording(self, frames, frame_offsets, sample_rate):
+        signal = _util.generate_fake_signal(
+            frames,
+            self._spec["fps"]["num"],
+            self._spec["fps"]["den"],
+            sample_rate / self._args.clock_skew,
+            frame_offsets=frame_offsets,
+        )
+        return signal._replace(sample_rate=sample_rate)
+
+    def _add_padding(self, signal):
+        begin_padding_samples = int(
+            np.round(self._args.begin_padding_seconds * signal.sample_rate)
+        )
+        end_padding_samples = int(
+            np.round(self._args.end_padding_seconds * signal.sample_rate)
+        )
+        signal = signal._replace(
+            samples=np.concatenate(
+                (
+                    (
+                        (
+                            np.ones(
+                                int(
+                                    np.round(
+                                        self._args.begin_padding_seconds
+                                        * signal.sample_rate
+                                    )
+                                ),
+                                dtype=signal.samples.dtype,
+                            )
+                            * self._args.padding_signal_level
+                        )
+                        if begin_padding_samples > 0
+                        else []
+                    ),
+                    signal.samples,
+                    (
+                        (
+                            np.ones(
+                                int(
+                                    np.round(
+                                        self._args.end_padding_seconds
+                                        * signal.sample_rate
+                                    )
+                                ),
+                                dtype=signal.samples.dtype,
+                            )
+                            * self._args.padding_signal_level
+                        )
+                        if end_padding_samples > 0
+                        else []
+                    ),
+                )
+            ).astype(np.float32)
+        )
+        return signal._replace(
+            samples=signal.samples[
+                -begin_padding_samples if begin_padding_samples < 0 else 0 : (
+                    end_padding_samples if end_padding_samples < 0 else None
+                )
+            ]
+        )
+
+    def _add_pwm(self, signal):
+        if self._args.pwm_frequency_fps == 0:
+            return signal
+        return signal._replace(
             samples=(signal.samples + 1)
             * (
                 scipy.signal.square(
@@ -374,53 +423,59 @@ def main():
                     * (
                         2
                         * np.pi
-                        * args.pwm_frequency_fps
-                        * spec["fps"]["num"]
-                        / spec["fps"]["den"]
+                        * self._args.pwm_frequency_fps
+                        * self._spec["fps"]["num"]
+                        / self._spec["fps"]["den"]
                         / signal.sample_rate
                     ),
-                    args.pwm_duty_cycle,
+                    self._args.pwm_duty_cycle,
                 )
                 * 0.5
                 + 0.5
             )
             - 1
         )
-    signal = _signal.downsample(signal, downsample_ratio)
-    signal = signal._replace(
-        samples=(signal.samples + args.dc_offset)
-        * ((-1 if args.invert else 1) * args.amplitude)
-    )
 
-    if args.gaussian_filter_stddev_seconds:
+    def _add_dc_offset(self, signal):
+        return signal._replace(samples=signal.samples + self._args.dc_offset)
+
+    def _gaussian_filter(self, signal):
+        if not self._args.gaussian_filter_stddev_seconds:
+            return signal
         gaussian_filter_stddev_samples = (
-            args.gaussian_filter_stddev_seconds * signal.sample_rate
+            self._args.gaussian_filter_stddev_seconds * signal.sample_rate
         )
-        signal = signal._replace(
+        return signal._replace(
             samples=_apply_gaussian_filter(
                 signal.samples, gaussian_filter_stddev_samples
             )
         )
 
-    if args.high_pass_filter_hz:
-        signal = _signal.butter(
-            signal, N=1, Wn=args.high_pass_filter_hz, btype="highpass"
-        )
-
-    if args.noise_rms_per_hz:
-        signal = signal._replace(
-            samples=signal.samples
-            + np.random.default_rng(0).normal(
-                scale=args.noise_rms_per_hz * signal.sample_rate / 2,
-                size=signal.samples.size,
+    def _high_pass_filter(self, signal):
+        return (
+            _signal.butter(
+                signal, N=1, Wn=self._args.high_pass_filter_hz, btype="highpass"
             )
+            if self._args.high_pass_filter_hz
+            else signal
         )
 
-    _signal.tofile(
-        signal,
-        file=args.output_recording_file,
-        subtype=args.output_sample_type,
-    )
+    def _add_noise(self, signal):
+        return (
+            signal._replace(
+                samples=signal.samples
+                + np.random.default_rng(0).normal(
+                    scale=self._args.noise_rms_per_hz * signal.sample_rate / 2,
+                    size=signal.samples.size,
+                )
+            )
+            if self._args.noise_rms_per_hz
+            else signal
+        )
+
+
+def main():
+    _Generator(_parse_arguments()).generate()
 
 
 if __name__ == "__main__":
