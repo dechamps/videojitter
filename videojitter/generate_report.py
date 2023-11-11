@@ -507,7 +507,7 @@ def _is_high_white(transitions):
 def main():
     args = _parse_arguments()
 
-    output_chart_files = getattr(args, "output_chart_file", None)
+    output_chart_files = getattr(args, "output_chart_file", [])
     output_csv_file = getattr(args, "output_csv_file", None)
     assert (
         output_chart_files or output_csv_file
