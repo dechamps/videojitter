@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import soundfile
 import scipy.signal
-import videojitter._util
+from videojitter import _util
 
 
 def _parse_arguments():
@@ -116,7 +116,7 @@ def _parse_arguments():
 
 
 def _generate_pattern_samples(length_seconds, fps_num, fps_den, sample_rate):
-    return videojitter._util.generate_fake_samples(
+    return _util.generate_fake_samples(
         np.tile([False, True], int(np.ceil(0.5 * length_seconds * fps_num / fps_den))),
         fps_num,
         fps_den,
@@ -159,7 +159,7 @@ def _generate_slope_kernel(min_frequency_hz, sample_rate):
     # mistaken for edges.
     return scipy.signal.convolve(
         slope_kernel,
-        videojitter._util.firwin(
+        _util.firwin(
             half_length * 2 + 1,
             min_frequency_hz,
             fs=sample_rate,
@@ -246,7 +246,7 @@ def main():
         spec = json.load(spec_file)
     nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
     expected_transition_count = spec["transition_count"]
-    frames = videojitter._util.generate_frames(
+    frames = _util.generate_frames(
         expected_transition_count, spec["delayed_transitions"]
     )
     reference_duration_seconds = len(frames) / nominal_fps

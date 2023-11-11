@@ -3,7 +3,7 @@ import json
 import sys
 import numpy as np
 import ffmpeg
-import videojitter._util
+from videojitter import _util
 
 
 def _parse_arguments():
@@ -145,7 +145,7 @@ def main():
     ffmpeg_process = ffmpeg_spec.run_async(pipe_stdin=True)
     ffmpeg_process.stdin.write(
         (
-            videojitter._util.generate_frames(
+            _util.generate_frames(
                 spec["transition_count"], spec["delayed_transitions"]
             ).astype(np.uint8)
             * 0xFF
