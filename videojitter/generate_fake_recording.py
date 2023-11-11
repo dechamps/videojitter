@@ -312,9 +312,8 @@ class _Generator:
         recording = self._add_padding(recording)
         recording = self._add_pwm(recording)
         recording = _signal.downsample(recording, downsample_ratio)
-        recording = self._add_dc_offset(recording)
         recording = recording._replace(
-            samples=recording.samples
+            samples=(recording.samples + self._args.dc_offset)
             * (-1 if self._args.invert else 1)
             * self._args.amplitude
         )
@@ -435,9 +434,6 @@ class _Generator:
             )
             - 1
         )
-
-    def _add_dc_offset(self, recording):
-        return recording._replace(samples=recording.samples + self._args.dc_offset)
 
     def _gaussian_filter(self, recording):
         if not self._args.gaussian_filter_stddev_seconds:
