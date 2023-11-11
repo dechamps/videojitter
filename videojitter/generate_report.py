@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from si_prefix import si_format
 from scipy import stats
-import videojitter.util
+import videojitter._util
 
 
 def _parse_arguments():
@@ -428,7 +428,7 @@ def _match_delayed_transitions(
 
     # Look at a few transitions before and after the one that is closest to the
     # expected timestamp.
-    neighbors_indexes = videojitter.util.generate_windows(
+    neighbors_indexes = videojitter._util.generate_windows(
         recording_delayed_transition_indexes, max_offset, max_offset
     )
     neighbors_durations_seconds = (

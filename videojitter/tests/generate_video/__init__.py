@@ -1,8 +1,8 @@
-import videojitter.testing
+import videojitter._testing
 
 
 async def videojitter_test(test_case):
-    with videojitter.testing.Pipeline(test_case) as pipeline:
+    with videojitter._testing.Pipeline(test_case) as pipeline:
         # Encoding video takes time. Use small durations so that the test
         # finishes quickly.
         await pipeline.run_generate_spec("--duration-seconds", 2)

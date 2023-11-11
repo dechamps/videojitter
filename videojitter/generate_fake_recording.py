@@ -4,7 +4,7 @@ import json
 import numpy as np
 import soundfile
 import scipy.special
-import videojitter.util
+import videojitter._util
 
 
 def _parse_arguments():
@@ -300,10 +300,10 @@ def main():
     sample_rate = args.output_sample_rate_hz * downsample_ratio
     print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
 
-    frames = videojitter.util.generate_frames(
+    frames = videojitter._util.generate_frames(
         spec["transition_count"], spec["delayed_transitions"]
     )
-    samples = videojitter.util.generate_fake_samples(
+    samples = videojitter._util.generate_fake_samples(
         frames,
         spec["fps"]["num"],
         spec["fps"]["den"],
