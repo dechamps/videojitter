@@ -306,24 +306,24 @@ class _Generator:
             f"Using internal sample rate of {internal_sample_rate} Hz", file=sys.stderr
         )
 
-        signal = self._generate_ideal_recording(
+        recording = self._generate_ideal_recording(
             frames, self._get_frame_offsets(frames), internal_sample_rate
         )
-        signal = self._add_padding(signal)
-        signal = self._add_pwm(signal)
-        signal = _signal.downsample(signal, downsample_ratio)
-        signal = self._add_dc_offset(signal)
-        signal = signal._replace(
-            samples=signal.samples
+        recording = self._add_padding(recording)
+        recording = self._add_pwm(recording)
+        recording = _signal.downsample(recording, downsample_ratio)
+        recording = self._add_dc_offset(recording)
+        recording = recording._replace(
+            samples=recording.samples
             * (-1 if self._args.invert else 1)
             * self._args.amplitude
         )
-        signal = self._gaussian_filter(signal)
-        signal = self._high_pass_filter(signal)
-        signal = self._add_noise(signal)
+        recording = self._gaussian_filter(recording)
+        recording = self._high_pass_filter(recording)
+        recording = self._add_noise(recording)
 
         _signal.tofile(
-            signal,
+            recording,
             file=self._args.output_recording_file,
             subtype=self._args.output_sample_type,
         )
@@ -349,23 +349,23 @@ class _Generator:
         )
 
     def _generate_ideal_recording(self, frames, frame_offsets, sample_rate):
-        signal = _util.generate_fake_signal(
+        recording = _util.generate_fake_recording(
             frames,
             self._spec["fps"]["num"],
             self._spec["fps"]["den"],
             sample_rate / self._args.clock_skew,
             frame_offsets=frame_offsets,
         )
-        return signal._replace(sample_rate=sample_rate)
+        return recording._replace(sample_rate=sample_rate)
 
-    def _add_padding(self, signal):
+    def _add_padding(self, recording):
         begin_padding_samples = int(
-            np.round(self._args.begin_padding_seconds * signal.sample_rate)
+            np.round(self._args.begin_padding_seconds * recording.sample_rate)
         )
         end_padding_samples = int(
-            np.round(self._args.end_padding_seconds * signal.sample_rate)
+            np.round(self._args.end_padding_seconds * recording.sample_rate)
         )
-        signal = signal._replace(
+        recording = recording._replace(
             samples=np.concatenate(
                 (
                     (
@@ -374,27 +374,27 @@ class _Generator:
                                 int(
                                     np.round(
                                         self._args.begin_padding_seconds
-                                        * signal.sample_rate
+                                        * recording.sample_rate
                                     )
                                 ),
-                                dtype=signal.samples.dtype,
+                                dtype=recording.samples.dtype,
                             )
                             * self._args.padding_signal_level
                         )
                         if begin_padding_samples > 0
                         else []
                     ),
-                    signal.samples,
+                    recording.samples,
                     (
                         (
                             np.ones(
                                 int(
                                     np.round(
                                         self._args.end_padding_seconds
-                                        * signal.sample_rate
+                                        * recording.sample_rate
                                     )
                                 ),
-                                dtype=signal.samples.dtype,
+                                dtype=recording.samples.dtype,
                             )
                             * self._args.padding_signal_level
                         )
@@ -404,29 +404,29 @@ class _Generator:
                 )
             ).astype(np.float32)
         )
-        return signal._replace(
-            samples=signal.samples[
+        return recording._replace(
+            samples=recording.samples[
                 -begin_padding_samples if begin_padding_samples < 0 else 0 : (
                     end_padding_samples if end_padding_samples < 0 else None
                 )
             ]
         )
 
-    def _add_pwm(self, signal):
+    def _add_pwm(self, recording):
         if self._args.pwm_frequency_fps == 0:
-            return signal
-        return signal._replace(
-            samples=(signal.samples + 1)
+            return recording
+        return recording._replace(
+            samples=(recording.samples + 1)
             * (
                 scipy.signal.square(
-                    np.arange(signal.samples.size)
+                    np.arange(recording.samples.size)
                     * (
                         2
                         * np.pi
                         * self._args.pwm_frequency_fps
                         * self._spec["fps"]["num"]
                         / self._spec["fps"]["den"]
-                        / signal.sample_rate
+                        / recording.sample_rate
                     ),
                     self._args.pwm_duty_cycle,
                 )
@@ -436,41 +436,41 @@ class _Generator:
             - 1
         )
 
-    def _add_dc_offset(self, signal):
-        return signal._replace(samples=signal.samples + self._args.dc_offset)
+    def _add_dc_offset(self, recording):
+        return recording._replace(samples=recording.samples + self._args.dc_offset)
 
-    def _gaussian_filter(self, signal):
+    def _gaussian_filter(self, recording):
         if not self._args.gaussian_filter_stddev_seconds:
-            return signal
+            return recording
         gaussian_filter_stddev_samples = (
-            self._args.gaussian_filter_stddev_seconds * signal.sample_rate
+            self._args.gaussian_filter_stddev_seconds * recording.sample_rate
         )
-        return signal._replace(
+        return recording._replace(
             samples=_apply_gaussian_filter(
-                signal.samples, gaussian_filter_stddev_samples
+                recording.samples, gaussian_filter_stddev_samples
             )
         )
 
-    def _high_pass_filter(self, signal):
+    def _high_pass_filter(self, recording):
         return (
             _signal.butter(
-                signal, N=1, Wn=self._args.high_pass_filter_hz, btype="highpass"
+                recording, N=1, Wn=self._args.high_pass_filter_hz, btype="highpass"
             )
             if self._args.high_pass_filter_hz
-            else signal
+            else recording
         )
 
-    def _add_noise(self, signal):
+    def _add_noise(self, recording):
         return (
-            signal._replace(
-                samples=signal.samples
+            recording._replace(
+                samples=recording.samples
                 + np.random.default_rng(0).normal(
-                    scale=self._args.noise_rms_per_hz * signal.sample_rate / 2,
-                    size=signal.samples.size,
+                    scale=self._args.noise_rms_per_hz * recording.sample_rate / 2,
+                    size=recording.samples.size,
                 )
             )
             if self._args.noise_rms_per_hz
-            else signal
+            else recording
         )
 
 

@@ -115,7 +115,7 @@ def _parse_arguments():
 
 
 def _generate_pattern_signal(length_seconds, fps_num, fps_den, sample_rate):
-    return _util.generate_fake_signal(
+    return _util.generate_fake_recording(
         np.tile([False, True], int(np.ceil(0.5 * length_seconds * fps_num / fps_den))),
         fps_num,
         fps_den,

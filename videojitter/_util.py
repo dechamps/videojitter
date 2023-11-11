@@ -40,7 +40,7 @@ def generate_frames(transition_count, delayed_transitions):
     return ~(frames.cumsum() % 2).astype(bool)
 
 
-def generate_fake_signal(frames, fps_num, fps_den, sample_rate, frame_offsets=0):
+def generate_fake_recording(frames, fps_num, fps_den, sample_rate, frame_offsets=0):
     """Generates a recording signal simulating what an ideal instrument would output
     when faced with the given frame sequence.
     """
