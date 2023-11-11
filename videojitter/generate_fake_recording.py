@@ -2,9 +2,8 @@ import argparse
 import sys
 import json
 import numpy as np
-import soundfile
 import scipy.special
-from videojitter import _util
+from videojitter import _signal, _util
 
 
 def _parse_arguments():
@@ -289,7 +288,6 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
 
 def main():
     args = _parse_arguments()
-    sample_rate = args.internal_sample_rate_hz
     with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)
 
@@ -297,17 +295,17 @@ def main():
     downsample_ratio = int(
         np.ceil(args.internal_sample_rate_hz / args.output_sample_rate_hz)
     )
-    sample_rate = args.output_sample_rate_hz * downsample_ratio
-    print(f"Using internal sample rate of {sample_rate} Hz", file=sys.stderr)
+    internal_sample_rate = args.output_sample_rate_hz * downsample_ratio
+    print(f"Using internal sample rate of {internal_sample_rate} Hz", file=sys.stderr)
 
     frames = _util.generate_frames(
         spec["transition_count"], spec["delayed_transitions"]
     )
-    samples = _util.generate_fake_samples(
+    signal = _util.generate_fake_signal(
         frames,
         spec["fps"]["num"],
         spec["fps"]["den"],
-        sample_rate / args.clock_skew,
+        internal_sample_rate / args.clock_skew,
         frame_offsets=(
             _get_pattern_frame_offset_adjustments(
                 frames.size,
@@ -320,90 +318,107 @@ def main():
         + frames * args.white_duration_overshoot
         + (np.arange(frames.size) % 2 == 0) * args.even_duration_overshoot,
     )
-    begin_padding_samples = int(np.round(args.begin_padding_seconds * sample_rate))
-    end_padding_samples = int(np.round(args.end_padding_seconds * sample_rate))
-    samples = np.concatenate(
-        (
+    signal = signal._replace(sample_rate=internal_sample_rate)
+    begin_padding_samples = int(
+        np.round(args.begin_padding_seconds * signal.sample_rate)
+    )
+    end_padding_samples = int(np.round(args.end_padding_seconds * signal.sample_rate))
+    signal = signal._replace(
+        samples=np.concatenate(
             (
                 (
-                    np.ones(
-                        int(np.round(args.begin_padding_seconds * sample_rate)),
-                        dtype=samples.dtype,
+                    (
+                        np.ones(
+                            int(
+                                np.round(
+                                    args.begin_padding_seconds * signal.sample_rate
+                                )
+                            ),
+                            dtype=signal.samples.dtype,
+                        )
+                        * args.padding_signal_level
                     )
-                    * args.padding_signal_level
-                )
-                if begin_padding_samples > 0
-                else []
-            ),
-            samples,
-            (
-                (
-                    np.ones(
-                        int(np.round(args.end_padding_seconds * sample_rate)),
-                        dtype=samples.dtype,
-                    )
-                    * args.padding_signal_level
-                )
-                if end_padding_samples > 0
-                else []
-            ),
-        )
-    ).astype(np.float32)
-    samples = samples[
-        -begin_padding_samples if begin_padding_samples < 0 else 0 : (
-            end_padding_samples if end_padding_samples < 0 else None
-        )
-    ]
-    if args.pwm_frequency_fps != 0:
-        samples = (samples + 1) * (
-            scipy.signal.square(
-                np.arange(samples.size)
-                * (
-                    2
-                    * np.pi
-                    * args.pwm_frequency_fps
-                    * spec["fps"]["num"]
-                    / spec["fps"]["den"]
-                    / sample_rate
+                    if begin_padding_samples > 0
+                    else []
                 ),
-                args.pwm_duty_cycle,
+                signal.samples,
+                (
+                    (
+                        np.ones(
+                            int(
+                                np.round(args.end_padding_seconds * signal.sample_rate)
+                            ),
+                            dtype=signal.samples.dtype,
+                        )
+                        * args.padding_signal_level
+                    )
+                    if end_padding_samples > 0
+                    else []
+                ),
             )
-            * 0.5
-            + 0.5
-        ) - 1
-    samples = (
-        scipy.signal.resample_poly(
-            samples,
-            up=1,
-            down=downsample_ratio,
+        ).astype(np.float32)
+    )
+    signal = signal._replace(
+        samples=signal.samples[
+            -begin_padding_samples if begin_padding_samples < 0 else 0 : (
+                end_padding_samples if end_padding_samples < 0 else None
+            )
+        ]
+    )
+    if args.pwm_frequency_fps != 0:
+        signal = signal._replace(
+            samples=(signal.samples + 1)
+            * (
+                scipy.signal.square(
+                    np.arange(signal.samples.size)
+                    * (
+                        2
+                        * np.pi
+                        * args.pwm_frequency_fps
+                        * spec["fps"]["num"]
+                        / spec["fps"]["den"]
+                        / signal.sample_rate
+                    ),
+                    args.pwm_duty_cycle,
+                )
+                * 0.5
+                + 0.5
+            )
+            - 1
         )
-        + args.dc_offset
-    ) * ((-1 if args.invert else 1) * args.amplitude)
-    sample_rate = sample_rate / downsample_ratio
+    signal = _signal.downsample(signal, downsample_ratio)
+    signal = signal._replace(
+        samples=(signal.samples + args.dc_offset)
+        * ((-1 if args.invert else 1) * args.amplitude)
+    )
 
     if args.gaussian_filter_stddev_seconds:
         gaussian_filter_stddev_samples = (
-            args.gaussian_filter_stddev_seconds * sample_rate
+            args.gaussian_filter_stddev_seconds * signal.sample_rate
         )
-        samples = _apply_gaussian_filter(samples, gaussian_filter_stddev_samples)
+        signal = signal._replace(
+            samples=_apply_gaussian_filter(
+                signal.samples, gaussian_filter_stddev_samples
+            )
+        )
 
     if args.high_pass_filter_hz:
-        samples = scipy.signal.sosfilt(
-            scipy.signal.butter(
-                1, args.high_pass_filter_hz, "highpass", fs=sample_rate, output="sos"
-            ),
-            samples,
-        ).astype(samples.dtype)
-
-    if args.noise_rms_per_hz:
-        samples += np.random.default_rng(0).normal(
-            scale=args.noise_rms_per_hz * sample_rate / 2, size=samples.size
+        signal = _signal.butter(
+            signal, N=1, Wn=args.high_pass_filter_hz, btype="highpass"
         )
 
-    soundfile.write(
-        args.output_recording_file,
-        samples,
-        samplerate=int(sample_rate),
+    if args.noise_rms_per_hz:
+        signal = signal._replace(
+            samples=signal.samples
+            + np.random.default_rng(0).normal(
+                scale=args.noise_rms_per_hz * signal.sample_rate / 2,
+                size=signal.samples.size,
+            )
+        )
+
+    _signal.tofile(
+        signal,
+        file=args.output_recording_file,
         subtype=args.output_sample_type,
     )
 

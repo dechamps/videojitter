@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.signal
+from videojitter import _signal
 
 
 def generate_windows(indexes, lookback, lookahead):
@@ -40,12 +40,12 @@ def generate_frames(transition_count, delayed_transitions):
     return ~(frames.cumsum() % 2).astype(bool)
 
 
-def generate_fake_samples(frames, fps_num, fps_den, sample_rate, frame_offsets=0):
-    """Generates a recording simulating what an ideal instrument would output
+def generate_fake_signal(frames, fps_num, fps_den, sample_rate, frame_offsets=0):
+    """Generates a recording signal simulating what an ideal instrument would output
     when faced with the given frame sequence.
     """
-    return (
-        np.repeat(
+    return _signal.Signal(
+        samples=np.repeat(
             frames,
             np.diff(
                 np.round(
@@ -56,17 +56,6 @@ def generate_fake_samples(frames, fps_num, fps_den, sample_rate, frame_offsets=0
             ),
         ).astype(np.int8)
         * 2
-        - 1
+        - 1,
+        sample_rate=sample_rate,
     )
-
-
-def firwin(*kargs, pass_zero=True, **kwargs):
-    """Equivalent to scipy.signal.firwin() but with a workaround for
-    the `pass_zero=False` bug described at
-    https://github.com/scipy/scipy/issues/19291.
-    """
-    kernel = scipy.signal.firwin(*kargs, **kwargs)
-    if not pass_zero:
-        kernel = -kernel
-        kernel[kernel.size // 2] += 1
-    return kernel

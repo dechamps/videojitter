@@ -3,9 +3,8 @@ import json
 import sys
 import numpy as np
 import pandas as pd
-import soundfile
 import scipy.signal
-from videojitter import _util
+from videojitter import _signal, _util
 
 
 def _parse_arguments():
@@ -115,8 +114,8 @@ def _parse_arguments():
     return argument_parser.parse_args()
 
 
-def _generate_pattern_samples(length_seconds, fps_num, fps_den, sample_rate):
-    return _util.generate_fake_samples(
+def _generate_pattern_signal(length_seconds, fps_num, fps_den, sample_rate):
+    return _util.generate_fake_signal(
         np.tile([False, True], int(np.ceil(0.5 * length_seconds * fps_num / fps_den))),
         fps_num,
         fps_den,
@@ -157,17 +156,20 @@ def _generate_slope_kernel(min_frequency_hz, sample_rate):
     # Apply a gentle highpass filter to reject frequencies we don't care about.
     # We use a very short filter to mitigate ringing artefacts, which could be
     # mistaken for edges.
-    return scipy.signal.convolve(
-        slope_kernel,
-        _util.firwin(
-            half_length * 2 + 1,
-            min_frequency_hz,
-            fs=sample_rate,
+    kernel = _signal.convolve(
+        _signal.Signal(samples=slope_kernel, sample_rate=sample_rate),
+        _signal.firwin(
+            numtaps=half_length * 2 + 1,
+            cutoff=min_frequency_hz,
             pass_zero=False,
             window="boxcar",
+            sample_rate=sample_rate,
         ),
         "same",
-    ) * scipy.signal.windows.blackmanharris(slope_kernel.size)
+    )
+    return kernel._replace(
+        samples=kernel.samples * scipy.signal.windows.blackmanharris(slope_kernel.size)
+    )
 
 
 def _find_peaks_with_prominence_mirrored(x):
@@ -256,25 +258,18 @@ def main():
         file=sys.stderr,
     )
 
-    recording_samples, recording_sample_rate = soundfile.read(
-        args.recording_file, dtype=np.float32
-    )
-    assert recording_samples.ndim == 1, (
-        f"Recording file contains {recording_samples.shape[1]} channels - only mono"
-        " files are supported. Extract the correct channel and try again."
-    )
-    recording_duration_seconds = recording_samples.size / recording_sample_rate
+    recording = _signal.fromfile(args.recording_file, dtype=np.float32)
     print(
-        f"Successfully loaded recording containing {recording_samples.size} samples at"
-        f" {recording_sample_rate} Hz ({recording_duration_seconds} seconds)",
+        f"Successfully loaded recording containing {recording.samples.size} samples at"
+        f" {recording.sample_rate} Hz ({_signal.duration(recording)} seconds)",
         file=sys.stderr,
     )
 
     def format_index(index):
-        return f"sample {index} ({index / recording_sample_rate} seconds)"
+        return f"sample {index} ({index / recording.sample_rate} seconds)"
 
-    max_index = np.argmax(np.abs(recording_samples))
-    if recording_samples[max_index] > 0.9:
+    max_index = np.argmax(np.abs(recording.samples))
+    if recording.samples[max_index] > 0.9:
         print(
             "WARNING: it looks like the recording may be clipping around"
             f" {format_index(max_index)}. You may want to re-record at a lower input"
@@ -285,16 +280,17 @@ def main():
     wavfile_index = 0
     debug_files_prefix = getattr(args, "output_debug_files_prefix", None)
 
-    def maybe_write_debug_wavfile(name, samples, normalize=False):
+    def maybe_write_debug_wavfile(name, signal, normalize=False):
         if debug_files_prefix is None:
             return
         if normalize:
-            samples = samples / np.max(np.abs(samples))
+            signal = signal._replace(
+                samples=signal.samples / np.max(np.abs(signal.samples))
+            )
         nonlocal wavfile_index
-        scipy.io.wavfile.write(
-            f"{debug_files_prefix}{wavfile_index:02}_{name}.wav",
-            int(recording_sample_rate),
-            samples.astype(np.float32),
+        _signal.tofile(
+            signal._replace(samples=signal.samples.astype(np.float32)),
+            file=f"{debug_files_prefix}{wavfile_index:02}_{name}.wav",
         )
         wavfile_index += 1
 
@@ -310,32 +306,31 @@ def main():
     # preserve frequencies up to 1/Tm, and thus, per Nyquist, we need a sampling
     # rate of at least 2/Tm.
     downsampling_ratio = np.floor(
-        0.5 * args.min_edge_separation_seconds * recording_sample_rate
+        0.5 * args.min_edge_separation_seconds * recording.sample_rate
     )
-    recording_sample_rate /= downsampling_ratio
     print(
         f"Downsampling recording by {downsampling_ratio}x (to"
-        f" {recording_sample_rate} Hz)",
+        f" {recording.sample_rate / downsampling_ratio} Hz)",
         file=sys.stderr,
     )
-    recording_samples = scipy.signal.resample_poly(
-        recording_samples,
-        up=1,
-        down=downsampling_ratio,
-    )
-    maybe_write_debug_wavfile("downsampled", recording_samples)
+    recording = _signal.downsample(recording, downsampling_ratio)
+    maybe_write_debug_wavfile("downsampled", recording)
 
-    pattern_samples = _generate_pattern_samples(
+    pattern = _generate_pattern_signal(
         args.pattern_length_seconds,
         spec["fps"]["num"],
         spec["fps"]["den"],
-        recording_sample_rate,
+        recording.sample_rate,
     )
-    maybe_write_debug_wavfile("pattern", pattern_samples)
+    maybe_write_debug_wavfile("pattern", pattern)
 
-    pattern_cross_correlation = scipy.signal.correlate(
-        recording_samples,
-        pattern_samples.astype(recording_samples.dtype) / pattern_samples.size,
+    pattern_cross_correlation = _signal.correlate(
+        recording,
+        pattern._replace(
+            samples=(pattern.samples / pattern.samples.size).astype(
+                recording.samples.dtype
+            )
+        ),
         mode="valid",
     )
     maybe_write_debug_wavfile(
@@ -343,25 +338,27 @@ def main():
         pattern_cross_correlation,
     )
 
-    abs_pattern_cross_correlation = np.abs(pattern_cross_correlation)
-    boundary_candidates = (
-        abs_pattern_cross_correlation
-        >= np.max(abs_pattern_cross_correlation) * args.pattern_score_threshold
+    abs_pattern_cross_correlation = pattern_cross_correlation._replace(
+        samples=np.abs(pattern_cross_correlation.samples)
+    )
+    boundary_candidates = abs_pattern_cross_correlation._replace(
+        samples=abs_pattern_cross_correlation.samples
+        >= np.max(abs_pattern_cross_correlation.samples) * args.pattern_score_threshold
     )
     maybe_write_debug_wavfile("boundary_candidates", boundary_candidates)
 
-    boundary_candidate_indexes = np.nonzero(boundary_candidates)[0]
+    boundary_candidate_indexes = np.nonzero(boundary_candidates.samples)[0]
     assert boundary_candidate_indexes.size > 1
     test_signal_start_index = boundary_candidate_indexes[0]
-    test_signal_end_index = boundary_candidate_indexes[-1] + pattern_samples.size
+    test_signal_end_index = boundary_candidate_indexes[-1] + pattern.samples.size
     print(
         f"Test signal appears to start at {format_index(test_signal_start_index)} and"
         f" end at {format_index(test_signal_end_index)} in the recording.",
         file=sys.stderr,
     )
     if (
-        test_signal_start_index < recording_sample_rate
-        and test_signal_end_index > recording_samples.size - recording_sample_rate
+        test_signal_start_index < recording.sample_rate
+        and test_signal_end_index > recording.samples.size - recording.sample_rate
     ):
         print(
             "WARNING: test signal boundaries are very close to recording boundaries."
@@ -373,8 +370,10 @@ def main():
             file=sys.stderr,
         )
 
-    recording_samples = recording_samples[test_signal_start_index:test_signal_end_index]
-    maybe_write_debug_wavfile("trimmed", recording_samples)
+    recording = recording._replace(
+        samples=recording.samples[test_signal_start_index:test_signal_end_index]
+    )
+    maybe_write_debug_wavfile("trimmed", recording)
 
     min_frequency = nominal_fps * args.min_frequency_ratio
     print(
@@ -412,23 +411,29 @@ def main():
     #
     # In practice, what we do is we apply a peak finding algorithm to locate the
     # points at which the signal reaches a local steepness extremum.
-    slope_kernel = _generate_slope_kernel(min_frequency, recording_sample_rate)
+    slope_kernel = _generate_slope_kernel(min_frequency, recording.sample_rate)
     maybe_write_debug_wavfile("slope_kernel", slope_kernel)
-    recording_samples = np.concatenate(
-        (
-            np.full(slope_kernel.size // 2, recording_samples[0]),
-            recording_samples,
-            np.full(slope_kernel.size // 2, recording_samples[-1]),
+    recording = recording._replace(
+        samples=np.concatenate(
+            (
+                np.full(slope_kernel.samples.size // 2, recording.samples[0]),
+                recording.samples,
+                np.full(slope_kernel.samples.size // 2, recording.samples[-1]),
+            )
         )
     )
-    maybe_write_debug_wavfile("padded", recording_samples)
-    recording_slope = scipy.signal.convolve(
-        recording_samples,
-        slope_kernel.astype(recording_samples.dtype),
+    maybe_write_debug_wavfile("padded", recording)
+    recording_slope = _signal.convolve(
+        recording,
+        slope_kernel._replace(
+            samples=slope_kernel.samples.astype(recording.samples.dtype)
+        ),
         "valid",
     )
     maybe_write_debug_wavfile("slope", recording_slope)
-    assert recording_slope.size == test_signal_end_index - test_signal_start_index
+    assert (
+        recording_slope.samples.size == test_signal_end_index - test_signal_start_index
+    )
 
     # High frequency noise can cause us to find spurious local extrema as the
     # signal "wiggles around" the true peak - this results in a "forest" of
@@ -450,17 +455,27 @@ def main():
     # merely the peak-to-peak amplitude of the noise, which in reasonable
     # recordings is expected to be much lower.
     slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
-        recording_slope
+        recording_slope.samples
     )
     if debug_files_prefix is not None:
-        recording_slope_heights = np.zeros(recording_samples.size)
-        recording_slope_heights[slope_peak_indexes] = recording_slope[
+        recording_slope_heights = np.zeros(recording.samples.size)
+        recording_slope_heights[slope_peak_indexes] = recording_slope.samples[
             slope_peak_indexes
         ]
-        maybe_write_debug_wavfile("slope_heights", recording_slope_heights)
-        recording_slope_prominence = np.zeros(recording_samples.size)
+        maybe_write_debug_wavfile(
+            "slope_heights",
+            _signal.Signal(
+                samples=recording_slope_heights, sample_rate=recording.sample_rate
+            ),
+        )
+        recording_slope_prominence = np.zeros(recording.samples.size)
         recording_slope_prominence[slope_peak_indexes] = slope_prominences
-        maybe_write_debug_wavfile("slope_prominences", recording_slope_prominence)
+        maybe_write_debug_wavfile(
+            "slope_prominences",
+            _signal.Signal(
+                samples=recording_slope_prominence, sample_rate=recording.sample_rate
+            ),
+        )
 
     # We need to decide on a prominence threshold for what constitutes a "true"
     # edge. The correct threshold must be below the minimum true edge peak
@@ -498,18 +513,21 @@ def main():
 
     edge_is_rising = slope_prominences > 0
     if debug_files_prefix is not None:
-        recording_edges = np.zeros(recording_samples.size)
+        recording_edges = np.zeros(recording.samples.size)
         recording_edges[slope_peak_indexes] = edge_is_rising * 2 - 1
-        maybe_write_debug_wavfile("edges", recording_edges)
+        maybe_write_debug_wavfile(
+            "edges",
+            _signal.Signal(samples=recording_edges, sample_rate=recording.sample_rate),
+        )
 
     edges = pd.Series(
         edge_is_rising,
         index=pd.Index(
             (
-                _interpolate_peaks(recording_slope, slope_peak_indexes)
+                _interpolate_peaks(recording_slope.samples, slope_peak_indexes)
                 + test_signal_start_index
             )
-            / recording_sample_rate,
+            / recording.sample_rate,
             name="recording_timestamp_seconds",
         ),
         name="edge_is_rising",
