@@ -41,7 +41,7 @@ class _TestCase:
         try:
             await self._module.videojitter_test(self)
         except Exception as exception:
-            raise Exception(f"Failed to run test: {self._name}") from exception
+            raise RuntimeError(f"Failed to run test: {self._name}") from exception
 
     def get_path(self):
         return self._path
@@ -57,7 +57,7 @@ class _TestCase:
         )
         await process.communicate()
         if process.returncode != 0:
-            raise Exception(
+            raise RuntimeError(
                 f"Subprocess terminated with error code {process.returncode}"
             )
 
