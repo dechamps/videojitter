@@ -142,18 +142,11 @@ def _parse_arguments():
         default=1.0,
     )
     argument_parser.add_argument(
-        "--invert",
+        "--gain",
         help=(
-            "Invert the test signal (after the DC offset), i.e. white is low and black"
-            " is high"
-        ),
-        action="store_true",
-    )
-    argument_parser.add_argument(
-        "--amplitude",
-        help=(
-            "Amplitude of the resulting signal, where 1.0 (plus the DC offset) is full"
-            " scale."
+            "Amplitude gain to apply to the full scale signal, after the DC offset. Use"
+            " a negative value to invert the signal (i.e. black is high and white is"
+            " low)."
         ),
         type=float,
         default=0.5,
@@ -313,9 +306,7 @@ class _Generator:
         recording = self._add_pwm(recording)
         recording = _signal.downsample(recording, downsample_ratio)
         recording = recording._replace(
-            samples=(recording.samples + self._args.dc_offset)
-            * (-1 if self._args.invert else 1)
-            * self._args.amplitude
+            samples=(recording.samples + self._args.dc_offset) * self._args.gain
         )
         recording = self._gaussian_filter(recording)
         recording = self._high_pass_filter(recording)
