@@ -189,8 +189,10 @@ def _generate_chart(
             ),
             label_order=(~alt.datum.valid) * 2 + (~alt.datum.edge_is_rising),
             valid_label=alt.expr.if_(alt.datum.valid, "yes", "no"),
-            time_since_previous_transition_seconds_relative_to_mean=alt.datum.time_since_previous_transition_seconds
-            - mean_time_between_transitions,
+            time_since_previous_transition_seconds_relative_to_mean=(
+                alt.datum.time_since_previous_transition_seconds
+                - mean_time_between_transitions
+            ),
         )
         .mark_point(filled=True)
         .encode(
@@ -360,8 +362,9 @@ def _generate_chart(
             usermeta={
                 "embedOptions": {
                     "downloadFileName": "videojitter",
-                    # Sets the Vega-Embed PNG export scale factor to provide higher-quality
-                    # exports. See https://github.com/vega/vega-embed/issues/492
+                    # Sets the Vega-Embed PNG export scale factor to provide
+                    # higher-quality exports. See:
+                    #   https://github.com/vega/vega-embed/issues/492
                     "scaleFactor": 2,
                 }
             }
@@ -405,7 +408,7 @@ def _match_delayed_transitions(
     # the closest real transition. This should work in all but the most
     # pathological cases (e.g. time-varying clock skew).
     delayed_transition_indexes = np.array(delayed_transition_indexes)
-    delayed_transition_expected_timestamp_seconds = (
+    delayed_transition_expected_time_seconds = (
         delayed_transition_indexes + 1 + np.arange(delayed_transition_indexes.size)
     ) / (
         (expected_transition_count + delayed_transition_indexes.size)
@@ -416,7 +419,7 @@ def _match_delayed_transitions(
     ) + transitions.recording_timestamp_seconds.min()
     recording_delayed_transition_indexes = pd.Index(
         transitions.recording_timestamp_seconds
-    ).get_indexer(delayed_transition_expected_timestamp_seconds, method="nearest")
+    ).get_indexer(delayed_transition_expected_time_seconds, method="nearest")
 
     # In theory we could stop there, but we shouldn't, because the delayed
     # transition can be a few frames off (e.g. if there are spurious extra
@@ -465,7 +468,7 @@ def _match_delayed_transitions(
             "WARNING: unable to locate the following delayed transitions:"
             f" {delayed_transition_indexes[not_found_indexes]} (expected to find them"
             " around"
-            f" {delayed_transition_expected_timestamp_seconds[not_found_indexes]} seconds)."
+            f" {delayed_transition_expected_time_seconds[not_found_indexes]} seconds)."
             " These delayed transitions will not be reported, and black/white color"
             " information may not be available.",
             file=sys.stderr,
@@ -628,12 +631,12 @@ def main():
             " between black vs. white transitions) have NOT been compensated for"
         )
 
-    time_between_transitions_standard_deviation_seconds = transitions[
+    time_between_transitions_stddev_seconds = transitions[
         normal_transition
     ].time_since_previous_transition_seconds.std()
     print(
         "Valid, non-delayed transition interval standard deviation:"
-        f" ~{time_between_transitions_standard_deviation_seconds:.6f} seconds",
+        f" ~{time_between_transitions_stddev_seconds:.6f} seconds",
         file=sys.stderr,
     )
 
@@ -664,12 +667,37 @@ def main():
         shortest_transition = normal_transitions.iloc[
             normal_transitions.time_since_previous_transition_seconds.argmin()
         ]
+        shortest_transition_duration = (
+            shortest_transition.time_since_previous_transition_seconds
+        )
+        shortest_transition_timestamp = shortest_transition.recording_timestamp_seconds
         longest_transition = normal_transitions.iloc[
             normal_transitions.time_since_previous_transition_seconds.argmax()
         ]
+        longest_transition_duration = (
+            longest_transition.time_since_previous_transition_seconds
+        )
+        longest_transition_timestamp = longest_transition.recording_timestamp_seconds
         mean_time_between_transitions = (
             normal_transitions.time_since_previous_transition_seconds.mean()
         )
+        p05_duration = transitions[
+            normal_transition
+        ].time_since_previous_transition_seconds.quantile(0.005)
+        p95_duration = transitions[
+            normal_transition
+        ].time_since_previous_transition_seconds.quantile(0.995)
+        outliers_count = (
+            np.abs(
+                stats.zscore(
+                    transitions[normal_transition].loc[
+                        :, "time_since_previous_transition_seconds"
+                    ],
+                    nan_policy="omit",
+                )
+            )
+            > 3
+        ).sum()
         mean_fps = 1 / mean_time_between_transitions
         found_intentionally_delayed_transitions = (
             transitions.intentionally_delayed.sum()
@@ -710,18 +738,14 @@ def main():
                 edge_direction_compensation_fineprint,
                 (
                     "Transition interval range:"
-                    f" {si_format(shortest_transition. time_since_previous_transition_seconds, 3)}s"
-                    " (at"
-                    f" {si_format(shortest_transition.recording_timestamp_seconds, 3)}s)"
-                    f" to {si_format(longest_transition.time_since_previous_transition_seconds, 3)}s"
-                    " (at"
-                    f" {si_format(longest_transition.recording_timestamp_seconds, 3)}s)"
-                    " - standard deviation:"
-                    f" {si_format(time_between_transitions_standard_deviation_seconds, 3)}s"
-                    " - 99% of transitions are between"
-                    f" {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.005), 3)}s"
-                    " and"
-                    f" {si_format(transitions[normal_transition].time_since_previous_transition_seconds.quantile(0.995), 3)}s"
+                    f" {si_format(shortest_transition_duration, 3)}s (at"
+                    f" {si_format(shortest_transition_timestamp, 3)}s) to"
+                    f" {si_format(longest_transition_duration, 3)}s (at"
+                    f" {si_format(longest_transition_timestamp, 3)}s) - standard"
+                    " deviation:"
+                    f" {si_format(time_between_transitions_stddev_seconds, 3)}s"
+                    f" - 99% of transitions are between {si_format(p05_duration, 3)}s"
+                    f" and {si_format(p95_duration, 3)}s"
                 ),
                 (
                     "Mean time between transitions:"
@@ -730,9 +754,8 @@ def main():
                     " than expected (clock skew)"
                 ),
                 (
-                    f"{(np.abs(stats.zscore(transitions[normal_transition].loc[:, 'time_since_previous_transition_seconds'], nan_policy='omit')) > 3).sum()} transitions"
-                    " are outliers (more than 3 standard deviations away from the"
-                    " mean)"
+                    f"{outliers_count} transitions are outliers (more than 3 standard"
+                    " deviations away from the mean)"
                 ),
                 "Generated by videojitter",
             ],
