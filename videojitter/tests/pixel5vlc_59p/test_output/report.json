@@ -227,7 +227,7 @@
       "scaleFactor": 2
     }
   },
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.8.0.json",
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.15.1.json",
   "datasets": {
     "data-7bb5f07f277c16eb55e95d5232745925": [
       {
