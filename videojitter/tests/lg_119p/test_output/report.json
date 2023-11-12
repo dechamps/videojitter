@@ -174,7 +174,7 @@
           ]
         },
         {
-          "calculate": "(datum.recording_timestamp_seconds - 15.55337767703086)",
+          "calculate": "(datum.recording_timestamp_seconds - 15.558798887103796)",
           "as": "time_since_first_transition"
         },
         {
@@ -225,8 +225,9 @@
       },
       "title": {
         "text": [
-          "First transition recorded at 15.553 s; last: 75.570 s; length: 60.017 s",
-          "Detected 7195 transitions (expected 7192); first transition was removed; last transition was removed; expecting 1 intentionally delayed transitions",
+          "Chart and following notes exclude the very first transition and exclude the very last transition",
+          "First transition recorded at 15.559 s; last: 75.564 s; length: 60.005 s",
+          "Detected 7193 transitions (expected 7192);  expecting 1 intentionally delayed transitions",
           "The following stats exclude 0 invalid transitions and the 1 intentionally delayed transitions that were found:",
           "Time since previous transition includes +3.119 ms correction in all falling edges and -3.119 ms correction in all rising edges",
           "Transition interval range: 7.739 ms (at 45.577 s) to 9.925 ms (at 75.564 s) - standard deviation: 30.502 \u00b5s - 99% of transitions are between 8.289 ms and 8.383 ms",

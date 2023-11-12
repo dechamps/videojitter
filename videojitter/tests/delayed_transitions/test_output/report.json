@@ -225,8 +225,9 @@
       },
       "title": {
         "text": [
+          "Chart and following notes include the very first transition and include the very last transition",
           "First transition recorded at 10.000 s; last: 10.320 s; length: 320.000 ms",
-          "Detected 30 transitions (expected 30); first transition was kept; last transition was kept; expecting 2 intentionally delayed transitions",
+          "Detected 30 transitions (expected 30);  expecting 2 intentionally delayed transitions",
           "The following stats exclude 0 invalid transitions and the 2 intentionally delayed transitions that were found:",
           "Time since previous transition includes -189.952 as correction in all falling edges and +189.952 as correction in all rising edges",
           "Transition interval range: 10.000 ms (at 10.010 s) to 20.000 ms (at 10.170 s) - standard deviation: 1.925 ms - 99% of transitions are between 10.000 ms and 18.700 ms",

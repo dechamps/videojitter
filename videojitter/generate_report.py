@@ -515,22 +515,22 @@ class _Generator:
         ), "At least one of --output-chart-file or --output-csv-file must be specified"
 
     def generate(self):
-        transition_count = self._spec["transition_count"]
         print(
-            f"Successfully loaded spec file containing {transition_count} frame"
-            f" transitions at {self._nominal_fps()} FPS",
+            "Successfully loaded spec file containing"
+            f" {self._spec['transition_count']} frame transitions at"
+            f" {self._nominal_fps()} FPS",
             file=sys.stderr,
         )
         transitions = self._read_transitions()
-        transition_count = transitions.index.size
         transitions_interval_seconds = _interval(
             transitions.recording_timestamp_seconds
         )
         print(
-            f"Recording analysis contains {transition_count} frame transitions, with"
-            f" first transition at ~{transitions_interval_seconds.left:.6f} seconds and"
-            f" last transition at ~{transitions_interval_seconds.right:.6f} seconds for"
-            f" a total of ~{transitions_interval_seconds.length:.6f} seconds",
+            f"Recording analysis contains {transitions.index.size} frame transitions,"
+            " with first transition at"
+            f" ~{transitions_interval_seconds.left:.6f} seconds and last transition at"
+            f" ~{transitions_interval_seconds.right:.6f} seconds for a total of"
+            f" ~{transitions_interval_seconds.length:.6f} seconds",
             file=sys.stderr,
         )
 
@@ -595,8 +595,6 @@ class _Generator:
             normal_transition,
             rounded_transitions,
             high_is_white,
-            transitions_interval_seconds,
-            transition_count,
             keep_first_transition,
             keep_last_transition,
             time_between_transitions_stddev_seconds,
@@ -731,8 +729,6 @@ class _Generator:
         normal_transition,
         rounded_transitions,
         high_is_white,
-        transitions_interval_seconds,
-        transition_count,
         kept_first_transition,
         kept_last_transition,
         time_between_transitions_stddev_seconds,
@@ -780,6 +776,9 @@ class _Generator:
             if "intentionally_delayed" in transitions
             else 0
         )
+        transitions_interval_seconds = _interval(
+            transitions.recording_timestamp_seconds
+        )
         chart = _generate_chart(
             rounded_transitions,
             f"{transitions.index.size} transitions at"
@@ -794,16 +793,21 @@ class _Generator:
             ),
             fine_print=[
                 (
+                    "Chart and following notes"
+                    f" {'include' if kept_first_transition else 'exclude'} the very"
+                    " first transition and"
+                    f" {'include' if kept_last_transition else 'exclude'} the very"
+                    " last transition"
+                ),
+                (
                     "First transition recorded at"
                     f" {si_format(transitions_interval_seconds.left, 3)}s; last:"
                     f" {si_format(transitions_interval_seconds.right, 3)}s; length:"
                     f" {si_format(transitions_interval_seconds.length, 3)}s"
                 ),
                 (
-                    f"Detected {transition_count} transitions (expected"
-                    f" {self._spec['transition_count']}); first transition was"
-                    f" {'kept' if kept_first_transition else 'removed'}; last"
-                    f" transition was {'kept' if kept_last_transition else 'removed'};"
+                    f"Detected {transitions.index.size} transitions (expected"
+                    f" {self._spec['transition_count']}); "
                     " expecting"
                     f" {len(self._spec['delayed_transitions'])} intentionally delayed"
                     " transitions"
