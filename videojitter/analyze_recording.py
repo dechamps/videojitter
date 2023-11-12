@@ -242,298 +242,358 @@ def _interpolate_peaks(x, peak_indexes):
     return peak_indexes + 0.5 * (alpha - gamma) / (alpha - 2 * beta + gamma)
 
 
-def main():
-    args = _parse_arguments()
-    with open(args.spec_file, encoding="utf-8") as spec_file:
-        spec = json.load(spec_file)
-    nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    expected_transition_count = spec["transition_count"]
-    frames = _util.generate_frames(
-        expected_transition_count, spec["delayed_transitions"]
-    )
-    reference_duration_seconds = len(frames) / nominal_fps
-    print(
-        f"Successfully loaded spec file describing {len(frames)} frames at"
-        f" {nominal_fps} FPS ({reference_duration_seconds} seconds)",
-        file=sys.stderr,
-    )
+def _format_index(signal, index):
+    return f"sample {index} ({index / signal.sample_rate} seconds)"
 
-    recording = _signal.fromfile(args.recording_file, dtype=np.float32)
-    print(
-        f"Successfully loaded recording containing {recording.samples.size} samples at"
-        f" {recording.sample_rate} Hz ({_signal.duration(recording)} seconds)",
-        file=sys.stderr,
-    )
 
-    def format_index(index):
-        return f"sample {index} ({index / recording.sample_rate} seconds)"
+class _Analyzer:
+    def __init__(self, args):
+        self._args = args
+        with open(args.spec_file, encoding="utf-8") as spec_file:
+            self._spec = json.load(spec_file)
+        self._debug_wavfile_index = 0
 
-    max_index = np.argmax(np.abs(recording.samples))
-    if recording.samples[max_index] > 0.9:
+    def analyze(self):
+        frames = self._generate_frames()
+        reference_duration_seconds = len(frames) / self._nominal_fps()
         print(
-            "WARNING: it looks like the recording may be clipping around"
-            f" {format_index(max_index)}. You may want to re-record at a lower input"
-            " gain/volume.",
+            f"Successfully loaded spec file describing {len(frames)} frames at"
+            f" {self._nominal_fps()} FPS ({reference_duration_seconds} seconds)",
             file=sys.stderr,
         )
 
-    wavfile_index = 0
-    debug_files_prefix = getattr(args, "output_debug_files_prefix", None)
+        recording = _signal.fromfile(self._args.recording_file, dtype=np.float32)
+        print(
+            f"Successfully loaded recording containing {recording.samples.size} samples"
+            f" at {recording.sample_rate} Hz ({_signal.duration(recording)} seconds)",
+            file=sys.stderr,
+        )
+        self._detect_clipping(recording)
+        recording = self._downsample(recording)
+        test_signal_start_index, test_signal_end_index = self._find_boundaries(
+            recording
+        )
+        recording = recording._replace(
+            samples=recording.samples[test_signal_start_index:test_signal_end_index]
+        )
+        self._write_debug_wavfile("trimmed", lambda: recording)
 
-    def maybe_write_debug_wavfile(name, signal, normalize=False):
+        edge_positions, edge_is_rising = self._detect_edges(recording)
+        edges = pd.Series(
+            edge_is_rising,
+            index=pd.Index(
+                (edge_positions + test_signal_start_index) / recording.sample_rate,
+                name="recording_timestamp_seconds",
+            ),
+            name="edge_is_rising",
+        )
+        edges.sort_index(inplace=True)
+        edges.to_csv(self._args.output_edges_csv_file)
+
+    def _generate_frames(self):
+        return _util.generate_frames(
+            self._spec["transition_count"], self._spec["delayed_transitions"]
+        )
+
+    def _detect_clipping(self, recording):
+        max_index = np.argmax(np.abs(recording.samples))
+        if recording.samples[max_index] < 0.9:
+            return
+        print(
+            "WARNING: it looks like the recording may be clipping around"
+            f" {_format_index(recording, max_index)}. You may want to re-record at a"
+            " lower input gain/volume.",
+            file=sys.stderr,
+        )
+
+    def _downsample(self, recording):
+        # If we assume the worst-case scenario where all the edges in the input
+        # signal are separated by the min threshold Tm, then the fundamental
+        # period in the input signal is 2*Tm (because the period is a full rising
+        # edge + falling edge cycle), and the fundamental frequency is 1/(2*Tm).
+        # However we also need to preserve the second harmonic, because that carries
+        # the information about waveform asymmetry - if we lose that, then it will
+        # look like every rising edge occurs exactly halfway between every falling
+        # edge (and vice-versa), thus destroying important timing information that
+        # the user may care about (consider e.g. 3:2 patterns). Therefore we need to
+        # preserve frequencies up to 1/Tm, and thus, per Nyquist, we need a sampling
+        # rate of at least 2/Tm.
+        downsampling_ratio = np.floor(
+            0.5 * self._args.min_edge_separation_seconds * recording.sample_rate
+        )
+        print(
+            f"Downsampling recording by {downsampling_ratio}x (to"
+            f" {recording.sample_rate / downsampling_ratio} Hz)",
+            file=sys.stderr,
+        )
+        recording = _signal.downsample(recording, downsampling_ratio)
+        self._write_debug_wavfile("downsampled", lambda: recording)
+        return recording
+
+    def _find_boundaries(self, recording):
+        pattern = self._generate_pattern(recording.sample_rate)
+        boundary_candidates = self._extract_boundary_candidates(
+            self._correlate_pattern(recording, pattern)
+        )
+        boundary_candidate_indexes = np.nonzero(boundary_candidates.samples)[0]
+        assert boundary_candidate_indexes.size > 1
+        test_signal_start_index = boundary_candidate_indexes[0]
+        test_signal_end_index = boundary_candidate_indexes[-1] + pattern.samples.size
+        print(
+            "Test signal appears to start at"
+            f" {_format_index(recording, test_signal_start_index)} and end at"
+            f" {_format_index(recording, test_signal_end_index)} in the"
+            " recording.",
+            file=sys.stderr,
+        )
+        if (
+            test_signal_start_index < recording.sample_rate
+            and test_signal_end_index > recording.samples.size - recording.sample_rate
+        ):
+            print(
+                "WARNING: test signal boundaries are very close to recording"
+                " boundaries. This may mean the recording is truncated or the"
+                " boundaries were not detected correctly (e.g. because the recording is"
+                " corrupted or doesn't match the spec). This warning can be ignored the"
+                " recording was trimmed manually (you shouldn't need to do that though"
+                " - the analyzer can detect where the test signal begins and ends"
+                " automatically!).",
+                file=sys.stderr,
+            )
+        return test_signal_start_index, test_signal_end_index
+
+    def _generate_pattern(self, sample_rate):
+        pattern = _generate_pattern_signal(
+            self._args.pattern_length_seconds,
+            self._spec["fps"]["num"],
+            self._spec["fps"]["den"],
+            sample_rate,
+        )
+        self._write_debug_wavfile("pattern", lambda: pattern)
+        return pattern
+
+    def _correlate_pattern(self, recording, pattern):
+        pattern_cross_correlation = _signal.correlate(
+            recording,
+            pattern._replace(
+                samples=(pattern.samples / pattern.samples.size).astype(
+                    recording.samples.dtype
+                )
+            ),
+            mode="valid",
+        )
+        self._write_debug_wavfile(
+            "cross_correlation",
+            lambda: pattern_cross_correlation,
+        )
+        return pattern_cross_correlation
+
+    def _extract_boundary_candidates(self, pattern_cross_correlation):
+        abs_pattern_cross_correlation = pattern_cross_correlation._replace(
+            samples=np.abs(pattern_cross_correlation.samples)
+        )
+        boundary_candidates = abs_pattern_cross_correlation._replace(
+            samples=abs_pattern_cross_correlation.samples
+            >= np.max(abs_pattern_cross_correlation.samples)
+            * self._args.pattern_score_threshold
+        )
+        self._write_debug_wavfile("boundary_candidates", lambda: boundary_candidates)
+        return boundary_candidates
+
+    def _detect_edges(self, recording):
+        recording_slope = self._generate_recording_slope(recording)
+        slope_peak_indexes, edge_is_rising = self._detect_edges_from_slope(
+            recording_slope
+        )
+        return (
+            _interpolate_peaks(recording_slope.samples, slope_peak_indexes),
+            edge_is_rising,
+        )
+
+    def _generate_recording_slope(self, recording):
+        min_frequency = self._nominal_fps() * self._args.min_frequency_ratio
+        print(
+            f"Removing frequencies lower than {min_frequency} Hz from the recording",
+            file=sys.stderr,
+        )
+
+        # The fundamental, core idea behind the way we detect "edges" is to look for
+        # large scale changes in overall recording signal level.
+        #
+        # One approach is to look at zero crossings; indeed, we can reasonably
+        # assume that, on a properly highpassed signal, every true edge will result
+        # in a change of sign. However, sadly the converse isn't true: due to high
+        # frequency noise the signal will tend to "hover" around zero between edges,
+        # creating spurious zero crossings. Separating the spurious zero crossings
+        # from the true ones is challenging; using a thresold on the slope at the
+        # zero crossing helps, but still fails in pathological cases such as noise
+        # causing the signal to "hesitate" (i.e. form a narrow plateau) around the
+        # zero crossing, which can result in the edge being missed. (We could work
+        # around that by computing the slope using more neighboring points, but that
+        # would require us to assume that an edge is more than 2 points wide - which
+        # basically amounts to lowpassing the signal. This would impair our ability
+        # to resolve fast "blinks".)
+        #
+        # A more promising idea is to compute the "slope" of the signal and find the
+        # steepest slopes. This approach is more flexible than looking only at zero
+        # crossings because it will find the highest rate of change even if it is
+        # located outside of a zero crossing. (In a sinusoid the highest rate of
+        # change happens at the zero crossing, but the recordings we are dealing
+        # with are not sinusoids. Even after highpass filtering, the steepest slope
+        # might not be located at the zero crossing. This is especially true given
+        # real recordings tend to have highly asymmetric shapes: in this case it's
+        # mathematically impossible for the steepest slope to be located at the
+        # zero crossing on *both* rising and falling edges at the same time.)
+        #
+        # In practice, what we do is we apply a peak finding algorithm to locate the
+        # points at which the signal reaches a local steepness extremum.
+        slope_kernel = _generate_slope_kernel(min_frequency, recording.sample_rate)
+        self._write_debug_wavfile("slope_kernel", lambda: slope_kernel)
+        recording_length = recording.samples.size
+        recording = recording._replace(
+            samples=np.concatenate(
+                (
+                    np.full(slope_kernel.samples.size // 2, recording.samples[0]),
+                    recording.samples,
+                    np.full(slope_kernel.samples.size // 2, recording.samples[-1]),
+                )
+            )
+        )
+        self._write_debug_wavfile("padded", lambda: recording)
+        recording_slope = _signal.convolve(
+            recording,
+            slope_kernel._replace(
+                samples=slope_kernel.samples.astype(recording.samples.dtype)
+            ),
+            "valid",
+        )
+        self._write_debug_wavfile("slope", lambda: recording_slope)
+        assert recording_slope.samples.size == recording_length
+        return recording_slope
+
+    def _detect_edges_from_slope(self, recording_slope):
+        slope_peak_indexes, slope_prominences = self._find_peaks(recording_slope)
+
+        abs_slope_prominences = np.abs(slope_prominences)
+        slope_prominence_threshold = self._get_slope_prominence_threshold(
+            abs_slope_prominences
+        )
+        valid_slope_peak = abs_slope_prominences > slope_prominence_threshold
+        slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
+        slope_prominences = slope_prominences[valid_slope_peak]
+        print(
+            f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above"
+            f" ~{slope_prominence_threshold:.3}. First edge is right after"
+            f" {_format_index(recording_slope, slope_peak_indexes[0])} and last edge is"
+            f" right after {_format_index(recording_slope, slope_peak_indexes[-1])}.",
+            file=sys.stderr,
+        )
+        assert slope_peak_indexes.size > 1
+
+        edge_is_rising = slope_prominences > 0
+
+        def generate_edges_debug_signal():
+            recording_edges = np.zeros(recording_slope.samples.size)
+            recording_edges[slope_peak_indexes] = edge_is_rising * 2 - 1
+            return _signal.Signal(
+                samples=recording_edges, sample_rate=recording_slope.sample_rate
+            )
+
+        self._write_debug_wavfile("edges", generate_edges_debug_signal)
+        return slope_peak_indexes, edge_is_rising
+
+    def _find_peaks(self, slope):
+        # High frequency noise can cause us to find spurious local extrema as the
+        # signal "wiggles around" the true peak - this results in a "forest" of
+        # peaks (with similar heights) appearing around the true edge. If we don't
+        # do anything about this, we will incorrectly report many closely spaced
+        # edges for each true edge.
+        #
+        # In each of these "forests", we need a way to select the tallest peak and
+        # ignore the others. Prominence is the ideal metric for this: basically, it
+        # indicates how far the signal has to "swing back" before a higher peak is
+        # reached in either direction. For the tallest peak in a forest, the only
+        # way to get to a higher peak is to go through the previous or next edge.
+        # Since that's by definition an opposite edge, we're looking at a full
+        # falling+rising edge swing, and the resulting prominence is the entire
+        # peak-to-peak amplitude between these edges - hence, very high. In
+        # contrast, if the peak is not the tallest in the forest, then by definition
+        # there is a higher peak in the same forest, and getting there merely
+        # requires a small "hop" through the noise. The prominence is therefore
+        # merely the peak-to-peak amplitude of the noise, which in reasonable
+        # recordings is expected to be much lower.
+        slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
+            slope.samples
+        )
+
+        def generate_heights_debug_signal():
+            recording_slope_heights = np.zeros(slope.samples.size)
+            recording_slope_heights[slope_peak_indexes] = slope.samples[
+                slope_peak_indexes
+            ]
+            return _signal.Signal(
+                samples=recording_slope_heights, sample_rate=slope.sample_rate
+            )
+
+        self._write_debug_wavfile("slope_heights", generate_heights_debug_signal)
+
+        def generate_prominences_debug_signal():
+            recording_slope_prominence = np.zeros(slope.samples.size)
+            recording_slope_prominence[slope_peak_indexes] = slope_prominences
+            return _signal.Signal(
+                samples=recording_slope_prominence, sample_rate=slope.sample_rate
+            )
+
+        self._write_debug_wavfile(
+            "slope_prominences", generate_prominences_debug_signal
+        )
+
+        return slope_peak_indexes, slope_prominences
+
+    def _get_slope_prominence_threshold(self, abs_slope_prominences):
+        # We need to decide on a prominence threshold for what constitutes a "true"
+        # edge. The correct threshold must be below the minimum true edge peak
+        # prominence, which which don't know, so we'll have to take a guess. We
+        # could reference our guess on the maximum prominence among all peaks -
+        # that's pretty much guaranteed to be a valid edge - but that would make the
+        # threshold very sensitive to an isolated outlier. To avoid this problem we
+        # base our guess on the Nth peak prominence, where N is large enough to
+        # mitigate the influence of outliers, but small enough that we can be
+        # reasonably confident we're still going to pick a valid edge even if the
+        # test signal contains fewer edges than expected. We then multiply that
+        # reference with a fudge factor to allow for edges with slightly smaller
+        # prominences, and that's our threshold.
+        minimum_edge_count = self._spec["transition_count"] * self._args.min_edges_ratio
+        assert abs_slope_prominences.size >= minimum_edge_count
+        return (
+            np.quantile(
+                abs_slope_prominences,
+                1 - minimum_edge_count / abs_slope_prominences.size,
+            )
+            * self._args.slope_prominence_threshold
+        )
+
+    def _write_debug_wavfile(self, name, generate_signal, normalize=False):
+        debug_files_prefix = getattr(self._args, "output_debug_files_prefix", None)
         if debug_files_prefix is None:
             return
+        signal = generate_signal()
         if normalize:
             signal = signal._replace(
                 samples=signal.samples / np.max(np.abs(signal.samples))
             )
-        nonlocal wavfile_index
         _signal.tofile(
             signal._replace(samples=signal.samples.astype(np.float32)),
-            file=f"{debug_files_prefix}{wavfile_index:02}_{name}.wav",
+            file=f"{debug_files_prefix}{self._debug_wavfile_index:02}_{name}.wav",
         )
-        wavfile_index += 1
+        self._debug_wavfile_index += 1
 
-    # If we assume the worst-case scenario where all the edges in the input
-    # signal are separated by the min threshold Tm, then the fundamental
-    # period in the input signal is 2*Tm (because the period is a full rising
-    # edge + falling edge cycle), and the fundamental frequency is 1/(2*Tm).
-    # However we also need to preserve the second harmonic, because that carries
-    # the information about waveform asymmetry - if we lose that, then it will
-    # look like every rising edge occurs exactly halfway between every falling
-    # edge (and vice-versa), thus destroying important timing information that
-    # the user may care about (consider e.g. 3:2 patterns). Therefore we need to
-    # preserve frequencies up to 1/Tm, and thus, per Nyquist, we need a sampling
-    # rate of at least 2/Tm.
-    downsampling_ratio = np.floor(
-        0.5 * args.min_edge_separation_seconds * recording.sample_rate
-    )
-    print(
-        f"Downsampling recording by {downsampling_ratio}x (to"
-        f" {recording.sample_rate / downsampling_ratio} Hz)",
-        file=sys.stderr,
-    )
-    recording = _signal.downsample(recording, downsampling_ratio)
-    maybe_write_debug_wavfile("downsampled", recording)
+    def _nominal_fps(self):
+        return self._spec["fps"]["num"] / self._spec["fps"]["den"]
 
-    pattern = _generate_pattern_signal(
-        args.pattern_length_seconds,
-        spec["fps"]["num"],
-        spec["fps"]["den"],
-        recording.sample_rate,
-    )
-    maybe_write_debug_wavfile("pattern", pattern)
 
-    pattern_cross_correlation = _signal.correlate(
-        recording,
-        pattern._replace(
-            samples=(pattern.samples / pattern.samples.size).astype(
-                recording.samples.dtype
-            )
-        ),
-        mode="valid",
-    )
-    maybe_write_debug_wavfile(
-        "cross_correlation",
-        pattern_cross_correlation,
-    )
-
-    abs_pattern_cross_correlation = pattern_cross_correlation._replace(
-        samples=np.abs(pattern_cross_correlation.samples)
-    )
-    boundary_candidates = abs_pattern_cross_correlation._replace(
-        samples=abs_pattern_cross_correlation.samples
-        >= np.max(abs_pattern_cross_correlation.samples) * args.pattern_score_threshold
-    )
-    maybe_write_debug_wavfile("boundary_candidates", boundary_candidates)
-
-    boundary_candidate_indexes = np.nonzero(boundary_candidates.samples)[0]
-    assert boundary_candidate_indexes.size > 1
-    test_signal_start_index = boundary_candidate_indexes[0]
-    test_signal_end_index = boundary_candidate_indexes[-1] + pattern.samples.size
-    print(
-        f"Test signal appears to start at {format_index(test_signal_start_index)} and"
-        f" end at {format_index(test_signal_end_index)} in the recording.",
-        file=sys.stderr,
-    )
-    if (
-        test_signal_start_index < recording.sample_rate
-        and test_signal_end_index > recording.samples.size - recording.sample_rate
-    ):
-        print(
-            "WARNING: test signal boundaries are very close to recording boundaries."
-            " This may mean the recording is truncated or the boundaries were not"
-            " detected correctly (e.g. because the recording is corrupted or doesn't"
-            " match the spec). This warning can be ignored the recording was trimmed"
-            " manually (you shouldn't need to do that though - the analyzer can detect"
-            " where the test signal begins and ends automatically!).",
-            file=sys.stderr,
-        )
-
-    recording = recording._replace(
-        samples=recording.samples[test_signal_start_index:test_signal_end_index]
-    )
-    maybe_write_debug_wavfile("trimmed", recording)
-
-    min_frequency = nominal_fps * args.min_frequency_ratio
-    print(
-        f"Removing frequencies lower than {min_frequency} Hz from the recording",
-        file=sys.stderr,
-    )
-
-    # The fundamental, core idea behind the way we detect "edges" is to look for
-    # large scale changes in overall recording signal level.
-    #
-    # One approach is to look at zero crossings; indeed, we can reasonably
-    # assume that, on a properly highpassed signal, every true edge will result
-    # in a change of sign. However, sadly the converse isn't true: due to high
-    # frequency noise the signal will tend to "hover" around zero between edges,
-    # creating spurious zero crossings. Separating the spurious zero crossings
-    # from the true ones is challenging; using a thresold on the slope at the
-    # zero crossing helps, but still fails in pathological cases such as noise
-    # causing the signal to "hesitate" (i.e. form a narrow plateau) around the
-    # zero crossing, which can result in the edge being missed. (We could work
-    # around that by computing the slope using more neighboring points, but that
-    # would require us to assume that an edge is more than 2 points wide - which
-    # basically amounts to lowpassing the signal. This would impair our ability
-    # to resolve fast "blinks".)
-    #
-    # A more promising idea is to compute the "slope" of the signal and find the
-    # steepest slopes. This approach is more flexible than looking only at zero
-    # crossings because it will find the highest rate of change even if it is
-    # located outside of a zero crossing. (In a sinusoid the highest rate of
-    # change happens at the zero crossing, but the recordings we are dealing
-    # with are not sinusoids. Even after highpass filtering, the steepest slope
-    # might not be located at the zero crossing. This is especially true given
-    # real recordings tend to have highly asymmetric shapes: in this case it's
-    # mathematically impossible for the steepest slope to be located at the
-    # zero crossing on *both* rising and falling edges at the same time.)
-    #
-    # In practice, what we do is we apply a peak finding algorithm to locate the
-    # points at which the signal reaches a local steepness extremum.
-    slope_kernel = _generate_slope_kernel(min_frequency, recording.sample_rate)
-    maybe_write_debug_wavfile("slope_kernel", slope_kernel)
-    recording = recording._replace(
-        samples=np.concatenate(
-            (
-                np.full(slope_kernel.samples.size // 2, recording.samples[0]),
-                recording.samples,
-                np.full(slope_kernel.samples.size // 2, recording.samples[-1]),
-            )
-        )
-    )
-    maybe_write_debug_wavfile("padded", recording)
-    recording_slope = _signal.convolve(
-        recording,
-        slope_kernel._replace(
-            samples=slope_kernel.samples.astype(recording.samples.dtype)
-        ),
-        "valid",
-    )
-    maybe_write_debug_wavfile("slope", recording_slope)
-    assert (
-        recording_slope.samples.size == test_signal_end_index - test_signal_start_index
-    )
-
-    # High frequency noise can cause us to find spurious local extrema as the
-    # signal "wiggles around" the true peak - this results in a "forest" of
-    # peaks (with similar heights) appearing around the true edge. If we don't
-    # do anything about this, we will incorrectly report many closely spaced
-    # edges for each true edge.
-    #
-    # In each of these "forests", we need a way to select the tallest peak and
-    # ignore the others. Prominence is the ideal metric for this: basically, it
-    # indicates how far the signal has to "swing back" before a higher peak is
-    # reached in either direction. For the tallest peak in a forest, the only
-    # way to get to a higher peak is to go through the previous or next edge.
-    # Since that's by definition an opposite edge, we're looking at a full
-    # falling+rising edge swing, and the resulting prominence is the entire
-    # peak-to-peak amplitude between these edges - hence, very high. In
-    # contrast, if the peak is not the tallest in the forest, then by definition
-    # there is a higher peak in the same forest, and getting there merely
-    # requires a small "hop" through the noise. The prominence is therefore
-    # merely the peak-to-peak amplitude of the noise, which in reasonable
-    # recordings is expected to be much lower.
-    slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
-        recording_slope.samples
-    )
-    if debug_files_prefix is not None:
-        recording_slope_heights = np.zeros(recording.samples.size)
-        recording_slope_heights[slope_peak_indexes] = recording_slope.samples[
-            slope_peak_indexes
-        ]
-        maybe_write_debug_wavfile(
-            "slope_heights",
-            _signal.Signal(
-                samples=recording_slope_heights, sample_rate=recording.sample_rate
-            ),
-        )
-        recording_slope_prominence = np.zeros(recording.samples.size)
-        recording_slope_prominence[slope_peak_indexes] = slope_prominences
-        maybe_write_debug_wavfile(
-            "slope_prominences",
-            _signal.Signal(
-                samples=recording_slope_prominence, sample_rate=recording.sample_rate
-            ),
-        )
-
-    # We need to decide on a prominence threshold for what constitutes a "true"
-    # edge. The correct threshold must be below the minimum true edge peak
-    # prominence, which which don't know, so we'll have to take a guess. We
-    # could reference our guess on the maximum prominence among all peaks -
-    # that's pretty much guaranteed to be a valid edge - but that would make the
-    # threshold very sensitive to an isolated outlier. To avoid this problem we
-    # base our guess on the Nth peak prominence, where N is large enough to
-    # mitigate the influence of outliers, but small enough that we can be
-    # reasonably confident we're still going to pick a valid edge even if the
-    # test signal contains fewer edges than expected. We then multiply that
-    # reference with a fudge factor to allow for edges with slightly smaller
-    # prominences, and that's our threshold.
-    abs_slope_prominences = np.abs(slope_prominences)
-    minimum_edge_count = expected_transition_count * args.min_edges_ratio
-    assert abs_slope_prominences.size >= minimum_edge_count
-    slope_prominence_threshold = (
-        np.quantile(
-            abs_slope_prominences,
-            1 - minimum_edge_count / abs_slope_prominences.size,
-        )
-        * args.slope_prominence_threshold
-    )
-    valid_slope_peak = abs_slope_prominences > slope_prominence_threshold
-    slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
-    slope_prominences = slope_prominences[valid_slope_peak]
-    print(
-        f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above"
-        f" ~{slope_prominence_threshold:.3}. First edge is right after"
-        f" {format_index(slope_peak_indexes[0])} and last edge is right after"
-        f" {format_index(slope_peak_indexes[-1])}.",
-        file=sys.stderr,
-    )
-    assert slope_peak_indexes.size > 1
-
-    edge_is_rising = slope_prominences > 0
-    if debug_files_prefix is not None:
-        recording_edges = np.zeros(recording.samples.size)
-        recording_edges[slope_peak_indexes] = edge_is_rising * 2 - 1
-        maybe_write_debug_wavfile(
-            "edges",
-            _signal.Signal(samples=recording_edges, sample_rate=recording.sample_rate),
-        )
-
-    edges = pd.Series(
-        edge_is_rising,
-        index=pd.Index(
-            (
-                _interpolate_peaks(recording_slope.samples, slope_peak_indexes)
-                + test_signal_start_index
-            )
-            / recording.sample_rate,
-            name="recording_timestamp_seconds",
-        ),
-        name="edge_is_rising",
-    )
-    edges.sort_index(inplace=True)
-    edges.to_csv(args.output_edges_csv_file)
+def main():
+    _Analyzer(_parse_arguments()).analyze()
 
 
 if __name__ == "__main__":
