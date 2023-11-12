@@ -270,6 +270,7 @@ class _Analyzer:
         )
         self._detect_clipping(recording)
         recording = self._downsample(recording)
+
         test_signal_start_index, test_signal_end_index = self._find_boundaries(
             recording
         )
