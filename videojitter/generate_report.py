@@ -503,153 +503,221 @@ def _is_high_white(transitions):
     return None if high_is_white == low_is_white else high_is_white
 
 
-def main():
-    args = _parse_arguments()
+class _Generator:
+    def __init__(self, args):
+        self._args = args
+        with open(args.spec_file, encoding="utf-8") as spec_file:
+            self._spec = json.load(spec_file)
+        self._output_chart_files = getattr(args, "output_chart_file", [])
+        self._output_csv_file = getattr(args, "output_csv_file", None)
+        assert (
+            self._output_chart_files or self._output_csv_file
+        ), "At least one of --output-chart-file or --output-csv-file must be specified"
 
-    output_chart_files = getattr(args, "output_chart_file", [])
-    output_csv_file = getattr(args, "output_csv_file", None)
-    assert (
-        output_chart_files or output_csv_file
-    ), "At least one of --output-chart-file or --output-csv-file must be specified"
-
-    with open(args.spec_file, encoding="utf-8") as spec_file:
-        spec = json.load(spec_file)
-    nominal_fps = spec["fps"]["num"] / spec["fps"]["den"]
-    transition_count = spec["transition_count"]
-    print(
-        f"Successfully loaded spec file containing {transition_count} frame transitions"
-        f" at {nominal_fps} FPS",
-        file=sys.stderr,
-    )
-
-    transitions = pd.read_csv(
-        args.edges_csv_file,
-        usecols=["recording_timestamp_seconds", "edge_is_rising"],
-    ).rename_axis(index="transition_index")
-    transition_count = transitions.index.size
-    transitions_interval_seconds = _interval(transitions.recording_timestamp_seconds)
-    print(
-        f"Recording analysis contains {transition_count} frame transitions, with first"
-        f" transition at ~{transitions_interval_seconds.left:.6f} seconds and last"
-        f" transition at ~{transitions_interval_seconds.right:.6f} seconds for a total"
-        f" of ~{transitions_interval_seconds.length:.6f} seconds",
-        file=sys.stderr,
-    )
-
-    transitions["time_since_previous_transition_seconds"] = (
-        transitions.recording_timestamp_seconds.diff()
-    )
-
-    transitions["valid"] = transitions.edge_is_rising.pipe(
-        lambda r: np.diff(r.values, prepend=not r.values[0])
-    )
-    invalid_transition_count = (~transitions.valid).sum()
-    if invalid_transition_count > 0:
+    def generate(self):
+        nominal_fps = self._spec["fps"]["num"] / self._spec["fps"]["den"]
+        transition_count = self._spec["transition_count"]
         print(
-            f"WARNING: data contains {invalid_transition_count} edges where the"
-            " previous edge is the same direction (i.e. transition from one color to"
-            " the same color). This usually means the analyzer failed to make sense of"
-            ' some of the recording. These transitions will be reported as "invalid".',
+            f"Successfully loaded spec file containing {transition_count} frame"
+            f" transitions at {nominal_fps} FPS",
+            file=sys.stderr,
+        )
+        transitions = self._read_transitions()
+        transition_count = transitions.index.size
+        transitions_interval_seconds = _interval(
+            transitions.recording_timestamp_seconds
+        )
+        print(
+            f"Recording analysis contains {transition_count} frame transitions, with"
+            f" first transition at ~{transitions_interval_seconds.left:.6f} seconds and"
+            f" last transition at ~{transitions_interval_seconds.right:.6f} seconds for"
+            f" a total of ~{transitions_interval_seconds.length:.6f} seconds",
             file=sys.stderr,
         )
 
-    high_is_white = None
-    intentionally_delayed_transitions = spec["delayed_transitions"]
-    if intentionally_delayed_transitions:
-        delayed_transitions = _match_delayed_transitions(
-            transitions,
-            intentionally_delayed_transitions,
-            transition_count,
-            args.delayed_transition_max_offset,
+        transitions["time_since_previous_transition_seconds"] = (
+            transitions.recording_timestamp_seconds.diff()
+        )
+        transitions["valid"] = self._is_valid_transition(transitions)
+
+        high_is_white = None
+        intentionally_delayed_transitions = self._delayed_transitions(transitions)
+        if intentionally_delayed_transitions is not None:
+            intentionally_delayed = pd.notna(
+                intentionally_delayed_transitions.expected_transition_index.reindex_like(
+                    transitions
+                )
+            )
+            if not intentionally_delayed_transitions.empty:
+                transitions["intentionally_delayed"] = intentionally_delayed
+                high_is_white = self._is_high_white(intentionally_delayed_transitions)
+
+        keep_first_transition = getattr(self._args, "keep_first_transition", False)
+        if not keep_first_transition:
+            transitions = self._drop_first_transition(transitions)
+
+        keep_last_transition = getattr(self._args, "keep_last_transition", False)
+        if not keep_last_transition:
+            transitions = self._drop_last_transition(transitions)
+
+        normal_transition = transitions.valid
+        if "intentionally_delayed" in transitions:
+            normal_transition = normal_transition & ~transitions.intentionally_delayed
+
+        transitions, falling_rising_offsets_seconds = self._compensate_edge_direction(
+            transitions, normal_transition
+        )
+        edge_direction_compensation_fineprint = (
+            "Consistent timing differences between falling and rising edges (i.e."
+            " between black vs. white transitions) have NOT been compensated for"
+            if falling_rising_offsets_seconds is None
+            else (
+                "Time since previous transition includes"
+                f" {_si_format_plus(falling_rising_offsets_seconds[0], 3)}s correction"
+                " in all falling edges and"
+                f" {_si_format_plus(falling_rising_offsets_seconds[1], 3)}s correction"
+                " in all rising edges"
+            )
         )
 
-        if not delayed_transitions.empty:
-            delayed_transitions = pd.concat(
-                [transitions, delayed_transitions],
-                axis="columns",
-                join="inner",
+        time_between_transitions_stddev_seconds = transitions[
+            normal_transition
+        ].time_since_previous_transition_seconds.std()
+        print(
+            "Valid, non-delayed transition interval standard deviation:"
+            f" ~{time_between_transitions_stddev_seconds:.6f} seconds",
+            file=sys.stderr,
+        )
+
+        rounded_transitions = self._round(transitions)
+        self._write_csv(rounded_transitions, high_is_white)
+        self._write_chart(
+            transitions,
+            normal_transition,
+            rounded_transitions,
+            high_is_white,
+            nominal_fps,
+            transitions_interval_seconds,
+            transition_count,
+            keep_first_transition,
+            keep_last_transition,
+            time_between_transitions_stddev_seconds,
+            edge_direction_compensation_fineprint,
+        )
+
+    def _read_transitions(self):
+        return pd.read_csv(
+            self._args.edges_csv_file,
+            usecols=["recording_timestamp_seconds", "edge_is_rising"],
+        ).rename_axis(index="transition_index")
+
+    def _is_valid_transition(self, transitions):
+        valid = transitions.edge_is_rising.pipe(
+            lambda r: np.diff(r.values, prepend=not r.values[0])
+        )
+        invalid_transition_count = (~valid).sum()
+        if invalid_transition_count > 0:
+            print(
+                f"WARNING: data contains {invalid_transition_count} edges where the"
+                " previous edge is the same direction (i.e. transition from one color"
+                " to the same color). This usually means the analyzer failed to make"
+                " sense of some of the recording. These transitions will be reported"
+                ' as "invalid".',
+                file=sys.stderr,
             )
-            # Since we know the expected transition indexes of the delayed transitions,
-            # we can use them to deduce whether rising edges are transitions to black or
-            # transitions to white.
-            high_is_white = _is_high_white(delayed_transitions)
-            if high_is_white is None:
-                print(
-                    "Unable to determine frame color information from delayed"
-                    " transitions",
-                    file=sys.stderr,
-                )
-            else:
-                print(
-                    "Deduced from delayed transitions that rising edges are"
-                    f" transitions to {'white' if high_is_white else 'black'} and"
-                    " falling edges are transitions to"
-                    f" {'black' if high_is_white else 'white'}",
-                    file=sys.stderr,
-                )
-            transitions["intentionally_delayed"] = pd.notna(
-                delayed_transitions.expected_transition_index.reindex_like(transitions)
+        return valid
+
+    def _delayed_transitions(self, transitions):
+        intentionally_delayed_transitions = self._spec["delayed_transitions"]
+        if not intentionally_delayed_transitions:
+            return None
+        return pd.concat(
+            [
+                transitions,
+                _match_delayed_transitions(
+                    transitions,
+                    intentionally_delayed_transitions,
+                    transitions.index.size,
+                    self._args.delayed_transition_max_offset,
+                ),
+            ],
+            axis="columns",
+            join="inner",
+        )
+
+    def _is_high_white(self, delayed_transitions):
+        # Since we know the expected transition indexes of the delayed transitions,
+        # we can use them to deduce whether rising edges are transitions to black or
+        # transitions to white.
+        high_is_white = _is_high_white(delayed_transitions)
+        if high_is_white is None:
+            print(
+                "Unable to determine frame color information from delayed transitions",
+                file=sys.stderr,
             )
+        else:
+            print(
+                "Deduced from delayed transitions that rising edges are"
+                f" transitions to {'white' if high_is_white else 'black'} and"
+                " falling edges are transitions to"
+                f" {'black' if high_is_white else 'white'}",
+                file=sys.stderr,
+            )
+        return high_is_white
 
-    keep_first_transition = getattr(args, "keep_first_transition", False)
-    if not keep_first_transition:
-        transitions = transitions.iloc[1:]
-        transitions.time_since_previous_transition_seconds.iloc[0] = np.nan
-    keep_last_transition = getattr(args, "keep_last_transition", False)
-    if not keep_last_transition:
-        transitions = transitions.iloc[:-1]
+    def _drop_first_transition(self, transitions):
+        transitions = transitions.iloc[1:].copy()
+        transitions.iloc[
+            0, transitions.columns.get_loc("time_since_previous_transition_seconds")
+        ] = np.nan
+        return transitions
 
-    normal_transition = transitions.valid
-    if "intentionally_delayed" in transitions:
-        normal_transition = normal_transition & ~transitions.intentionally_delayed
+    def _drop_last_transition(self, transitions):
+        transitions = transitions.iloc[:-1].copy()
+        return transitions
 
-    if getattr(args, "edge_direction_compensation", intentionally_delayed_transitions):
+    def _compensate_edge_direction(self, transitions, normal_transition):
+        if not getattr(
+            self._args,
+            "edge_direction_compensation",
+            self._spec["delayed_transitions"],
+        ):
+            return transitions, None
+
         falling_edge_lag_seconds = _estimate_falling_edge_lag_seconds(
             transitions[normal_transition]
         )
         falling_edge_offset_seconds = -falling_edge_lag_seconds / 2
         rising_edge_offset_seconds = falling_edge_lag_seconds / 2
-        edge_direction_compensation_fineprint = (
-            "Time since previous transition includes"
-            f" {_si_format_plus(falling_edge_offset_seconds, 3)}s correction in all"
-            f" falling edges and {_si_format_plus(rising_edge_offset_seconds, 3)}s"
-            " correction in all rising edges"
-        )
+
+        transitions = transitions.copy()
         transitions.loc[
             ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
         ] += falling_edge_offset_seconds
         transitions.loc[
             transitions.edge_is_rising, "time_since_previous_transition_seconds"
         ] += rising_edge_offset_seconds
-    else:
-        edge_direction_compensation_fineprint = (
-            "Consistent timing differences between falling and rising edges (i.e."
-            " between black vs. white transitions) have NOT been compensated for"
-        )
+        return transitions, (falling_edge_offset_seconds, rising_edge_offset_seconds)
 
-    time_between_transitions_stddev_seconds = transitions[
-        normal_transition
-    ].time_since_previous_transition_seconds.std()
-    print(
-        "Valid, non-delayed transition interval standard deviation:"
-        f" ~{time_between_transitions_stddev_seconds:.6f} seconds",
-        file=sys.stderr,
-    )
-
-    rounded_transitions = transitions.copy()
-    rounded_transitions.recording_timestamp_seconds = (
-        rounded_transitions.recording_timestamp_seconds.round(
-            args.time_precision_seconds_decimals
+    def _round(self, transitions):
+        rounded_transitions = transitions.copy()
+        rounded_transitions.recording_timestamp_seconds = (
+            rounded_transitions.recording_timestamp_seconds.round(
+                self._args.time_precision_seconds_decimals
+            )
         )
-    )
-    rounded_transitions.time_since_previous_transition_seconds = (
-        rounded_transitions.time_since_previous_transition_seconds.round(
-            args.time_precision_seconds_decimals
+        rounded_transitions.time_since_previous_transition_seconds = (
+            rounded_transitions.time_since_previous_transition_seconds.round(
+                self._args.time_precision_seconds_decimals
+            )
         )
-    )
+        return rounded_transitions
 
-    if output_csv_file:
-        rounded_transitions.pipe(
+    def _write_csv(self, transitions, high_is_white):
+        if not self._output_csv_file:
+            return
+
+        transitions.pipe(
             lambda t: (
                 t
                 if high_is_white is None
@@ -657,8 +725,25 @@ def main():
                     to_white=t.edge_is_rising if high_is_white else ~t.edge_is_rising
                 )
             )
-        ).to_csv(output_csv_file, index=False)
-    if output_chart_files:
+        ).to_csv(self._output_csv_file, index=False)
+
+    def _write_chart(
+        self,
+        transitions,
+        normal_transition,
+        rounded_transitions,
+        high_is_white,
+        nominal_fps,
+        transitions_interval_seconds,
+        transition_count,
+        kept_first_transition,
+        kept_last_transition,
+        time_between_transitions_stddev_seconds,
+        edge_direction_compensation_fineprint,
+    ):
+        if not self._output_chart_files:
+            return
+
         normal_transitions = transitions[normal_transition]
         shortest_transition = normal_transitions.iloc[
             normal_transitions.time_since_previous_transition_seconds.argmin()
@@ -677,18 +762,16 @@ def main():
         mean_time_between_transitions = (
             normal_transitions.time_since_previous_transition_seconds.mean()
         )
-        p05_duration = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.quantile(0.005)
-        p95_duration = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.quantile(0.995)
+        p05_duration = (
+            normal_transitions.time_since_previous_transition_seconds.quantile(0.005)
+        )
+        p95_duration = (
+            normal_transitions.time_since_previous_transition_seconds.quantile(0.995)
+        )
         outliers_count = (
             np.abs(
                 stats.zscore(
-                    transitions[normal_transition].loc[
-                        :, "time_since_previous_transition_seconds"
-                    ],
+                    normal_transitions.loc[:, "time_since_previous_transition_seconds"],
                     nan_policy="omit",
                 )
             )
@@ -705,10 +788,11 @@ def main():
             f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
             transitions_interval_seconds.left,
             high_is_white,
-            args.chart_minimum_time_between_transitions_seconds,
-            args.chart_maximum_time_between_transitions_seconds,
+            self._args.chart_minimum_time_between_transitions_seconds,
+            self._args.chart_maximum_time_between_transitions_seconds,
             np.round(
-                mean_time_between_transitions, args.time_precision_seconds_decimals
+                mean_time_between_transitions,
+                self._args.time_precision_seconds_decimals,
             ),
             fine_print=[
                 (
@@ -719,17 +803,18 @@ def main():
                 ),
                 (
                     f"Detected {transition_count} transitions (expected"
-                    f" {spec['transition_count']}); first transition was"
-                    f" {'kept' if keep_first_transition else 'removed'}; last"
-                    f" transition was {'kept' if keep_last_transition else 'removed'};"
-                    f" expecting {len(intentionally_delayed_transitions)} intentionally"
-                    " delayed transitions"
+                    f" {self._spec['transition_count']}); first transition was"
+                    f" {'kept' if kept_first_transition else 'removed'}; last"
+                    f" transition was {'kept' if kept_last_transition else 'removed'};"
+                    " expecting"
+                    f" {len(self._spec['delayed_transitions'])} intentionally delayed"
+                    " transitions"
                 ),
                 (
-                    f"The following stats exclude {invalid_transition_count} invalid"
+                    f"The following stats exclude {(~transitions.valid).sum()} invalid"
                     " transitions and the"
-                    f" {found_intentionally_delayed_transitions} intentionally delayed"
-                    " transitions that were found:"
+                    f" {found_intentionally_delayed_transitions} intentionally"
+                    " delayed transitions that were found:"
                 ),
                 edge_direction_compensation_fineprint,
                 (
@@ -756,8 +841,12 @@ def main():
                 "Generated by videojitter",
             ],
         )
-        for output_chart_file in output_chart_files:
+        for output_chart_file in self._output_chart_files:
             chart.save(output_chart_file)
+
+
+def main():
+    _Generator(_parse_arguments()).generate()
 
 
 if __name__ == "__main__":
