@@ -482,6 +482,17 @@ def _match_delayed_transitions(
     )
 
 
+def _filter_normal_transitions(transitions):
+    return transitions[
+        transitions.valid
+        & (
+            ~transitions.intentionally_delayed
+            if "intentionally_delayed" in transitions
+            else True
+        )
+    ]
+
+
 def _is_high_white(transitions):
     """Given zero, one or more transitions with expected transition indexes,
     returns True if high is white (i.e. a rising edge is a transition to a white
@@ -559,12 +570,8 @@ class _Generator:
         if not keep_last_transition:
             transitions = self._drop_last_transition(transitions)
 
-        normal_transition = transitions.valid
-        if "intentionally_delayed" in transitions:
-            normal_transition = normal_transition & ~transitions.intentionally_delayed
-
         transitions, falling_rising_offsets_seconds = self._compensate_edge_direction(
-            transitions, normal_transition
+            transitions
         )
         edge_direction_compensation_fineprint = (
             "Consistent timing differences between falling and rising edges (i.e."
@@ -579,9 +586,9 @@ class _Generator:
             )
         )
 
-        time_between_transitions_stddev_seconds = transitions[
-            normal_transition
-        ].time_since_previous_transition_seconds.std()
+        time_between_transitions_stddev_seconds = _filter_normal_transitions(
+            transitions
+        ).time_since_previous_transition_seconds.std()
         print(
             "Valid, non-delayed transition interval standard deviation:"
             f" ~{time_between_transitions_stddev_seconds:.6f} seconds",
@@ -592,7 +599,6 @@ class _Generator:
         self._write_csv(rounded_transitions, high_is_white)
         self._write_chart(
             transitions,
-            normal_transition,
             rounded_transitions,
             high_is_white,
             keep_first_transition,
@@ -672,7 +678,7 @@ class _Generator:
         transitions = transitions.iloc[:-1].copy()
         return transitions
 
-    def _compensate_edge_direction(self, transitions, normal_transition):
+    def _compensate_edge_direction(self, transitions):
         if not getattr(
             self._args,
             "edge_direction_compensation",
@@ -681,7 +687,7 @@ class _Generator:
             return transitions, None
 
         falling_edge_lag_seconds = _estimate_falling_edge_lag_seconds(
-            transitions[normal_transition]
+            _filter_normal_transitions(transitions)
         )
         falling_edge_offset_seconds = -falling_edge_lag_seconds / 2
         rising_edge_offset_seconds = falling_edge_lag_seconds / 2
@@ -726,7 +732,6 @@ class _Generator:
     def _write_chart(
         self,
         transitions,
-        normal_transition,
         rounded_transitions,
         high_is_white,
         kept_first_transition,
@@ -737,7 +742,7 @@ class _Generator:
         if not self._output_chart_files:
             return
 
-        normal_transitions = transitions[normal_transition]
+        normal_transitions = _filter_normal_transitions(transitions)
         shortest_transition = normal_transitions.iloc[
             normal_transitions.time_since_previous_transition_seconds.argmin()
         ]
