@@ -255,10 +255,9 @@ class _Analyzer:
 
     def analyze(self):
         frames = self._generate_frames()
-        reference_duration_seconds = len(frames) / self._nominal_fps()
         print(
             f"Successfully loaded spec file describing {len(frames)} frames at"
-            f" {self._nominal_fps()} FPS ({reference_duration_seconds} seconds)",
+            f" {self._nominal_fps()} FPS ({len(frames) / self._nominal_fps()} seconds)",
             file=sys.stderr,
         )
 
