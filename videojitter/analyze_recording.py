@@ -548,15 +548,11 @@ class _Analyzer:
         edges.sort_index(inplace=True)
         edges.to_csv(self._args.output_edges_csv_file)
 
-    def _write_debug_wavfile(self, name, generate_signal, normalize=False):
+    def _write_debug_wavfile(self, name, generate_signal):
         debug_files_prefix = getattr(self._args, "output_debug_files_prefix", None)
         if debug_files_prefix is None:
             return
         signal = generate_signal()
-        if normalize:
-            signal = signal._replace(
-                samples=signal.samples / np.max(np.abs(signal.samples))
-            )
         _signal.tofile(
             signal._replace(samples=signal.samples.astype(np.float32)),
             file=f"{debug_files_prefix}{self._debug_wavfile_index:02}_{name}.wav",
