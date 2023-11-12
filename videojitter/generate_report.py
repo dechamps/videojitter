@@ -573,18 +573,6 @@ class _Generator:
         transitions, falling_rising_offsets_seconds = self._compensate_edge_direction(
             transitions
         )
-        edge_direction_compensation_fineprint = (
-            "Consistent timing differences between falling and rising edges (i.e."
-            " between black vs. white transitions) have NOT been compensated for"
-            if falling_rising_offsets_seconds is None
-            else (
-                "Time since previous transition includes"
-                f" {_si_format_plus(falling_rising_offsets_seconds[0], 3)}s correction"
-                " in all falling edges and"
-                f" {_si_format_plus(falling_rising_offsets_seconds[1], 3)}s correction"
-                " in all rising edges"
-            )
-        )
 
         rounded_transitions = self._round(transitions)
         self._write_csv(rounded_transitions, high_is_white)
@@ -594,7 +582,7 @@ class _Generator:
             high_is_white,
             keep_first_transition,
             keep_last_transition,
-            edge_direction_compensation_fineprint,
+            falling_rising_offsets_seconds,
         )
 
     def _read_transitions(self):
@@ -726,7 +714,7 @@ class _Generator:
         high_is_white,
         kept_first_transition,
         kept_last_transition,
-        edge_direction_compensation_fineprint,
+        falling_rising_offsets_seconds,
     ):
         if not self._output_chart_files:
             return
@@ -809,7 +797,19 @@ class _Generator:
                     f" {len(self._spec['delayed_transitions'])} intentionally delayed"
                     " transitions"
                 ),
-                edge_direction_compensation_fineprint,
+                (
+                    "Consistent timing differences between falling and rising edges"
+                    " (i.e. between black vs. white transitions) have NOT been"
+                    " compensated for"
+                    if falling_rising_offsets_seconds is None
+                    else (
+                        "Time since previous transition includes"
+                        f" {_si_format_plus(falling_rising_offsets_seconds[0], 3)}s"
+                        " correction in all falling edges and"
+                        f" {_si_format_plus(falling_rising_offsets_seconds[1], 3)}s"
+                        " correction in all rising edges"
+                    )
+                ),
                 (
                     f"The following stats exclude {(~transitions.valid).sum()} invalid"
                     " transitions and the"
