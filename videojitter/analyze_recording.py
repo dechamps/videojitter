@@ -254,10 +254,14 @@ class _Analyzer:
         self._debug_wavfile_index = 0
 
     def analyze(self):
-        frames = self._generate_frames()
+        expected_duration_seconds = (
+            self._spec["transition_count"] + len(self._spec["delayed_transitions"])
+        ) / self._nominal_fps()
         print(
-            f"Successfully loaded spec file describing {len(frames)} frames at"
-            f" {self._nominal_fps()} FPS ({len(frames) / self._nominal_fps()} seconds)",
+            "Successfully loaded spec file describing"
+            f" {self._spec['transition_count']} transitions (of which"
+            f" {len(self._spec['delayed_transitions'])} are delayed) at"
+            f" {self._nominal_fps()} FPS ({expected_duration_seconds} seconds)",
             file=sys.stderr,
         )
 
@@ -288,11 +292,6 @@ class _Analyzer:
         )
         edges.sort_index(inplace=True)
         edges.to_csv(self._args.output_edges_csv_file)
-
-    def _generate_frames(self):
-        return _util.generate_frames(
-            self._spec["transition_count"], self._spec["delayed_transitions"]
-        )
 
     def _detect_clipping(self, recording):
         max_index = np.argmax(np.abs(recording.samples))

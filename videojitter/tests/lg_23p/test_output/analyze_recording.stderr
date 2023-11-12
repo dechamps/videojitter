@@ -1,4 +1,4 @@
-Successfully loaded spec file describing 1440 frames at 23.976023976023978 FPS (60.059999999999995 seconds)
+Successfully loaded spec file describing 1438 transitions (of which 1 are delayed) at 23.976023976023978 FPS (60.01829166666666 seconds)
 Successfully loaded recording containing 751120 samples at 8000 Hz (93.89 seconds)
 Downsampling recording by 4.0x (to 2000.0 Hz)
 Test signal appears to start at sample 47543 (23.7715 seconds) and end at sample 168841 (84.4205 seconds) in the recording.
