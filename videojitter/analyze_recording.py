@@ -279,16 +279,10 @@ class _Analyzer:
         self._write_debug_wavfile("trimmed", lambda: recording)
 
         edge_positions, edge_is_rising = self._detect_edges(recording)
-        edges = pd.Series(
+        self._write_csv(
+            (edge_positions + test_signal_start_index) / recording.sample_rate,
             edge_is_rising,
-            index=pd.Index(
-                (edge_positions + test_signal_start_index) / recording.sample_rate,
-                name="recording_timestamp_seconds",
-            ),
-            name="edge_is_rising",
         )
-        edges.sort_index(inplace=True)
-        edges.to_csv(self._args.output_edges_csv_file)
 
     def _detect_clipping(self, recording):
         max_index = np.argmax(np.abs(recording.samples))
@@ -562,6 +556,15 @@ class _Analyzer:
             )
             * self._args.slope_prominence_threshold
         )
+
+    def _write_csv(self, edge_timestamps, edge_is_rising):
+        edges = pd.Series(
+            edge_is_rising,
+            index=pd.Index(edge_timestamps, name="recording_timestamp_seconds"),
+            name="edge_is_rising",
+        )
+        edges.sort_index(inplace=True)
+        edges.to_csv(self._args.output_edges_csv_file)
 
     def _write_debug_wavfile(self, name, generate_signal, normalize=False):
         debug_files_prefix = getattr(self._args, "output_debug_files_prefix", None)
