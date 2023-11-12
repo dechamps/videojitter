@@ -812,13 +812,13 @@ class _Generator:
                     f" {len(self._spec['delayed_transitions'])} intentionally delayed"
                     " transitions"
                 ),
+                edge_direction_compensation_fineprint,
                 (
                     f"The following stats exclude {(~transitions.valid).sum()} invalid"
                     " transitions and the"
                     f" {found_intentionally_delayed_transitions} intentionally"
                     " delayed transitions that were found:"
                 ),
-                edge_direction_compensation_fineprint,
                 (
                     "Transition interval range:"
                     f" {si_format(shortest_transition_duration, 3)}s (at"
