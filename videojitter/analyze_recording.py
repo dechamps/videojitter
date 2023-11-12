@@ -385,12 +385,10 @@ class _Analyzer:
         return np.nonzero(boundary_candidates.samples)[0]
 
     def _detect_edges(self, recording):
-        recording_slope = self._generate_recording_slope(recording)
-        slope_peak_indexes, edge_is_rising = self._detect_edges_from_slope(
-            recording_slope
-        )
+        slope = self._generate_recording_slope(recording)
+        edge_indexes, edge_is_rising = self._detect_edges_from_slope_peaks(slope)
         return (
-            _interpolate_peaks(recording_slope.samples, slope_peak_indexes),
+            _interpolate_peaks(slope.samples, edge_indexes),
             edge_is_rising,
         )
 
@@ -430,60 +428,58 @@ class _Analyzer:
         #
         # In practice, what we do is we apply a peak finding algorithm to locate the
         # points at which the signal reaches a local steepness extremum.
-        slope_kernel = _generate_slope_kernel(min_frequency, recording.sample_rate)
-        self._write_debug_wavfile("slope_kernel", lambda: slope_kernel)
+        kernel = _generate_slope_kernel(min_frequency, recording.sample_rate)
+        self._write_debug_wavfile("slope_kernel", lambda: kernel)
         recording_length = recording.samples.size
         recording = recording._replace(
             samples=np.concatenate(
                 (
-                    np.full(slope_kernel.samples.size // 2, recording.samples[0]),
+                    np.full(kernel.samples.size // 2, recording.samples[0]),
                     recording.samples,
-                    np.full(slope_kernel.samples.size // 2, recording.samples[-1]),
+                    np.full(kernel.samples.size // 2, recording.samples[-1]),
                 )
             )
         )
         self._write_debug_wavfile("padded", lambda: recording)
-        recording_slope = _signal.convolve(
+        slope = _signal.convolve(
             recording,
-            slope_kernel._replace(
-                samples=slope_kernel.samples.astype(recording.samples.dtype)
-            ),
+            kernel._replace(samples=kernel.samples.astype(recording.samples.dtype)),
             "valid",
         )
-        self._write_debug_wavfile("slope", lambda: recording_slope)
-        assert recording_slope.samples.size == recording_length
-        return recording_slope
+        self._write_debug_wavfile("slope", lambda: slope)
+        assert slope.samples.size == recording_length
+        return slope
 
-    def _detect_edges_from_slope(self, recording_slope):
-        slope_peak_indexes, slope_prominences = self._find_peaks(recording_slope)
+    def _detect_edges_from_slope_peaks(self, slope):
+        peak_indexes, peak_prominences = self._find_peaks(slope)
 
-        abs_slope_prominences = np.abs(slope_prominences)
-        slope_prominence_threshold = self._get_slope_prominence_threshold(
-            abs_slope_prominences
+        abs_peak_prominences = np.abs(peak_prominences)
+        peak_prominence_threshold = self._get_slope_peak_prominence_threshold(
+            abs_peak_prominences
         )
-        valid_slope_peak = abs_slope_prominences > slope_prominence_threshold
-        slope_peak_indexes = slope_peak_indexes[valid_slope_peak]
-        slope_prominences = slope_prominences[valid_slope_peak]
+        valid_peak = abs_peak_prominences > peak_prominence_threshold
+        peak_indexes = peak_indexes[valid_peak]
+        peak_prominences = peak_prominences[valid_peak]
         print(
-            f"Kept {slope_peak_indexes.size} slope peaks whose prominence is above"
-            f" ~{slope_prominence_threshold:.3}. First edge is right after"
-            f" {_format_index(recording_slope, slope_peak_indexes[0])} and last edge is"
-            f" right after {_format_index(recording_slope, slope_peak_indexes[-1])}.",
+            f"Kept {peak_indexes.size} slope peaks whose prominence is above"
+            f" ~{peak_prominence_threshold:.3}. First edge is right after"
+            f" {_format_index(slope, peak_indexes[0])} and last edge is"
+            f" right after {_format_index(slope, peak_indexes[-1])}.",
             file=sys.stderr,
         )
-        assert slope_peak_indexes.size > 1
+        assert peak_indexes.size > 1
 
-        edge_is_rising = slope_prominences > 0
+        edge_is_rising = peak_prominences > 0
 
         def generate_edges_debug_signal():
-            recording_edges = np.zeros(recording_slope.samples.size)
-            recording_edges[slope_peak_indexes] = edge_is_rising * 2 - 1
+            recording_edges = np.zeros(slope.samples.size)
+            recording_edges[peak_indexes] = edge_is_rising * 2 - 1
             return _signal.Signal(
-                samples=recording_edges, sample_rate=recording_slope.sample_rate
+                samples=recording_edges, sample_rate=slope.sample_rate
             )
 
         self._write_debug_wavfile("edges", generate_edges_debug_signal)
-        return slope_peak_indexes, edge_is_rising
+        return peak_indexes, edge_is_rising
 
     def _find_peaks(self, slope):
         # High frequency noise can cause us to find spurious local extrema as the signal
@@ -503,35 +499,35 @@ class _Analyzer:
         # forest, and getting there merely requires a small "hop" through the noise. The
         # prominence is therefore merely the peak-to-peak amplitude of the noise, which
         # in reasonable recordings is expected to be much lower.
-        slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
+        peak_indexes, peak_prominences = _find_abs_peaks_with_prominence(
             slope.samples
         )
 
         def generate_heights_debug_signal():
-            recording_slope_heights = np.zeros(slope.samples.size)
-            recording_slope_heights[slope_peak_indexes] = slope.samples[
-                slope_peak_indexes
+            signal_slope_heights = np.zeros(slope.samples.size)
+            signal_slope_heights[peak_indexes] = slope.samples[
+                peak_indexes
             ]
             return _signal.Signal(
-                samples=recording_slope_heights, sample_rate=slope.sample_rate
+                samples=signal_slope_heights, sample_rate=slope.sample_rate
             )
 
         self._write_debug_wavfile("slope_heights", generate_heights_debug_signal)
 
         def generate_prominences_debug_signal():
-            recording_slope_prominence = np.zeros(slope.samples.size)
-            recording_slope_prominence[slope_peak_indexes] = slope_prominences
+            signal_slope_prominence = np.zeros(slope.samples.size)
+            signal_slope_prominence[peak_indexes] = peak_prominences
             return _signal.Signal(
-                samples=recording_slope_prominence, sample_rate=slope.sample_rate
+                samples=signal_slope_prominence, sample_rate=slope.sample_rate
             )
 
         self._write_debug_wavfile(
             "slope_prominences", generate_prominences_debug_signal
         )
 
-        return slope_peak_indexes, slope_prominences
+        return peak_indexes, peak_prominences
 
-    def _get_slope_prominence_threshold(self, abs_slope_prominences):
+    def _get_slope_peak_prominence_threshold(self, abs_slope_peak_prominences):
         # We need to decide on a prominence threshold for what constitutes a "true"
         # edge. The correct threshold must be below the minimum true edge peak
         # prominence, which which don't know, so we'll have to take a guess. We could
@@ -544,11 +540,11 @@ class _Analyzer:
         # expected. We then multiply that reference with a fudge factor to allow for
         # edges with slightly smaller prominences, and that's our threshold.
         minimum_edge_count = self._spec["transition_count"] * self._args.min_edges_ratio
-        assert abs_slope_prominences.size >= minimum_edge_count
+        assert abs_slope_peak_prominences.size >= minimum_edge_count
         return (
             np.quantile(
-                abs_slope_prominences,
-                1 - minimum_edge_count / abs_slope_prominences.size,
+                abs_slope_peak_prominences,
+                1 - minimum_edge_count / abs_slope_peak_prominences.size,
             )
             * self._args.slope_prominence_threshold
         )
