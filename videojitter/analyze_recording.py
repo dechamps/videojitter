@@ -243,6 +243,12 @@ def _format_index(signal, index):
     return f"sample {index} ({index / signal.sample_rate} seconds)"
 
 
+def _generate_sparse_signal_from_template(template, indexes, values):
+    samples = np.zeros(template.samples.size)
+    samples[indexes] = values
+    return _signal.Signal(samples=samples, sample_rate=template.sample_rate)
+
+
 class _Analyzer:
     def __init__(self, args):
         self._args = args
@@ -470,15 +476,12 @@ class _Analyzer:
         assert peak_indexes.size > 1
 
         edge_is_rising = peak_prominences > 0
-
-        def generate_edges_debug_signal():
-            recording_edges = np.zeros(slope.samples.size)
-            recording_edges[peak_indexes] = edge_is_rising * 2 - 1
-            return _signal.Signal(
-                samples=recording_edges, sample_rate=slope.sample_rate
-            )
-
-        self._write_debug_wavfile("edges", generate_edges_debug_signal)
+        self._write_debug_wavfile(
+            "edges",
+            lambda: _generate_sparse_signal_from_template(
+                slope, peak_indexes, edge_is_rising * 2 - 1
+            ),
+        )
         return peak_indexes, edge_is_rising
 
     def _find_peaks(self, slope):
@@ -499,32 +502,19 @@ class _Analyzer:
         # forest, and getting there merely requires a small "hop" through the noise. The
         # prominence is therefore merely the peak-to-peak amplitude of the noise, which
         # in reasonable recordings is expected to be much lower.
-        peak_indexes, peak_prominences = _find_abs_peaks_with_prominence(
-            slope.samples
-        )
-
-        def generate_heights_debug_signal():
-            signal_slope_heights = np.zeros(slope.samples.size)
-            signal_slope_heights[peak_indexes] = slope.samples[
-                peak_indexes
-            ]
-            return _signal.Signal(
-                samples=signal_slope_heights, sample_rate=slope.sample_rate
-            )
-
-        self._write_debug_wavfile("slope_heights", generate_heights_debug_signal)
-
-        def generate_prominences_debug_signal():
-            signal_slope_prominence = np.zeros(slope.samples.size)
-            signal_slope_prominence[peak_indexes] = peak_prominences
-            return _signal.Signal(
-                samples=signal_slope_prominence, sample_rate=slope.sample_rate
-            )
-
+        peak_indexes, peak_prominences = _find_abs_peaks_with_prominence(slope.samples)
         self._write_debug_wavfile(
-            "slope_prominences", generate_prominences_debug_signal
+            "slope_heights",
+            lambda: _generate_sparse_signal_from_template(
+                slope, peak_indexes, slope.samples[peak_indexes]
+            ),
         )
-
+        self._write_debug_wavfile(
+            "slope_prominences",
+            lambda: _generate_sparse_signal_from_template(
+                slope, peak_indexes, peak_prominences
+            ),
+        )
         return peak_indexes, peak_prominences
 
     def _get_slope_peak_prominence_threshold(self, abs_slope_peak_prominences):
