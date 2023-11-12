@@ -321,10 +321,9 @@ class _Analyzer:
 
     def _find_boundaries(self, recording):
         pattern = self._generate_pattern(recording.sample_rate)
-        boundary_candidates = self._extract_boundary_candidates(
+        boundary_candidate_indexes = self._extract_boundary_candidate_indexes(
             self._correlate_pattern(recording, pattern)
         )
-        boundary_candidate_indexes = np.nonzero(boundary_candidates.samples)[0]
         assert boundary_candidate_indexes.size > 1
         test_signal_start_index = boundary_candidate_indexes[0]
         test_signal_end_index = boundary_candidate_indexes[-1] + pattern.samples.size
@@ -362,7 +361,7 @@ class _Analyzer:
         return pattern
 
     def _correlate_pattern(self, recording, pattern):
-        pattern_cross_correlation = _signal.correlate(
+        correlation = _signal.correlate(
             recording,
             pattern._replace(
                 samples=(pattern.samples / pattern.samples.size).astype(
@@ -372,22 +371,18 @@ class _Analyzer:
             mode="valid",
         )
         self._write_debug_wavfile(
-            "cross_correlation",
-            lambda: pattern_cross_correlation,
+            "pattern_correlation",
+            lambda: correlation,
         )
-        return pattern_cross_correlation
+        return correlation._replace(samples=np.abs(correlation.samples))
 
-    def _extract_boundary_candidates(self, pattern_cross_correlation):
-        abs_pattern_cross_correlation = pattern_cross_correlation._replace(
-            samples=np.abs(pattern_cross_correlation.samples)
-        )
-        boundary_candidates = abs_pattern_cross_correlation._replace(
-            samples=abs_pattern_cross_correlation.samples
-            >= np.max(abs_pattern_cross_correlation.samples)
-            * self._args.pattern_score_threshold
+    def _extract_boundary_candidate_indexes(self, pattern_correlation):
+        boundary_candidates = pattern_correlation._replace(
+            samples=pattern_correlation.samples
+            >= np.max(pattern_correlation.samples) * self._args.pattern_score_threshold
         )
         self._write_debug_wavfile("boundary_candidates", lambda: boundary_candidates)
-        return boundary_candidates
+        return np.nonzero(boundary_candidates.samples)[0]
 
     def _detect_edges(self, recording):
         recording_slope = self._generate_recording_slope(recording)
