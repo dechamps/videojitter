@@ -207,23 +207,22 @@ def _apply_gaussian_filter(samples, stddev_samples):
 
 def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     # The goal here is to generate a pattern that looks like a "sawtooth" on the
-    # resulting chart. From a mathematical perspective this is surprisingly
-    # tricky, because when we change the duration of a frame, this doesn't just
-    # change the position of the following transition on the Y axis - it also
-    # changes its position on the X axis, since the timestamp of the transition
-    # changes. The change in the X axis is much less visible than the change in
-    # the Y axis due to the difference in scale, but it still results in a
-    # curved line, especially for tall patterns (small `start`). We want a
-    # perfectly straight line to make it easier to tell when the analyzer is
-    # malfunctioning.
+    # resulting chart. From a mathematical perspective this is surprisingly tricky,
+    # because when we change the duration of a frame, this doesn't just change the
+    # position of the following transition on the Y axis - it also changes its position
+    # on the X axis, since the timestamp of the transition changes. The change in the X
+    # axis is much less visible than the change in the Y axis due to the difference in
+    # scale, but it still results in a curved line, especially for tall patterns (small
+    # `start`). We want a perfectly straight line to make it easier to tell when the
+    # analyzer is malfunctioning.
     #
-    # More rigorously, the value on the Y axis is equal to the difference with
-    # the previous point on the X axis:
+    # More rigorously, the value on the Y axis is equal to the difference with the
+    # previous point on the X axis:
     #
     #   y(n)=dx(n)=x(n)-x(n-1)
     #
-    # In order to draw in a straight line, we want the change in Y to equal the
-    # change in X (times a constant A):
+    # In order to draw in a straight line, we want the change in Y to equal the change
+    # in X (times a constant A):
     #
     #   y(n)=A*dx(n)
     #
@@ -235,30 +234,27 @@ def _get_pattern_frame_offset_adjustments(frame_count, pattern_count, start):
     #
     #   y(n)=B*C^(n-1)
     #
-    # That's not all. The above is a way to compute the interval between two
-    # successive frames, but what we really need is a way to compute the
-    # adjustments to individual frame timestamps (offsets). Indeed the
-    # adjustment to a given frame timestamp has to take into account the
-    # adjustments to all previous frame timestamps. This is given by the
-    # integral of y(n), which we'll note Y(n).
+    # That's not all. The above is a way to compute the interval between two successive
+    # frames, but what we really need is a way to compute the adjustments to individual
+    # frame timestamps (offsets). Indeed the adjustment to a given frame timestamp has
+    # to take into account the adjustments to all previous frame timestamps. This is
+    # given by theintegral of y(n), which we'll note Y(n).
     #
-    # But wait, we're still not done. Where this becomes really tricky is that
-    # we want the pattern to have a neutral effect on the overall duration of
-    # the frame sequence, i.e. when all the adjustments to frame durations are
-    # summed up, the result should be zero. Otherwise this would mess up the
-    # average FPS and might also result in discontinuities at the beginning
-    # and/or end of the pattern. This means we have to constrain the parameters
-    # such that Y(n) is zero at the end of the period. Setting a constraint on
-    # the period itself would not work well because the parameter has limited
-    # resolution (it's an integer). Instead we let the user choose the period as
-    # well as the initial/minimum frame duration adjustment (`start`) and from
-    # there we calculate the maximum frame duration adjustment (`end`).
+    # But wait, we're still not done. Where this becomes really tricky is that we want
+    # the pattern to have a neutral effect on the overall duration of the frame
+    # sequence, i.e. when all the adjustments to frame durations are summed up, the
+    # result should be zero. Otherwise this would mess up the average FPS and might also
+    # result in discontinuities at the beginning and/or end of the pattern. This means
+    # we have to constrain the parameters such that Y(n) is zero at the end of the
+    # period. Setting a constraint on the period itself would not work well because the
+    # parameter has limited resolution (it's an integer). Instead we let the user choose
+    # the period as well as the initial/minimum frame duration adjustment (`start`) and
+    # from there we calculate the maximum frame duration adjustment (`end`).
     #
-    # Coming up with an equation for `end` such that the final value of Y(n) is
-    # zero is surprisingly hard. See the generator-pattern.ipynb Jupyter
-    # notebook for an overview of the math that was used to arrive at the
-    # formulas for Y(n) (`frame_offset_adjustments`) and `end` that are used in
-    # this code.
+    # Coming up with an equation for `end` such that the final value of Y(n) is zero is
+    # surprisingly hard. See the generator-pattern.ipynb Jupyter notebook for an
+    # overview of the math that was used to arrive at the formulas for Y(n)
+    # (`frame_offset_adjustments`) and `end` that are used in this code.
     period_frames = frame_count // pattern_count
     offset_into_cycle = np.arange(0, period_frames) / period_frames
     end = -np.real(scipy.special.lambertw(-start * np.exp(-start), -1))

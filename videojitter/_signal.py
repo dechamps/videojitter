@@ -51,8 +51,8 @@ def butter(signal, **kwargs):
 
 
 def firwin(sample_rate, pass_zero=True, **kwargs):
-    """Equivalent to scipy.signal.firwin() but with a workaround for
-    the `pass_zero=False` bug described at
+    """Equivalent to scipy.signal.firwin() but with a workaround for the
+    `pass_zero=False` bug described at
     https://github.com/scipy/scipy/issues/19291.
     """
     kernel = scipy.signal.firwin(fs=sample_rate, **kwargs)

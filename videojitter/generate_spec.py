@@ -46,8 +46,7 @@ def main():
     if delayed_transition:
         transition_count -= 1
     if transition_count % 2 != 0:
-        # Keep the transition count even so that we begin and end with a black
-        # frame.
+        # Keep the transition count even so that we begin and end with a black frame.
         transition_count += 1
 
     print(

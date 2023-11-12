@@ -319,8 +319,8 @@ def _generate_chart(
         ).encode(
             alt.Opacity("intentionally_delayed_label", type="nominal", title=None)
             .scale(
-                # It would be cleaner to use a field-based range instead of
-                # mapping legend labels, but we can't because of this bug:
+                # It would be cleaner to use a field-based range instead of mapping
+                # legend labels, but we can't because of this bug:
                 # https://github.com/vega/vega-lite/issues/9150
                 domain=[normal_label, delayed_label],
                 range=[1, 0.5],
@@ -338,11 +338,11 @@ def _generate_chart(
         alt.vconcat(
             chart.encode(tooltip=tooltips).add_params(
                 # Make the chart zoomable on the X axis.
-                # Note we don't let the user zoom the Y axis, as they would then
-                # end up scaling both axes simultaneously, which does not really
-                # make sense (the aspect ratio of this chart is arbitrary
-                # anyway) and is more annoying than useful when attempting to
-                # keep outliers within the range of the chart.
+                # Note we don't let the user zoom the Y axis, as they would then end up
+                # scaling both axes simultaneously, which does not really make sense
+                # (the aspect ratio of this chart is arbitrary anyway) and is more
+                # annoying than useful when attempting to keep outliers within the range
+                # of the chart.
                 alt.selection_interval(
                     name="x_interval", encodings=["x"], bind="scales"
                 ),
@@ -377,9 +377,8 @@ def _mean_without_outliers(x):
 
 
 def _estimate_falling_edge_lag_seconds(transitions):
-    # We don't use the mean to prevent an outlier from biasing a given edge
-    # direction, nor the median to prevent odd results when dealing with pattern
-    # changes.
+    # We don't use the mean to prevent an outlier from biasing a given edge direction,
+    # nor the median to prevent odd results when dealing with pattern changes.
     return _mean_without_outliers(
         transitions.loc[
             ~transitions.edge_is_rising, "time_since_previous_transition_seconds"
@@ -401,12 +400,12 @@ def _match_delayed_transitions(
     expected_transition_count,
     max_offset,
 ):
-    # Locating delayed transitions by index alone will not give satisfactory
-    # results if the recording has missing or spurious transitions, as those
-    # would offset the index. Instead, calculate the timestamp at which we would
-    # expect to find the delayed transition in an ideal recording, then locate
-    # the closest real transition. This should work in all but the most
-    # pathological cases (e.g. time-varying clock skew).
+    # Locating delayed transitions by index alone will not give satisfactory results if
+    # the recording has missing or spurious transitions, as those would offset the
+    # index. Instead, calculate the timestamp at which we would expect to find the
+    # delayed transition in an ideal recording, then locate the closest real transition.
+    # This should work in all but the most pathological cases (e.g. time-varying clock
+    # skew).
     delayed_transition_indexes = np.array(delayed_transition_indexes)
     delayed_transition_expected_time_seconds = (
         delayed_transition_indexes + 1 + np.arange(delayed_transition_indexes.size)
@@ -421,13 +420,13 @@ def _match_delayed_transitions(
         transitions.recording_timestamp_seconds
     ).get_indexer(delayed_transition_expected_time_seconds, method="nearest")
 
-    # In theory we could stop there, but we shouldn't, because the delayed
-    # transition can be a few frames off (e.g. if there are spurious extra
-    # transitions at the beginning and/or end of the recording). So look at the
-    # data to produce a better guess.
+    # In theory we could stop there, but we shouldn't, because the delayed transition
+    # can be a few frames off (e.g. if there are spurious extra transitions at the
+    # beginning and/or end of the recording). So look at the data to produce a better
+    # guess.
 
-    # Look at a few transitions before and after the one that is closest to the
-    # expected timestamp.
+    # Look at a few transitions before and after the one that is closest to the expected
+    # timestamp.
     neighbors_indexes = _util.generate_windows(
         recording_delayed_transition_indexes, max_offset, max_offset
     )
@@ -435,11 +434,10 @@ def _match_delayed_transitions(
         transitions.time_since_previous_transition_seconds.values[neighbors_indexes]
     )
 
-    # First, align even frames with odd frames to prevent bias from affecting
-    # the outcome.
-    # TODO: it's surprising that this is necessary, and even that it works,
-    # given that the point of delayed transitions is precisely to remove this
-    # bias??
+    # First, align even frames with odd frames to prevent bias from affecting the
+    # outcome.
+    # TODO: it's surprising that this is necessary, and even that it works, given that
+    # the point of delayed transitions is precisely to remove this bias??
     even_bias = (
         np.mean(neighbors_durations_seconds[:, ::2], axis=1)
         - np.mean(neighbors_durations_seconds[:, 1::2], axis=1)
@@ -447,20 +445,19 @@ def _match_delayed_transitions(
     neighbors_durations_seconds[:, 0::2] -= even_bias / 2
     neighbors_durations_seconds[:, 1::2] += even_bias / 2
 
-    # Estimate the mean frame duration. The delayed transition counts for 2
-    # frames.
+    # Estimate the mean frame duration. The delayed transition counts for 2 frames.
     mean_frame_durations_seconds = np.sum(neighbors_durations_seconds, axis=1) / (
         max_offset * 2 + 2
     )
 
-    # A transition is considered a candidate if it happens significantly later
-    # than what the mean frame duration would predict.
+    # A transition is considered a candidate if it happens significantly later than what
+    # the mean frame duration would predict.
     candidate_transitions = (
         neighbors_durations_seconds > 1.5 * mean_frame_durations_seconds[:, None]
     )
 
-    # We assume we found the correct delayed transition if it is the only
-    # candidate within the window.
+    # We assume we found the correct delayed transition if it is the only candidate
+    # within the window.
     transition_found = np.count_nonzero(candidate_transitions, axis=1) == 1
     not_found_indexes = np.nonzero(~transition_found)[0]
     if not_found_indexes.size > 0:
@@ -493,10 +490,9 @@ def _is_high_white(transitions):
     edge is a transition to a white frame), or None if the results are
     inconclusive."""
 
-    # We assume, by convention, that the first transition as defined by the spec
-    # is a transition from black to white. That transition has index 0;
-    # therefore, an even transition index means a transition from black to
-    # white.
+    # We assume, by convention, that the first transition as defined by the spec is a
+    # transition from black to white. That transition has index 0; therefore, an even
+    # transition index means a transition from black to white.
     transitions_high_is_white = transitions.edge_is_rising == (
         transitions.expected_transition_index % 2 == 0
     )
@@ -573,9 +569,9 @@ def main():
                 axis="columns",
                 join="inner",
             )
-            # Since we know the expected transition indexes of the delayed
-            # transitions, we can use them to deduce whether rising edges are
-            # transitions to black or transitions to white.
+            # Since we know the expected transition indexes of the delayed transitions,
+            # we can use them to deduce whether rising edges are transitions to black or
+            # transitions to white.
             high_is_white = _is_high_white(delayed_transitions)
             if high_is_white is None:
                 print(

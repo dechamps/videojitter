@@ -124,38 +124,36 @@ def _generate_pattern_signal(length_seconds, fps_num, fps_den, sample_rate):
 
 
 def _generate_slope_kernel(min_frequency_hz, sample_rate):
-    # The simplest way to compute signal slope would be to differentiate the
-    # signal (as in, np.diff()). Unfortunately, differentiation also acts as a
-    # highpass filter with a constant +6dB/octave slope, causing high frequency
-    # noise to be amplified tremendously. (Intuitively, this is because the rate
-    # of change of a signal is proportional to frequency, not just amplitude.)
-    # This is a big problem; for example, high frequency PWM would normally be
-    # distinguishable from true edges by its lower amplitude, but since its
-    # frequency is much higher, a highpass filter can greatly impact our ability
-    # to discriminate between the two.
+    # The simplest way to compute signal slope would be to differentiate the signal (as
+    # in, np.diff()). Unfortunately, differentiation also acts as a highpass filter with
+    # a constant +6dB/octave slope, causing high frequency noise to be amplified
+    # tremendously. (Intuitively, this is because the rate of change of a signal is
+    # proportional to frequency, not just amplitude.) This is a big problem; for
+    # example, high frequency PWM would normally be distinguishable from true edges by
+    # its lower amplitude, but since its frequency is much higher, a highpass filter can
+    # greatly impact our ability to discriminate between the two.
     #
-    # To solve this problem, we can think of differentiation as a convolution
-    # with a [-1, +1] kernel. From a Fourier perspective, this operation looks
-    # like a highpass filter combined with a 90° phase shift. So, if we want
-    # differentation without the highpass filter, what we're really asking for
-    # is just the 90° phase shift.
+    # To solve this problem, we can think of differentiation as a convolution with a
+    # [-1, +1] kernel. From a Fourier perspective, this operation looks like a highpass
+    # filter combined with a 90° phase shift. So, if we want differentation without the
+    # highpass filter, what we're really asking for is just the 90° phase shift.
     #
     # A 90° phase shift happens to be the mathematical definition of the Hilbert
     # transform, so that's what we end up with here. This code is conceptually
-    # equivalent to -np.imag(scipy.signal.hilbert(x)), which provides a
-    # "perfect" frequency response, but is inefficient as it computes an FFT
-    # over the entire input. We can get practically equivalent results by
-    # convolving with a relatively short kernel. This generates a type III FIR
-    # hilbert transformer following the principles described at:
+    # equivalent to -np.imag(scipy.signal.hilbert(x)), which provides a "perfect"
+    # frequency response, but is inefficient as it computes an FFT over the entire
+    # input. We can get practically equivalent results by convolving with a relatively
+    # short kernel. This generates a type III FIR hilbert transformer following the
+    # principles described at:
     #   https://en.wikipedia.org/wiki/Hilbert_transform#Discrete_Hilbert_transform
     half_length = int(np.ceil(sample_rate / min_frequency_hz / 2)) * 2
     slope_kernel = np.zeros(half_length * 2 + 1)
     slope_kernel[1::2] = (-2 / np.pi) / np.arange(
         start=-half_length + 1, stop=half_length + 1, step=2
     )
-    # Apply a gentle highpass filter to reject frequencies we don't care about.
-    # We use a very short filter to mitigate ringing artefacts, which could be
-    # mistaken for edges.
+    # Apply a gentle highpass filter to reject frequencies we don't care about. We use a
+    # very short filter to mitigate ringing artefacts, which could be mistaken for
+    # edges.
     kernel = _signal.convolve(
         _signal.Signal(samples=slope_kernel, sample_rate=sample_rate),
         _signal.firwin(
@@ -173,42 +171,41 @@ def _generate_slope_kernel(min_frequency_hz, sample_rate):
 
 
 def _find_peaks_with_prominence_mirrored(x):
-    """Like scipy.signal.find_peaks(), but calculates prominences under the
-    assumption that the borders are mirror images of the signal; this ensures
-    that the first/last peaks do not end up with an unfairly low prominence just
-    because they don't have an opposite peak on *both* sides."""
-    # This makes sure that, if scipy.signal.peak_prominences() hits a signal
-    # border, the resulting base will always be lower than the one on the other
-    # side of the peak. Therefore, the lowest contour line (which determines the
-    # prominence) will always be on the other side of the peak.
+    """Like scipy.signal.find_peaks(), but calculates prominences under the assumption
+    that the borders are mirror images of the signal; this ensures that the first/last
+    peaks do not end up with an unfairly low prominence just because they don't have an
+    opposite peak on *both* sides."""
+    # This makes sure that, if scipy.signal.peak_prominences() hits a signal border, the
+    # resulting base will always be lower than the one on the other side of the peak.
+    # Therefore, the lowest contour line (which determines the prominence) will always
+    # be on the other side of the peak.
     #
-    # Note that using a lower value (such as -infinity) would result in
-    # incorrect prominence for the tallest peak in the signal, which is computed
-    # based on the global minimum.
+    # Note that using a lower value (such as -infinity) would result in incorrect
+    # prominence for the tallest peak in the signal, which is computed based on the
+    # global minimum.
     xmin = np.min(x)
     x = np.insert(x, [0, x.size], [xmin, xmin])
 
     peak_indexes, peak_properties = scipy.signal.find_peaks(x, prominence=(None, None))
 
-    # Our modification may have created spurious peaks at the 2nd and/or
-    # second-to-last samples, so make sure to reject those.
+    # Our modification may have created spurious peaks at the 2nd and/or second-to-last
+    # samples, so make sure to reject those.
     valid_peak = (peak_indexes > 1) & (peak_indexes < x.size - 2)
 
     return peak_indexes[valid_peak] - 1, peak_properties["prominences"][valid_peak]
 
 
 def _find_abs_peaks_with_prominence(x):
-    """Like _find_peaks_with_prominence_mirrored(), but considers both positive
-    and negative peaks.
+    """Like _find_peaks_with_prominence_mirrored(), but considers both positive and
+    negative peaks.
 
     Negative prominences will be returned for negative peaks.
 
-    Note that the absolute prominences returned by this function are not the
-    same as those that would be returned by
-    _find_peaks_with_prominence_mirrored(np.abs(x)). Indeed, when calculating
-    peaks on a fully rectified signal, prominence is not increased by having to
-    go through negative values before reaching the next peak, but with this
-    function it is."""
+    Note that the absolute prominences returned by this function are not the same as
+    those that would be returned by _find_peaks_with_prominence_mirrored(np.abs(x)).
+    Indeed, when calculating peaks on a fully rectified signal, prominence is not
+    increased by having to go through negative values before reaching the next peak, but
+    with this function it is."""
     (
         positive_peak_indexes,
         positive_peak_prominences,
@@ -231,8 +228,8 @@ def _find_abs_peaks_with_prominence(x):
 
 
 def _interpolate_peaks(x, peak_indexes):
-    """Given `peak_indexes` the indexes of samples closest to peaks in `x`,
-    returns sub-sample peak location estimates.
+    """Given `peak_indexes` the indexes of samples closest to peaks in `x`, returns
+    sub-sample peak location estimates.
     """
     # Simplest way to do this is to use quadratic interpolation. See
     # https://ccrma.stanford.edu/~jos/sasp/Quadratic_Peak_Interpolation.html
@@ -305,17 +302,16 @@ class _Analyzer:
         )
 
     def _downsample(self, recording):
-        # If we assume the worst-case scenario where all the edges in the input
-        # signal are separated by the min threshold Tm, then the fundamental
-        # period in the input signal is 2*Tm (because the period is a full rising
-        # edge + falling edge cycle), and the fundamental frequency is 1/(2*Tm).
-        # However we also need to preserve the second harmonic, because that carries
-        # the information about waveform asymmetry - if we lose that, then it will
-        # look like every rising edge occurs exactly halfway between every falling
-        # edge (and vice-versa), thus destroying important timing information that
-        # the user may care about (consider e.g. 3:2 patterns). Therefore we need to
-        # preserve frequencies up to 1/Tm, and thus, per Nyquist, we need a sampling
-        # rate of at least 2/Tm.
+        # If we assume the worst-case scenario where all the edges in the input signal
+        # are separated by the min threshold Tm, then the fundamental period in the
+        # input signal is 2*Tm (because the period is a full rising edge + falling edge
+        # cycle), and the fundamental frequency is 1/(2*Tm). However we also need to
+        # preserve the second harmonic, because that carries the information about
+        # waveform asymmetry - if we lose that, then it will look like every rising edge
+        # occurs exactly halfway between every falling edge (and vice-versa), thus
+        # destroying important timing information that the user may care about (consider
+        # e.g. 3:2 patterns). Therefore we need to preserve frequencies up to 1/Tm, and
+        # thus, per Nyquist, we need a sampling rate of at least 2/Tm.
         downsampling_ratio = np.floor(
             0.5 * self._args.min_edge_separation_seconds * recording.sample_rate
         )
@@ -418,30 +414,29 @@ class _Analyzer:
         # The fundamental, core idea behind the way we detect "edges" is to look for
         # large scale changes in overall recording signal level.
         #
-        # One approach is to look at zero crossings; indeed, we can reasonably
-        # assume that, on a properly highpassed signal, every true edge will result
-        # in a change of sign. However, sadly the converse isn't true: due to high
-        # frequency noise the signal will tend to "hover" around zero between edges,
-        # creating spurious zero crossings. Separating the spurious zero crossings
-        # from the true ones is challenging; using a thresold on the slope at the
-        # zero crossing helps, but still fails in pathological cases such as noise
-        # causing the signal to "hesitate" (i.e. form a narrow plateau) around the
-        # zero crossing, which can result in the edge being missed. (We could work
-        # around that by computing the slope using more neighboring points, but that
-        # would require us to assume that an edge is more than 2 points wide - which
-        # basically amounts to lowpassing the signal. This would impair our ability
-        # to resolve fast "blinks".)
+        # One approach is to look at zero crossings; indeed, we can reasonably assume
+        # that, on a properly highpassed signal, every true edge will result in a change
+        # of sign. However, sadly the converse isn't true: due to high frequency noise
+        # the signal will tend to "hover" around zero between edges, creating spurious
+        # zero crossings. Separating the spurious zero crossings from the true ones is
+        # challenging; using a thresold on the slope at the zero crossing helps, but
+        # still fails in pathological cases such as noise causing the signal to
+        # "hesitate" (i.e. form a narrow plateau) around the zero crossing, which can
+        # result in the edge being missed. (We could work around that by computing the
+        # slope using more neighboring points, but that would require us to assume that
+        # an edge is more than 2 points wide - which basically amounts to lowpassing the
+        # signal. This would impair our ability to resolve fast "blinks".)
         #
         # A more promising idea is to compute the "slope" of the signal and find the
         # steepest slopes. This approach is more flexible than looking only at zero
         # crossings because it will find the highest rate of change even if it is
-        # located outside of a zero crossing. (In a sinusoid the highest rate of
-        # change happens at the zero crossing, but the recordings we are dealing
-        # with are not sinusoids. Even after highpass filtering, the steepest slope
-        # might not be located at the zero crossing. This is especially true given
-        # real recordings tend to have highly asymmetric shapes: in this case it's
-        # mathematically impossible for the steepest slope to be located at the
-        # zero crossing on *both* rising and falling edges at the same time.)
+        # located outside of a zero crossing. (In a sinusoid the highest rate of change
+        # happens at the zero crossing, but the recordings we are dealing with are not
+        # sinusoids. Even after highpass filtering, the steepest slope might not be
+        # located at the zero crossing. This is especially true given real recordings
+        # tend to have highly asymmetric shapes: in this case it's mathematically
+        # impossible for the steepest slope to be located at the zero crossing on *both*
+        # rising and falling edges at the same time.)
         #
         # In practice, what we do is we apply a peak finding algorithm to locate the
         # points at which the signal reaches a local steepness extremum.
@@ -501,25 +496,23 @@ class _Analyzer:
         return slope_peak_indexes, edge_is_rising
 
     def _find_peaks(self, slope):
-        # High frequency noise can cause us to find spurious local extrema as the
-        # signal "wiggles around" the true peak - this results in a "forest" of
-        # peaks (with similar heights) appearing around the true edge. If we don't
-        # do anything about this, we will incorrectly report many closely spaced
-        # edges for each true edge.
+        # High frequency noise can cause us to find spurious local extrema as the signal
+        # "wiggles around" the true peak - this results in a "forest" of peaks (with
+        # similar heights) appearing around the true edge. If we don't do anything about
+        # this, we will incorrectly report many closely spaced edges for each true edge.
         #
         # In each of these "forests", we need a way to select the tallest peak and
         # ignore the others. Prominence is the ideal metric for this: basically, it
         # indicates how far the signal has to "swing back" before a higher peak is
-        # reached in either direction. For the tallest peak in a forest, the only
-        # way to get to a higher peak is to go through the previous or next edge.
-        # Since that's by definition an opposite edge, we're looking at a full
-        # falling+rising edge swing, and the resulting prominence is the entire
-        # peak-to-peak amplitude between these edges - hence, very high. In
-        # contrast, if the peak is not the tallest in the forest, then by definition
-        # there is a higher peak in the same forest, and getting there merely
-        # requires a small "hop" through the noise. The prominence is therefore
-        # merely the peak-to-peak amplitude of the noise, which in reasonable
-        # recordings is expected to be much lower.
+        # reached in either direction. For the tallest peak in a forest, the only way to
+        # get to a higher peak is to go through the previous or next edge. Since that's
+        # by definition an opposite edge, we're looking at a full falling+rising edge
+        # swing, and the resulting prominence is the entire peak-to-peak amplitude
+        # between these edges - hence, very high. In contrast, if the peak is not the
+        # tallest in the forest, then by definition there is a higher peak in the same
+        # forest, and getting there merely requires a small "hop" through the noise. The
+        # prominence is therefore merely the peak-to-peak amplitude of the noise, which
+        # in reasonable recordings is expected to be much lower.
         slope_peak_indexes, slope_prominences = _find_abs_peaks_with_prominence(
             slope.samples
         )
@@ -551,16 +544,15 @@ class _Analyzer:
     def _get_slope_prominence_threshold(self, abs_slope_prominences):
         # We need to decide on a prominence threshold for what constitutes a "true"
         # edge. The correct threshold must be below the minimum true edge peak
-        # prominence, which which don't know, so we'll have to take a guess. We
-        # could reference our guess on the maximum prominence among all peaks -
-        # that's pretty much guaranteed to be a valid edge - but that would make the
-        # threshold very sensitive to an isolated outlier. To avoid this problem we
-        # base our guess on the Nth peak prominence, where N is large enough to
-        # mitigate the influence of outliers, but small enough that we can be
-        # reasonably confident we're still going to pick a valid edge even if the
-        # test signal contains fewer edges than expected. We then multiply that
-        # reference with a fudge factor to allow for edges with slightly smaller
-        # prominences, and that's our threshold.
+        # prominence, which which don't know, so we'll have to take a guess. We could
+        # reference our guess on the maximum prominence among all peaks - that's pretty
+        # much guaranteed to be a valid edge - but that would make the threshold very
+        # sensitive to an isolated outlier. To avoid this problem we base our guess on
+        # the Nth peak prominence, where N is large enough to mitigate the influence of
+        # outliers, but small enough that we can be reasonably confident we're still
+        # going to pick a valid edge even if the test signal contains fewer edges than
+        # expected. We then multiply that reference with a fudge factor to allow for
+        # edges with slightly smaller prominences, and that's our threshold.
         minimum_edge_count = self._spec["transition_count"] * self._args.min_edges_ratio
         assert abs_slope_prominences.size >= minimum_edge_count
         return (

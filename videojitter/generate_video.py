@@ -97,8 +97,8 @@ def main():
                     f" {args.padding_square_height_pixels})), A, B)"
                 ),
             ).filter("negate", enable="eq(mod(n, 2), 1)")
-            # The loop is not strictly necessary, but makes the pipeline vastly
-            # faster by ensuring both frames are only computed once and then reused.
+            # The loop is not strictly necessary, but makes the pipeline vastly faster
+            # by ensuring both frames are only computed once and then reused.
             .filter("loop", -1, size=2, start=0)
         )
         if padding_fullscreen_color is None
@@ -117,19 +117,17 @@ def main():
             ).filter("scale", s=args.size),
             padding[1].trim(end=args.end_padding),
         ),
-        # Include a dummy audio track as it makes the test video more
-        # realistic. Some video players (especially PC software) rely on the
-        # audio track for clocking, and will behave very differently if it's
-        # not there.
+        # Include a dummy audio track as it makes the test video more realistic. Some
+        # video players (especially PC software) rely on the audio track for clocking,
+        # and will behave very differently if it's not there.
         ffmpeg.input("anoisesrc=c=pink:r=48000:a=0.001", format="lavfi"),
         args.output_file,
         **{
             "shortest": None,
             "profile:v": "baseline",
             "preset": "ultrafast",
-            # Make the video behave like typical HD video for compatibility
-            # and to ensure the video players behave similarly to a "real"
-            # video.
+            # Make the video behave like typical HD video for compatibility and to
+            # ensure the video players behave similarly to a "real" video.
             "pix_fmt": "yuv420p",
             "color_primaries": "bt709",
             "color_trc": "bt709",
