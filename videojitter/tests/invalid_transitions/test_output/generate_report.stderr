@@ -1,4 +1,3 @@
 Successfully loaded spec file containing 10 frame transitions at 100.0 FPS
 Recording analysis contains 10 frame transitions, with first transition at ~10.000000 seconds and last transition at ~10.090000 seconds for a total of ~0.090000 seconds
 WARNING: data contains 2 edges where the previous edge is the same direction (i.e. transition from one color to the same color). This usually means the analyzer failed to make sense of some of the recording. These transitions will be reported as "invalid".
-Valid, non-delayed transition interval standard deviation: ~0.000000 seconds

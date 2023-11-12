@@ -586,15 +586,6 @@ class _Generator:
             )
         )
 
-        time_between_transitions_stddev_seconds = _filter_normal_transitions(
-            transitions
-        ).time_since_previous_transition_seconds.std()
-        print(
-            "Valid, non-delayed transition interval standard deviation:"
-            f" ~{time_between_transitions_stddev_seconds:.6f} seconds",
-            file=sys.stderr,
-        )
-
         rounded_transitions = self._round(transitions)
         self._write_csv(rounded_transitions, high_is_white)
         self._write_chart(
@@ -603,7 +594,6 @@ class _Generator:
             high_is_white,
             keep_first_transition,
             keep_last_transition,
-            time_between_transitions_stddev_seconds,
             edge_direction_compensation_fineprint,
         )
 
@@ -736,13 +726,15 @@ class _Generator:
         high_is_white,
         kept_first_transition,
         kept_last_transition,
-        time_between_transitions_stddev_seconds,
         edge_direction_compensation_fineprint,
     ):
         if not self._output_chart_files:
             return
 
         normal_transitions = _filter_normal_transitions(transitions)
+        time_between_transitions_stddev_seconds = (
+            normal_transitions.time_since_previous_transition_seconds.std()
+        )
         shortest_transition = normal_transitions.iloc[
             normal_transitions.time_since_previous_transition_seconds.argmin()
         ]
