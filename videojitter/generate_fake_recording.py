@@ -342,7 +342,9 @@ class _Generator:
             sample_rate / self._args.clock_skew,
             frame_offsets=frame_offsets,
         )
-        return recording._replace(sample_rate=sample_rate)
+        return recording._replace(
+            samples=recording.samples.astype(np.float32), sample_rate=sample_rate
+        )
 
     def _add_padding(self, recording):
         begin_padding_samples = int(
@@ -355,40 +357,26 @@ class _Generator:
             samples=np.concatenate(
                 (
                     (
-                        (
-                            np.ones(
-                                int(
-                                    np.round(
-                                        self._args.begin_padding_seconds
-                                        * recording.sample_rate
-                                    )
-                                ),
-                                dtype=recording.samples.dtype,
-                            )
-                            * self._args.padding_signal_level
+                        np.full(
+                            begin_padding_samples,
+                            self._args.padding_signal_level,
+                            dtype=recording.samples.dtype,
                         )
                         if begin_padding_samples > 0
                         else []
                     ),
                     recording.samples,
                     (
-                        (
-                            np.ones(
-                                int(
-                                    np.round(
-                                        self._args.end_padding_seconds
-                                        * recording.sample_rate
-                                    )
-                                ),
-                                dtype=recording.samples.dtype,
-                            )
-                            * self._args.padding_signal_level
+                        np.full(
+                            end_padding_samples,
+                            self._args.padding_signal_level,
+                            dtype=recording.samples.dtype,
                         )
                         if end_padding_samples > 0
                         else []
                     ),
                 )
-            ).astype(np.float32)
+            )
         )
         return recording._replace(
             samples=recording.samples[
