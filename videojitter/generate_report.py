@@ -515,11 +515,10 @@ class _Generator:
         ), "At least one of --output-chart-file or --output-csv-file must be specified"
 
     def generate(self):
-        nominal_fps = self._spec["fps"]["num"] / self._spec["fps"]["den"]
         transition_count = self._spec["transition_count"]
         print(
             f"Successfully loaded spec file containing {transition_count} frame"
-            f" transitions at {nominal_fps} FPS",
+            f" transitions at {self._nominal_fps()} FPS",
             file=sys.stderr,
         )
         transitions = self._read_transitions()
@@ -596,7 +595,6 @@ class _Generator:
             normal_transition,
             rounded_transitions,
             high_is_white,
-            nominal_fps,
             transitions_interval_seconds,
             transition_count,
             keep_first_transition,
@@ -733,7 +731,6 @@ class _Generator:
         normal_transition,
         rounded_transitions,
         high_is_white,
-        nominal_fps,
         transitions_interval_seconds,
         transition_count,
         kept_first_transition,
@@ -785,7 +782,8 @@ class _Generator:
         )
         chart = _generate_chart(
             rounded_transitions,
-            f"{transitions.index.size} transitions at {nominal_fps:.3f} nominal FPS",
+            f"{transitions.index.size} transitions at"
+            f" {self._nominal_fps():.3f} nominal FPS",
             transitions_interval_seconds.left,
             high_is_white,
             self._args.chart_minimum_time_between_transitions_seconds,
@@ -831,8 +829,9 @@ class _Generator:
                 (
                     "Mean time between transitions:"
                     f" {si_format(mean_time_between_transitions, 3)}s, i.e."
-                    f" {mean_fps:.06f} FPS, which is {mean_fps/nominal_fps:.6f}x faster"
-                    " than expected (clock skew)"
+                    f" {mean_fps:.06f} FPS, which is"
+                    f" {mean_fps/self._nominal_fps():.6f}x faster than expected (clock"
+                    " skew)"
                 ),
                 (
                     f"{outliers_count} transitions are outliers (more than 3 standard"
@@ -843,6 +842,9 @@ class _Generator:
         )
         for output_chart_file in self._output_chart_files:
             chart.save(output_chart_file)
+
+    def _nominal_fps(self):
+        return self._spec["fps"]["num"] / self._spec["fps"]["den"]
 
 
 def main():
