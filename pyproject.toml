@@ -1,5 +1,14 @@
 [project]
 name = "videojitter"
+authors = [{name = "Etienne Dechamps", email = "etienne@edechamps.fr"}]
+description = "Tools for physical measurement of video frame presentation timing"
+keywords = ["video"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Multimedia :: Video",
+]
 dynamic = ["dependencies", "version"]
 
 [build-system]
