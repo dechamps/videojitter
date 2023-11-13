@@ -4,8 +4,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
         - uses: actions/checkout@v4
-        - run: pip install build
-        - run: python -m build --sdist
+        - run: python -m venv .venv
+        - run: .venv/bin/pip install build
+        - run: .venv/bin/python -m build --sdist
         - uses: actions/upload-artifact@v3
           with:
             name: sdist
@@ -19,6 +20,7 @@ jobs:
           with:
             name: sdist
         - run: tar --gzip --extract --verbose --strip-components=1 --file videojitter-*.tar.gz
-        - run: pip install --requirement pylint-requirements.txt --requirement requirements.txt
+        - run: python -m venv .venv
+        - run: .venv/bin/pip install --requirement pylint-requirements.txt --requirement requirements.txt
         # TODO: also pylint the test code
-        - run: pylint src
+        - run: .venv/bin/pylint src
