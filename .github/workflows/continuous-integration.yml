@@ -1,0 +1,13 @@
+on: [push, pull_request]
+jobs:
+  build-sdist:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+        - run: pip install build
+        - run: python -m build --sdist
+        - uses: actions/upload-artifact@v3
+          with:
+            name: sdist
+            path: dist/videojitter-*.tar.gz
+            if-no-files-found: error
