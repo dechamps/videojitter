@@ -12,6 +12,22 @@ jobs:
           name: sdist
           path: dist/videojitter-*.tar.gz
           if-no-files-found: error
+  build-wheel:
+    runs-on: ubuntu-latest
+    needs: build-sdist
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: sdist
+      - run: tar --gzip --extract --verbose --strip-components=1 --file videojitter-*.tar.gz
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install build
+      - run: .venv/bin/python -m build --wheel
+      - uses: actions/upload-artifact@v3
+        with:
+          name: wheel
+          path: dist/videojitter-*.whl
+          if-no-files-found: error
   pylint:
     runs-on: ubuntu-latest
     needs: build-sdist
