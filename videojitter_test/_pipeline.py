@@ -54,8 +54,8 @@ class Pipeline:
 
     async def run_generate_spec(self, *args):
         json_path = self.get_write_path("spec.json")
-        await self._run_videojitter_module(
-            "generate_spec",
+        await self._run_executable(
+            "videojitter-generate-spec",
             "--output-spec-file",
             json_path,
             *args,
@@ -64,8 +64,8 @@ class Pipeline:
 
     async def run_generate_video(self, *args):
         video_path = self.get_write_path("video.mp4")
-        await self._run_videojitter_module(
-            "generate_video",
+        await self._run_executable(
+            "videojitter-generate-video",
             "--spec-file",
             self.get_read_path("spec.json"),
             "--output-file",
@@ -75,8 +75,8 @@ class Pipeline:
         assert video_path.stat().st_size > 0
 
     async def run_generate_fake_recording(self, *args):
-        await self._run_videojitter_module(
-            "generate_fake_recording",
+        await self._run_executable(
+            "videojitter-generate-fake-recording",
             "--spec-file",
             self.get_read_path("spec.json"),
             "--output-recording-file",
@@ -85,8 +85,8 @@ class Pipeline:
         )
 
     async def run_analyze_recording(self, *args):
-        await self._run_videojitter_module(
-            "analyze_recording",
+        await self._run_executable(
+            "videojitter-analyze-recording",
             "--spec-file",
             self.get_read_path("spec.json"),
             "--recording-file",
@@ -100,8 +100,8 @@ class Pipeline:
 
     async def run_generate_report(self, *args):
         json_report_chart_path = self.get_write_path("report.json")
-        await self._run_videojitter_module(
-            "generate_report",
+        await self._run_executable(
+            "videojitter-generate-report",
             "--spec-file",
             self.get_read_path("spec.json"),
             "--edges-csv-file",
@@ -116,16 +116,14 @@ class Pipeline:
         )
         prettify_json(json_report_chart_path)
 
-    async def _run_videojitter_module(self, module_name, *args):
+    async def _run_executable(self, executable_name, *args):
         with open(
-            self.get_output_path() / f"{module_name}.stdout", "wb"
+            self.get_output_path() / f"{executable_name}.stdout", "wb"
         ) as stdout, open(
-            self.get_output_path() / f"{module_name}.stderr", "wb"
+            self.get_output_path() / f"{executable_name}.stderr", "wb"
         ) as stderr:
             await self._test_case.run_subprocess(
-                sys.executable,
-                "-m",
-                f"videojitter.{module_name}",
+                executable_name,
                 *args,
                 stdout=stdout,
                 stderr=stderr,

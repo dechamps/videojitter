@@ -1,5 +1,5 @@
-generate_report.stderr
-generate_report.stdout
 report.csv
 report.html
 report.json
+videojitter-generate-report.stderr
+videojitter-generate-report.stdout

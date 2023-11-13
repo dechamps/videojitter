@@ -1,5 +1,3 @@
-analyze_recording.stderr
-analyze_recording.stdout
 analyze_recording_debug_00_downsampled.wav
 analyze_recording_debug_01_pattern.wav
 analyze_recording_debug_02_pattern_correlation.wav
@@ -12,8 +10,10 @@ analyze_recording_debug_08_slope_heights.wav
 analyze_recording_debug_09_slope_prominences.wav
 analyze_recording_debug_10_edges.wav
 edges.csv
-generate_report.stderr
-generate_report.stdout
 report.csv
 report.html
 report.json
+videojitter-analyze-recording.stderr
+videojitter-analyze-recording.stdout
+videojitter-generate-report.stderr
+videojitter-generate-report.stdout
