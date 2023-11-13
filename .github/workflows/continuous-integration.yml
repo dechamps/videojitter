@@ -34,6 +34,33 @@ jobs:
           name: wheel
           path: dist/videojitter-*.whl
           if-no-files-found: error
+  test:
+    # TODO: also test on Windows
+    runs-on: ubuntu-latest
+    needs: build-wheel
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheel
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install videojitter-*.whl
+      - uses: FedericoCarboni/setup-ffmpeg@v2
+      - uses: actions/checkout@v4
+        with:
+          path: git
+      - run: PATH="../.venv/bin:$PATH" ../.venv/bin/python -m videojitter_test
+        working-directory: git
+      - run: git -C git diff --exit-code
+        if: ${{ !cancelled() }}
+      - uses: actions/upload-artifact@v3
+        if: ${{ !cancelled() }}
+        with:
+          name: test_output
+          path: git/videojitter_test/cases/*/test_output
+          if-no-files-found: error
   pylint:
     runs-on: ubuntu-latest
     needs: build-sdist
