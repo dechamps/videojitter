@@ -11,6 +11,10 @@ dependencies = [
     "soundfile",
 ]
 
+[build-system]
+requires = ["setuptools==68.2.2"]
+build-backend = "setuptools.build_meta"
+
 [tool.pip-tools]
 generate-hashes = true
 strip-extras = true
