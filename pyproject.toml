@@ -1,3 +1,16 @@
+[project]
+name = "videojitter"
+version = "0"
+dependencies = [
+    "altair",
+    "ffmpeg-python",
+    "numpy",
+    "pandas",
+    "scipy",
+    "si-prefix",
+    "soundfile",
+]
+
 [tool.black]
 preview = true  # For long string line breaks
 
