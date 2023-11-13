@@ -1,5 +1,5 @@
 import json
-import sys
+import os
 
 
 def prettify_json(path):
@@ -117,6 +117,10 @@ class Pipeline:
         prettify_json(json_report_chart_path)
 
     async def _run_executable(self, executable_name, *args):
+        # Prevent non-deterministic output due to version string changes.
+        env = os.environ.copy()
+        env["VIDEOJITTER_OVERRIDE_VERSION"] = "TESTING"
+
         with open(
             self.get_output_path() / f"{executable_name}.stdout", "wb"
         ) as stdout, open(
@@ -125,6 +129,7 @@ class Pipeline:
             await self._test_case.run_subprocess(
                 executable_name,
                 *args,
+                env=env,
                 stdout=stdout,
                 stderr=stderr,
             )

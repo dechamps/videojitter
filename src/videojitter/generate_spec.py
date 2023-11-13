@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+from videojitter import _version
 
 
 def _parse_arguments():
@@ -38,6 +39,7 @@ def _parse_arguments():
 
 
 def main():
+    _version.print_banner("generate_spec")
     args = _parse_arguments()
 
     delayed_transition = not args.no_delayed_transition

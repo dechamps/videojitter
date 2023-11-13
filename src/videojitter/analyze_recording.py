@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import scipy.signal
-from videojitter import _signal, _util
+from videojitter import _signal, _util, _version
 
 
 def _parse_arguments():
@@ -564,4 +564,5 @@ class _Analyzer:
 
 
 def main():
+    _version.print_banner("analyze_recording")
     _Analyzer(_parse_arguments()).analyze()

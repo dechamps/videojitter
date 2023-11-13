@@ -1,3 +1,4 @@
+analyze_recording from videojitter TESTING
 Successfully loaded spec file describing 1500 transitions (of which 1 are delayed) at 25.0 FPS (60.04 seconds)
 Successfully loaded recording containing 610000 samples at 8000 Hz (76.25 seconds)
 Downsampling recording by 4.0x (to 2000.0 Hz)

@@ -18,6 +18,7 @@ build-backend = "setuptools.build_meta"
 dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools_scm]
+version_file = "src/videojitter/_version_generated.py"
 
 [project.scripts]
 videojitter-analyze-recording = "videojitter.analyze_recording:main"

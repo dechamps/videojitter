@@ -46,12 +46,13 @@ class _TestCase:
     def get_path(self):
         return self._path
 
-    async def run_subprocess(self, *args, stdout, stderr):
+    async def run_subprocess(self, *args, env, stdout, stderr):
         args = [str(arg) for arg in args]
         print(f"{self._name}: {args}")
         process = await asyncio.create_subprocess_exec(
             *args,
             stdin=subprocess.DEVNULL,
+            env=env,
             stdout=stdout,
             stderr=stderr,
         )

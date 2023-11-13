@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from si_prefix import si_format
 from scipy import stats
-from videojitter import _util
+from videojitter import _util, _version
 
 
 def _parse_arguments():
@@ -849,4 +849,5 @@ class _Generator:
 
 
 def main():
+    _version.print_banner("generate_report")
     _Generator(_parse_arguments()).generate()

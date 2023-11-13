@@ -3,7 +3,7 @@ import json
 import sys
 import numpy as np
 import ffmpeg
-from videojitter import _util
+from videojitter import _util, _version
 
 
 def _parse_arguments():
@@ -75,6 +75,7 @@ def _parse_arguments():
 
 
 def main():
+    _version.print_banner("generate_video")
     args = _parse_arguments()
     with open(args.spec_file, encoding="utf-8") as spec_file:
         spec = json.load(spec_file)

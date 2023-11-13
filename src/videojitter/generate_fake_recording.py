@@ -3,7 +3,7 @@ import sys
 import json
 import numpy as np
 import scipy.special
-from videojitter import _signal, _util
+from videojitter import _signal, _util, _version
 
 
 def _parse_arguments():
@@ -446,4 +446,5 @@ class _Generator:
 
 
 def main():
+    _version.print_banner("generate_fake_recording")
     _Generator(_parse_arguments()).generate()
