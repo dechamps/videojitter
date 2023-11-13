@@ -1,0 +1,11 @@
+# pip-tools `pip-compile` input file for dependency pinning.
+#
+# Note this is NOT the list of dependencies that is used for built package metadata;
+# pinned dependencies are used instead. See `pyproject.toml`.
+altair
+ffmpeg-python
+numpy
+pandas
+scipy
+si-prefix
+soundfile

@@ -1,22 +1,23 @@
 [project]
 name = "videojitter"
 version = "0"
-dependencies = [
-    "altair",
-    "ffmpeg-python",
-    "numpy",
-    "pandas",
-    "scipy",
-    "si-prefix",
-    "soundfile",
-]
+dynamic = ["dependencies"]
 
 [build-system]
 requires = ["setuptools==68.2.2"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.dynamic]
+# Use pinned dependencies for the package itself as the package is intended to be used
+# as an application in a dedicated venv. This ensures users end up running the package
+# with the exact same set of dependencies the code was developed and tested with.
+dependencies = {file = ["requirements.txt"]}
+
 [tool.pip-tools]
-generate-hashes = true
+# We could use generate-hashes here, but sadly we can't, because that would make the
+# resulting requirements.txt non-compliant with PEP 508, making it unusable for use in
+# dynamic `dependencies`. See also:
+#  https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html#dynamic-metadata
 strip-extras = true
 
 [tool.black]
