@@ -38,5 +38,4 @@ jobs:
       - run: tar --gzip --extract --verbose --strip-components=1 --file videojitter-*.tar.gz
       - run: python -m venv .venv
       - run: .venv/bin/pip install --requirement pylint-requirements.txt --requirement requirements.txt
-      # TODO: also pylint the test code
-      - run: .venv/bin/pylint src
+      - run: .venv/bin/pylint --verbose src videojitter_test
