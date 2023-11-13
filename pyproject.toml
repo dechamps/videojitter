@@ -16,8 +16,12 @@ preview = true  # For long string line breaks
 
 [tool.pylint.main]
 disable = [
+    "duplicate-code",
     "missing-module-docstring",
     "missing-class-docstring",
     "missing-function-docstring",
     "fixme",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-few-public-methods",
 ]
