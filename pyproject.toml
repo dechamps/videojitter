@@ -1,10 +1,14 @@
 [project]
 name = "videojitter"
-version = "0"
-dynamic = ["dependencies"]
+dynamic = ["dependencies", "version"]
 
 [build-system]
-requires = ["setuptools==68.2.2"]
+requires = [
+    "packaging==23.2",
+    "setuptools==68.2.2",
+    "setuptools-scm==8.0.4",
+    "typing_extensions==4.8.0",
+]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
@@ -12,6 +16,8 @@ build-backend = "setuptools.build_meta"
 # as an application in a dedicated venv. This ensures users end up running the package
 # with the exact same set of dependencies the code was developed and tested with.
 dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools_scm]
 
 [project.scripts]
 videojitter-analyze-recording = "videojitter.analyze_recording:main"
