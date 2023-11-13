@@ -47,6 +47,7 @@ strip-extras = true
 preview = true  # For long string line breaks
 
 [tool.pylint.main]
+ignore-paths = ["src/videojitter/_version_generated.py"]
 disable = [
     "duplicate-code",
     "missing-module-docstring",
