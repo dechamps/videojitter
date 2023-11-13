@@ -4,6 +4,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
       - run: python -m venv .venv
       - run: .venv/bin/pip install build
       - run: .venv/bin/python -m build --sdist
@@ -20,6 +23,9 @@ jobs:
         with:
           name: sdist
       - run: tar --gzip --extract --verbose --strip-components=1 --file videojitter-*.tar.gz
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
       - run: python -m venv .venv
       - run: .venv/bin/pip install build
       - run: .venv/bin/python -m build --wheel
@@ -35,6 +41,9 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: sdist
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
       - run: tar --gzip --extract --verbose --strip-components=1 --file videojitter-*.tar.gz
       - run: python -m venv .venv
       - run: .venv/bin/pip install --requirement pylint-requirements.txt --requirement requirements.txt
