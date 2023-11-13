@@ -565,7 +565,3 @@ class _Analyzer:
 
 def main():
     _Analyzer(_parse_arguments()).analyze()
-
-
-if __name__ == "__main__":
-    sys.exit(main())

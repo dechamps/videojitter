@@ -65,7 +65,3 @@ def main():
             },
             spec_file,
         )
-
-
-if __name__ == "__main__":
-    sys.exit(main())

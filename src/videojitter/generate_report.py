@@ -850,7 +850,3 @@ class _Generator:
 
 def main():
     _Generator(_parse_arguments()).generate()
-
-
-if __name__ == "__main__":
-    sys.exit(main())

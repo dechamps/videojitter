@@ -151,7 +151,3 @@ def main():
     )
     ffmpeg_process.stdin.close()
     ffmpeg_process.wait()
-
-
-if __name__ == "__main__":
-    sys.exit(main())
