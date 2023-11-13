@@ -1,0 +1,3 @@
+# pip-tools `pip-compile` input file for pinning pylint.
+-c requirements.txt
+pylint
