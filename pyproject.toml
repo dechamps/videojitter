@@ -11,6 +11,10 @@ dependencies = [
     "soundfile",
 ]
 
+[tool.pip-tools]
+generate-hashes = true
+strip-extras = true
+
 [tool.black]
 preview = true  # For long string line breaks
 
