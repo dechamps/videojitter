@@ -13,6 +13,13 @@ build-backend = "setuptools.build_meta"
 # with the exact same set of dependencies the code was developed and tested with.
 dependencies = {file = ["requirements.txt"]}
 
+[project.scripts]
+videojitter-analyze-recording = "videojitter.analyze_recording:main"
+videojitter-generate-fake-recording = "videojitter.generate_fake_recording:main"
+videojitter-generate-report = "videojitter.generate_report:main"
+videojitter-generate-spec = "videojitter.generate_spec:main"
+videojitter-generate-video = "videojitter.generate_video:main"
+
 [tool.pip-tools]
 # We could use generate-hashes here, but sadly we can't, because that would make the
 # resulting requirements.txt non-compliant with PEP 508, making it unusable for use in
