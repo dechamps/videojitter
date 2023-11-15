@@ -145,7 +145,7 @@
           ]
         },
         {
-          "calculate": "(datum.recording_timestamp_seconds - 5.0437067905813455)",
+          "calculate": "(datum.recording_timestamp_seconds - 5.043706790626049)",
           "as": "time_since_first_transition"
         },
         {

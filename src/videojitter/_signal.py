@@ -84,6 +84,17 @@ def convolve(signal1, signal2, *kargs, **kwargs):
     )
 
 
+def oaconvolve(signal1, signal2, *kargs, **kwargs):
+    """Sample-rate-aware equivalent of `scipy.signal.oaconvolve()`."""
+    assert signal1.sample_rate == signal2.sample_rate
+    return Signal(
+        samples=scipy.signal.oaconvolve(
+            signal1.samples, signal2.samples, *kargs, **kwargs
+        ),
+        sample_rate=signal1.sample_rate,
+    )
+
+
 def fromfile(*kargs, **kwargs):
     """Loads a mono signal using `soundfile.read()`."""
     samples, sample_rate = soundfile.read(*kargs, **kwargs)

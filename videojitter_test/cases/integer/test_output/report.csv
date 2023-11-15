@@ -124,7 +124,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 9.995137,True,0.022993,True
 10.02029,False,0.022976,True
 10.042377,True,0.024264,True
-10.067652,False,0.023098,True
+10.067651,False,0.023098,True
 10.088762,True,0.023287,True
 10.113968,False,0.02303,True
 10.136056,True,0.024264,True
@@ -636,7 +636,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 30.792605,True,0.031696,True
 30.825808,False,0.031027,True
 30.855837,True,0.032205,True
-30.890157,False,0.032143,True
+30.890157,False,0.032144,True
 30.919881,True,0.031901,True
 30.954409,False,0.032351,True
 30.98469,True,0.032458,True
@@ -1050,7 +1050,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 48.964227,True,0.031906,True
 48.998742,False,0.032339,True
 49.029028,True,0.032463,True
-49.063074,False,0.03187,True
+49.063074,False,0.031869,True
 49.093252,True,0.032355,True
 49.127472,False,0.032043,True
 49.158311,True,0.033015,True
@@ -1426,7 +1426,7 @@ recording_timestamp_seconds,edge_is_rising,time_since_previous_transition_second
 67.606195,True,0.043701,True
 67.652478,False,0.044106,True
 67.693998,True,0.043696,True
-67.74029,False,0.044116,True
+67.740291,False,0.044116,True
 67.781819,True,0.043705,True
 67.828093,False,0.044098,True
 67.869612,True,0.043696,True

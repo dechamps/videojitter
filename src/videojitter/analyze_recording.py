@@ -447,7 +447,7 @@ class _Analyzer:
             )
         )
         self._write_debug_wavfile("padded", lambda: recording)
-        slope = _signal.convolve(
+        slope = _signal.oaconvolve(
             recording,
             kernel._replace(samples=kernel.samples.astype(recording.samples.dtype)),
             "valid",
