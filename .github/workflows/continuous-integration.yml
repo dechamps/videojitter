@@ -1,4 +1,7 @@
 on: [push, pull_request]
+defaults:
+  run:
+    shell: bash
 jobs:
   build-sdist:
     runs-on: ubuntu-latest
@@ -35,9 +38,13 @@ jobs:
           path: dist/videojitter-*.whl
           if-no-files-found: error
   test:
-    # TODO: also test on Windows
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     needs: build-wheel
+    env:
+      VENV_BIN_DIR: ${{ startsWith(matrix.os, 'windows-') && 'Scripts' || 'bin' }}
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -46,35 +53,35 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m venv .venv
-      - run: .venv/bin/pip install videojitter-*.whl
-      - run: .venv/bin/videojitter-generate-spec
+      - run: .venv/$VENV_BIN_DIR/pip install videojitter-*.whl
+      - run: .venv/$VENV_BIN_DIR/videojitter-generate-spec
           --output-spec-file spec.json
-      - run: .venv/bin/videojitter-generate-fake-recording
+      - run: .venv/$VENV_BIN_DIR/videojitter-generate-fake-recording
           --spec-file spec.json
           --output-recording-file recording.wav
-      - run: .venv/bin/videojitter-analyze-recording
+      - run: .venv/$VENV_BIN_DIR/videojitter-analyze-recording
           --spec-file spec.json
           --recording-file recording.wav
           --output-edges-csv-file edges.csv
-      - run: .venv/bin/videojitter-generate-report
+      - run: .venv/$VENV_BIN_DIR/videojitter-generate-report
           --spec-file spec.json
           --edges-csv-file edges.csv
           --output-chart-file report.html
       - uses: FedericoCarboni/setup-ffmpeg@v2
-      - run: .venv/bin/videojitter-generate-video
+      - run: .venv/$VENV_BIN_DIR/videojitter-generate-video
           --spec-file spec.json
           --output-file video.mp4
       - uses: actions/checkout@v4
         with:
           path: git
-      - run: PATH="../.venv/bin:$PATH" ../.venv/bin/python -m videojitter_test
+      - run: PATH="../.venv/$VENV_BIN_DIR:$PATH" ../.venv/$VENV_BIN_DIR/python -m videojitter_test
         working-directory: git
       - run: git -C git diff --exit-code
         if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v3
         if: ${{ !cancelled() }}
         with:
-          name: test_output
+          name: test_output-${{ matrix.os }}
           path: git/videojitter_test/cases/*/test_output
           if-no-files-found: error
   pylint:
