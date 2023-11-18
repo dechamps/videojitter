@@ -77,7 +77,10 @@ async def _run_tests():
         async with throttle:
             await test_case.run()
 
-    async with asyncio.TaskGroup() as task_group:
+    # Note: asyncio.TaskGroup would normally be preferred, but it would force us to
+    # require Python 3.11 which is still a bit fresh at the time of writing.
+    await asyncio.gather(*[
+        run(_TestCase(tests_directory, test_module_name))
         for test_module_name in (
             [
                 module_info.name
@@ -85,8 +88,8 @@ async def _run_tests():
             ]
             if test_cases is None
             else test_cases
-        ):
-            task_group.create_task(run(_TestCase(tests_directory, test_module_name)))
+        )
+    ])
 
 
 def main():
