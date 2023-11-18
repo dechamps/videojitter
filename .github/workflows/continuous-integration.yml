@@ -134,6 +134,8 @@ jobs:
       - build-sdist
       - build-wheel
       - sigstore
+      # These are not strictly necessary, but it would be dangerous to create a release
+      # if they fail.
       - test
       - black
       - pylint
