@@ -91,3 +91,10 @@ jobs:
       - run: python -m venv .venv
       - run: .venv/bin/pip install --requirement pylint-requirements.txt --requirement requirements.txt
       - run: .venv/bin/pylint --verbose src videojitter_test
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install --requirement black-requirements.txt
+      - run: .venv/bin/black --diff --check .
