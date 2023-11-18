@@ -47,7 +47,23 @@ jobs:
           python-version: "3.11"
       - run: python -m venv .venv
       - run: .venv/bin/pip install videojitter-*.whl
+      - run: .venv/bin/videojitter-generate-spec
+          --output-spec-file spec.json
+      - run: .venv/bin/videojitter-generate-fake-recording
+          --spec-file spec.json
+          --output-recording-file recording.wav
+      - run: .venv/bin/videojitter-analyze-recording
+          --spec-file spec.json
+          --recording-file recording.wav
+          --output-edges-csv-file edges.csv
+      - run: .venv/bin/videojitter-generate-report
+          --spec-file spec.json
+          --edges-csv-file edges.csv
+          --output-chart-file report.html
       - uses: FedericoCarboni/setup-ffmpeg@v2
+      - run: .venv/bin/videojitter-generate-video
+          --spec-file spec.json
+          --output-file video.mp4
       - uses: actions/checkout@v4
         with:
           path: git
