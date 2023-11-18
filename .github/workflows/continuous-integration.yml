@@ -53,26 +53,38 @@ jobs:
       - run: .venv/$VENV_BIN_DIR/pip install videojitter-*.whl
       - run: .venv/$VENV_BIN_DIR/videojitter-generate-spec
           --output-spec-file spec.json
+        env:
+          PYTHONWARNINGS: error
       - run: .venv/$VENV_BIN_DIR/videojitter-generate-fake-recording
           --spec-file spec.json
           --output-recording-file recording.wav
+        env:
+          PYTHONWARNINGS: error
       - run: .venv/$VENV_BIN_DIR/videojitter-analyze-recording
           --spec-file spec.json
           --recording-file recording.wav
           --output-edges-csv-file edges.csv
+        env:
+          PYTHONWARNINGS: error
       - run: .venv/$VENV_BIN_DIR/videojitter-generate-report
           --spec-file spec.json
           --edges-csv-file edges.csv
           --output-chart-file report.html
+        env:
+          PYTHONWARNINGS: error
       - uses: FedericoCarboni/setup-ffmpeg@v2
       - run: .venv/$VENV_BIN_DIR/videojitter-generate-video
           --spec-file spec.json
           --output-file video.mp4
+        env:
+          PYTHONWARNINGS: error
       - uses: actions/checkout@v4
         with:
           path: git
       - run: PATH="../.venv/$VENV_BIN_DIR:$PATH" ../.venv/$VENV_BIN_DIR/python -m videojitter_test
         working-directory: git
+        env:
+          PYTHONWARNINGS: error
       - run: git -C git diff --exit-code
         if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v3
