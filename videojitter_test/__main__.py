@@ -84,7 +84,8 @@ async def _run_tests():
         for test_module_name in (
             [
                 module_info.name
-                for module_info in pkgutil.iter_modules([tests_directory])
+                # Note str() is necessary due to https://bugs.python.org/issue44061
+                for module_info in pkgutil.iter_modules([str(tests_directory)])
             ]
             if test_cases is None
             else test_cases
