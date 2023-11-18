@@ -10,7 +10,8 @@ classifiers = [
     "Topic :: Multimedia :: Video",
 ]
 dynamic = ["dependencies", "version"]
-requires-python = ">=3.11"  # For asyncio.TaskGroup
+# scipy 1.11.3 requires at least Python 3.9
+requires-python = ">=3.9"
 
 [build-system]
 requires = [
