@@ -26,7 +26,11 @@ def _parse_arguments():
         "--parallelism",
         help="How many test cases to run in parallel.",
         type=int,
-        default=len(os.sched_getaffinity(0)),
+        default=(
+            len(os.sched_getaffinity(0))
+            if "sched_getaffinity" in dir(os)
+            else os.cpu_count()
+        ),
     )
     return argument_parser.parse_args()
 
