@@ -121,11 +121,10 @@ class Pipeline:
         env = os.environ.copy()
         env["VIDEOJITTER_OVERRIDE_VERSION"] = "TESTING"
 
-        with open(
-            self.get_output_path() / f"{executable_name}.stdout", "wb"
-        ) as stdout, open(
-            self.get_output_path() / f"{executable_name}.stderr", "wb"
-        ) as stderr:
+        with (
+            open(self.get_output_path() / f"{executable_name}.stdout", "wb") as stdout,
+            open(self.get_output_path() / f"{executable_name}.stderr", "wb") as stderr,
+        ):
             await self._test_case.run_subprocess(
                 executable_name,
                 *args,
