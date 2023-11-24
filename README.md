@@ -87,7 +87,7 @@ oscilloscope that can export WAV files. In that case, great! You're good to go.
 Otherwise, you will need to obtain the hardware or build it yourself. But don't
 let that scare you! Building your own instrument is much simpler than you may
 think: a basic instrument can be built using only a few dollars worth of parts
-that can be assembled in minutes. TODO: elaborate
+that can be assembled in minutes. Read [this guide][] to find out how.
 
 #### Requirements on the instrument
 
@@ -319,3 +319,4 @@ See [`src/README`][].
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [pipx]: https://pypa.github.io/pipx/
 [Python]: https://www.python.org/
+[this guide]: INSTRUMENT.md
