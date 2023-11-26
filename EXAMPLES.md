@@ -25,7 +25,7 @@ test signal with no outliers - no late nor early frames.
 This example also demonstrates the ability of both the playback and measurement
 system to handle very high FPS - much higher than typical video content - as
 well as their amazing timing accuracy, which as described in the "fine print"
-(the text below the chart) is in the order of 10 µs (yes, *micro*seconds).
+(the text below the chart) is in the order of 10 µs (yes, _microseconds_).
 
 If you get this kind of result, your playback system is basically flawless as
 far as frame presentation timing is concerned.
