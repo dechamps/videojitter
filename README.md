@@ -4,6 +4,8 @@ _"You don't have to trust your eyes anymore"_
 
 <img src="videojitter_test/cases/asuswmp_23p_at_240hz/test_output/report.svg">
 
+[(more examples)][examples]
+
 _Brought to you by [Etienne Dechamps][] - [GitHub][]_
 
 ## What is it?
@@ -303,7 +305,8 @@ You can also save the results as CSV for further analysis using the
 
 Congratulations, you just made your first videojitter measurement!
 
-TODO: how to interpret the results
+For some hints on how to interpret typical results, take a look at the [examples
+gallery][examples].
 
 To make more measurements, just repeat the steps as necessary. You don't need to
 regenerate a spec nor a test video if their parameters haven't changed.
@@ -319,6 +322,7 @@ See [`src/README`][].
 [adjust the code]: src/
 [Audacity]: https://www.audacityteam.org/
 [Etienne Dechamps]: mailto:etienne@edechamps.fr
+[examples]: EXAMPLES.md
 [file a feature request]: https://github.com/dechamps/videojitter/issues
 [file an issue]: https://github.com/dechamps/videojitter/issues
 [participate in discussions]:
