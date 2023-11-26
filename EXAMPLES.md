@@ -27,7 +27,7 @@ system to handle very high FPS - much higher than typical video content - as
 well as their amazing timing accuracy, which as described in the "fine print"
 (the text below the chart) is in the order of 10 µs (yes, _microseconds_).
 
-If you get this kind of result, your playback system is basically flawless as
+If you get this kind of result, your playback system is pretty much flawless as
 far as frame presentation timing is concerned.
 
 ## Isolated timing errors
