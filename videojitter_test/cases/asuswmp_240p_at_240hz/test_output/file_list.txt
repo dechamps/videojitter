@@ -22,3 +22,5 @@ zoomed_report.csv
 zoomed_report.html
 zoomed_report.json
 zoomed_report.svg
+zoomed_videojitter-generate-report.stderr
+zoomed_videojitter-generate-report.stdout

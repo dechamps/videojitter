@@ -123,18 +123,23 @@ class Pipeline:
             "--output-chart-file",
             svg_report_chart_path,
             *args,
+            prefix=prefix,
         )
         prettify_json(json_report_chart_path)
         prettify_xml(svg_report_chart_path)
 
-    async def _run_executable(self, executable_name, *args):
+    async def _run_executable(self, executable_name, *args, prefix=""):
         # Prevent non-deterministic output due to version string changes.
         env = os.environ.copy()
         env["VIDEOJITTER_OVERRIDE_VERSION"] = "TESTING"
 
         with (
-            open(self.get_output_path() / f"{executable_name}.stdout", "wb") as stdout,
-            open(self.get_output_path() / f"{executable_name}.stderr", "wb") as stderr,
+            open(
+                self.get_output_path() / f"{prefix}{executable_name}.stdout", "wb"
+            ) as stdout,
+            open(
+                self.get_output_path() / f"{prefix}{executable_name}.stderr", "wb"
+            ) as stderr,
         ):
             await self._test_case.run_subprocess(
                 executable_name,
