@@ -5,6 +5,11 @@ For more details on how the videojitter test suite works, see [its README][].
 Each subdirectory is a test case that checks a specific input and videojitter
 commands/options against specific output goldens.
 
+**Note:** in some cases, report chart _images_ are treated as test goldens and
+included in version control. This is usually because the images are used as
+examples in videojitter documentation - this mechanism is a convenient way to
+ensure the images always stay in sync with any changes to videojitter outputs.
+
 Each test case falls under one of the following:
 
 ## Synthetic inputs
