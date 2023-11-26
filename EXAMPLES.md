@@ -153,5 +153,100 @@ The reason why the colours swap positions in the middle of the first chart is
 because of the intentionally delayed transition, which causes the pattern
 between black and white frames to be inverted.
 
+## Artefacts caused by overly slow display/instrument
+
+<img src="videojitter_test/cases/asuswmp_240p_at_240hz/test_output/report.svg">
+
+The above result was obtained by playing a 240 FPS video on the built-in "Nebula
+HDR" display of an ASUS ROG Flow X16 2023 laptop using Windows Media Player on
+Windows 11. The display is being driven at 240 Hz.
+
+The instrument used to make this measurement has a documented response time of
+8.5 ms, making it challenging to measure a 240 FPS video which has frame
+intervals of ~4.2 ms. It is quite likely that even the display itself isn't fast
+enough anyway: indeed, current-technology LCD displays are unlikely to be able
+to complete a full black-white transition in such a short amount of time.
+
+In this way the videojitter test video is arguably more demanding than
+real-world content, which rarely flips between 0% black and 100% white in the
+span of a single frame. Not to mention 240 FPS video is not exactly commonplace…
+
+It is not possible, in general, to distinguish between a slow instrument and a
+slow display in a videojitter measurement, as both would look roughly the same
+in the raw recording. However, we can discuss the effects of a "slow recording"
+as shown in the above example.
+
+The chart _mostly_ looks right despite the equipment being driven to its limits.
+videojitter will still attempt to extract what it can from the recording, and is
+able to time the vast majority of transitions correctly.
+
+However, the text at the bottom of the chart warns that 4 transitions went
+"missing". Also, things look a bit weird when sudden changes in frame durations
+occur, such as around the intentionally delayed transition and the outlier at
+around 35 seconds. Let's zoom into the latter:
+
+<img src="videojitter_test/cases/asuswmp_240p_at_240hz/test_output/zoomed_report.svg">
+
+One transition happened ~1.7 ms after the previous one, something that the
+display is not even capable of!
+
+The problem with sudden changes in frame durations is that, if a frame is
+displayed for longer, then the slow response time has less of an impact and the
+display and instrument will be able to go further into the transition than they
+otherwise could. This may sound like a good thing, but that actually poses a
+challenge for the videojitter analyzer because this means the waveform of longer
+transitions look different from shorter transitions - not just in duration, but
+also in amplitude and shape. This makes it harder for videojitter to determine
+where the true transition time is.
+
+Consider, for example, how the intentionally delayed transition looks like in
+the raw recording:
+
+<img src="img/audacity-slow-delayed.png">
+
+One can see that, because the delayed transition is a longer frame, the signal
+peaks significantly higher than for the surrounding transitions. In this
+situation, there is ambiguity (illustrated by the highlighted area) as to what
+the precise transition time should be. Currently videojitter will tend to pick a
+time closer to the right of the highlighted area, which in this case happens to
+be wrong (but it might not be in other cases, which is what makes this problem
+difficult to solve). This leads to videojitter interpreting the transition as
+being excessively late. Consequently, the next transition is interpreted as
+being excessively early - hence impossibly quick transitions are being reported.
+
+This also leads to videojitter getting confused as to which frames are black and
+which frames are white. Videojitter uses the delayed transition to deduce this,
+as it knows what color the longer-lasting frame is supposed to be. Here the true
+delayed transition is the falling edge after the large peak, but videojitter
+thinks it's the (mistimed) rising edge before the peak. Therefore, videojitter
+incorrectly deduces that rising edges are white and falling edges are black - in
+reality it's the opposite in this particular measurement.
+
+These issues can be more or less pronounced depending on the frame rate and
+instrument/display speed. Here's another example where the same 240 Hz display
+is being measured playing 60 Hz video where the player (VLC in this case) is
+missing its target very frequently, leading to many random shifts in frame
+durations:
+
+<img src="videojitter_test/cases/asusvlc_60p_at_240hz/test_output/report.svg">
+
+In that example we can see that videojitter is slightly mistiming most
+transitions due to the sudden random shifts, which causes the lines on the chart
+to look fuzzy/noisy instead of exactly matching a multiple of the display
+refresh interval. Looking at the raw recording, it becomes clear why videojitter
+struggles to precisely time these transitions, given their amplitude and shape
+is all over the place:
+
+<img src="img/audacity-asusvlc_60p_at_240hz.png">
+
+The overall takeaway here is: while videojitter is still mostly usable when
+measuring high frame rates using excessively slow displays and/or instruments,
+it is important to watch out for these artefacts while interpreting
+measurements. People making 24 FPS measurements can normally ignore these issues
+as that frame rate should be well within the limits of any reasonable display
+and instrument.
+
+TODO: pixel5vlc_23p TODO: pixel5vlc_59p
+
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228
