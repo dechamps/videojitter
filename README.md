@@ -237,12 +237,21 @@ waveform, you can use [Audacity][].
 
 In particular you'd want to check that the test signal is actually present - it
 should be visually obvious from the waveform where the test signal begins and
-ends.
+ends. In this example the test signal starts at around 25 seconds into the
+recording and ends 60 seconds later:
 
-You'd also want to zoom into the test signal and look for signs of clipping.
-Clipping can sometimes be remediated by re-recording with a lower gain/volume or
-by moving the light sensor further away from the display. videojitter will often
-still be able to produce sensible results even with a clipped signal, though.
+<img src="img/audacity-signal.png">
+
+Zooming into the start of the test signal - the periodicity induced by the 24
+"blinks" per second from the test video is clearly visible:
+
+<img src="img/audacity-signal-start.png">
+
+You should also look for signs of clipping, i.e. too much light overloading the
+sensor and/or the ADC. Clipping can sometimes be remediated by re-recording with
+a lower gain/volume or by moving the light sensor further away from the display.
+videojitter will often still be able to produce sensible results even with a
+clipped signal, though.
 
 Save the recording into a WAV file. Make sure the WAV file is mono - if you have
 more than one channel, remove all other channels before saving (in Audacity,
