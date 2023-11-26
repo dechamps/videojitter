@@ -24,7 +24,7 @@ def _parse_arguments():
     )
     argument_parser.add_argument(
         "--parallelism",
-        help="How many test cases to run in parallel.",
+        help="How many subprocesses to run in parallel.",
         type=int,
         default=(
             len(os.sched_getaffinity(0))
@@ -36,10 +36,11 @@ def _parse_arguments():
 
 
 class _TestCase:
-    def __init__(self, root_directory, name):
+    def __init__(self, root_directory, name, subprocess_throttle):
         self._name = name
         self._module = importlib.import_module(f"videojitter_test.cases.{name}")
         self._path = root_directory / name
+        self._subprocess_throttle = subprocess_throttle
 
     async def run(self):
         try:
@@ -52,35 +53,32 @@ class _TestCase:
 
     async def run_subprocess(self, *args, env, stdout, stderr):
         args = [str(arg) for arg in args]
-        print(f"{self._name}: {args}")
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdin=subprocess.DEVNULL,
-            env=env,
-            stdout=stdout,
-            stderr=stderr,
-        )
-        await process.communicate()
-        if process.returncode != 0:
-            raise RuntimeError(
-                f"Subprocess terminated with error code {process.returncode}"
+        async with self._subprocess_throttle:
+            print(f"{self._name}: {args}")
+            process = await asyncio.create_subprocess_exec(
+                *args,
+                stdin=subprocess.DEVNULL,
+                env=env,
+                stdout=stdout,
+                stderr=stderr,
             )
+            await process.communicate()
+            if process.returncode != 0:
+                raise RuntimeError(
+                    f"Subprocess terminated with error code {process.returncode}"
+                )
 
 
 async def _run_tests():
     args = _parse_arguments()
     test_cases = getattr(args, "test_case", None)
     tests_directory = pathlib.Path("videojitter_test") / "cases"
-    throttle = asyncio.Semaphore(args.parallelism)
-
-    async def run(test_case):
-        async with throttle:
-            await test_case.run()
+    subprocess_throttle = asyncio.Semaphore(args.parallelism)
 
     # Note: asyncio.TaskGroup would normally be preferred, but it would force us to
     # require Python 3.11 which is still a bit fresh at the time of writing.
     await asyncio.gather(*[
-        run(_TestCase(tests_directory, test_module_name))
+        _TestCase(tests_directory, test_module_name, subprocess_throttle).run()
         for test_module_name in (
             [
                 module_info.name
