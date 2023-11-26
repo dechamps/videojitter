@@ -125,5 +125,33 @@ timing errors shown above. This is because what really matters is not display
 refresh rate, but the frame rate of the test video. In this example the test
 video is 24/1.001 FPS which is well within the limits of the instrument.
 
+## 3:2 "23p@60Hz" pattern
+
+<img src="videojitter_test/cases/evr_23p_at_59hz/test_output/report.svg">
+
+The above is a textbook example of a 24 FPS test video being played on a display
+being driven at a 60 Hz refresh rate, leading to the infamous "3:2 pattern"
+which is very commonplace when playing video on PC.
+
+Basically, the problem is that 60 is not a whole multiple of 24, so the only way
+for the video player to make that work is to display a frame for 2 refresh
+intervals (2/60), then 3 refresh intervals (3/60), then 2, then 3, etc. This
+leads to the correct _average_ overall frame duration of 5/120 or 1/24 so the
+video can play at the proper speed, but at the cost of a very significant timing
+error on each frame.
+
+On a videojitter chart, this takes the form of a very obvious pattern where the
+frame transition intervals arrange themselves into two clear "lines": one at ~3
+3ms (2 60 Hz refresh intervals) and one at ~50 ms (3 60 Hz refresh intervals).
+
+Zooming in, we can easily observe that frame durations indeed alternate between
+the two from one frame to the next, as expected:
+
+<img src="videojitter_test/cases/evr_23p_at_59hz/test_output/zoomed_report.svg">
+
+The reason why the colours swap positions in the middle of the first chart is
+because of the intentionally delayed transition, which causes the pattern
+between black and white frames to be inverted.
+
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228

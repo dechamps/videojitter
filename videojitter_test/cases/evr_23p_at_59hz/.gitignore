@@ -2,3 +2,7 @@
 !/test_output/*.stdout
 !/test_output/report.csv
 !/test_output/report.json
+
+# Used in docs
+!/test_output/report.svg
+!/test_output/zoomed_report.svg
