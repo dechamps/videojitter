@@ -141,8 +141,8 @@ video can play at the proper speed, but at the cost of a very significant timing
 error on each frame.
 
 On a videojitter chart, this takes the form of a very obvious pattern where the
-frame transition intervals arrange themselves into two clear "lines": one at ~3
-3ms (2 60 Hz refresh intervals) and one at ~50 ms (3 60 Hz refresh intervals).
+frame transition intervals arrange themselves into two clear "lines": one at
+~33ms (2 60 Hz refresh intervals) and one at ~50 ms (3 60 Hz refresh intervals).
 
 Zooming in, we can easily observe that frame durations indeed alternate between
 the two from one frame to the next, as expected:
