@@ -92,5 +92,38 @@ time:
 
 <img src="videojitter_test/cases/lg_23p/test_output/zoomed_report.svg">
 
+## Periodic timing errors
+
+<img src="videojitter_test/cases/asuswmp_23p_at_240hz/test_output/report.svg">
+
+The above result was obtained by playing a 24/1.001 FPS video on the built-in
+"Nebula HDR" display of an ASUS ROG Flow X16 2023 laptop using Windows Media
+Player on Windows 11. The display is being driven at 240 Hz.
+
+Aside from a couple of outliers near the 11-second mark, what is interesting in
+this example is a seemingly periodic pattern of delayed frames. Each frame is
+delayed by exactly one refresh interval, which at 240 Hz is ~4.2 ms.
+
+This phenomenon can be explained by the display refresh rate (240 Hz) not being
+a perfect whole multiple of the video FPS (24/1.001 FPS). Most of the time each
+frame is displayed for exactly 10 refresh intervals, which is ~41.666666 ms, but
+that's slightly wrong. In a 24/1.001 FPS video, each frame should be displayed
+for slightly longer: ~41.708333 ms. As a result, an absolute, constant timing
+error of ~0.041666 ms accumulates with each new frame. This goes on until the
+error reaches the duration of a whole refresh interval (~4.16666) ms), which
+happens after exactly 100 frames or ~4.2 seconds. At that point, the system
+delays the next frame by one refresh interval so that the playback clock can
+"catch up" to the excessively fast display refresh clock. If this hypothesis is
+correct, we should expect to see a transition delayed by ~4.2 ms every ~4.2
+seconds… and that is exactly what we see here!
+
+This example also demonstrates that you don't need a fast instrument to
+accurately measure high refresh rate displays: here the display refresh interval
+is ~4.2 ms, but it was measured using an instrument that takes ~8.5 ms to
+settle. Even then, the instrument was still able to very precisely measure the
+timing errors shown above. This is because what really matters is not display
+refresh rate, but the frame rate of the test video. In this example the test
+video is 24/1.001 FPS which is well within the limits of the instrument.
+
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228
