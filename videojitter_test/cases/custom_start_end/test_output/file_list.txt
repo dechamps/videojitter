@@ -1,0 +1,6 @@
+report.csv
+report.html
+report.json
+report.svg
+videojitter-generate-report.stderr
+videojitter-generate-report.stdout

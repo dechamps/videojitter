@@ -39,6 +39,24 @@ def _parse_arguments():
         action="append",
     )
     argument_parser.add_argument(
+        "--chart-start-seconds",
+        help=(
+            "Initial chart timestamp axis start. If unset, the chart starts on the"
+            " first transition. Useful to generate pre-zoomed charts."
+        ),
+        type=float,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
+        "--chart-end-seconds",
+        help=(
+            "Initial chart timestamp axis end. If unset, the chart ends on the last"
+            " transition. Useful to generate pre-zoomed charts."
+        ),
+        type=float,
+        default=argparse.SUPPRESS,
+    )
+    argument_parser.add_argument(
         "--output-csv-file",
         help="Output the results as CSV to standard output",
         default=argparse.SUPPRESS,
@@ -137,6 +155,8 @@ def _generate_chart(
     title,
     first_transition_recording_timestamp_seconds,
     high_is_white,
+    time_start_seconds,
+    time_end_seconds,
     minimum_time_between_transitions_seconds,
     maximum_time_between_transitions_seconds,
     mean_time_between_transitions,
@@ -197,7 +217,20 @@ def _generate_chart(
         .mark_point(filled=True)
         .encode(
             alt.X("time_since_first_transition", type="quantitative")
-            .scale(zero=False, nice=False)
+            .scale(
+                zero=False,
+                nice=False,
+                **(
+                    {"domainMin": time_start_seconds}
+                    if time_start_seconds is not None
+                    else {}
+                ),
+                **(
+                    {"domainMax": time_end_seconds}
+                    if time_end_seconds is not None
+                    else {}
+                ),
+            )
             .axis(
                 labelExpr=alt.expr.format(alt.datum.value, "~s") + "s",
                 title="Time since first transition",
@@ -770,6 +803,16 @@ class _Generator:
             f" {self._nominal_fps():.3f} nominal FPS",
             transitions_interval_seconds.left,
             high_is_white,
+            getattr(
+                self._args,
+                "chart_start_seconds",
+                None,
+            ),
+            getattr(
+                self._args,
+                "chart_end_seconds",
+                None,
+            ),
             self._args.chart_minimum_time_between_transitions_seconds,
             self._args.chart_maximum_time_between_transitions_seconds,
             np.round(
