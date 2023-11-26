@@ -153,6 +153,25 @@ The reason why the colours swap positions in the middle of the first chart is
 because of the intentionally delayed transition, which causes the pattern
 between black and white frames to be inverted.
 
+## Severe presentation delays
+
+<img src="videojitter_test/cases/pixel5vlc_59p/test_output/report.svg">
+
+The above result was obtained by playing a 60/1.001 FPS video on a Google Pixel
+5 smartphone using the Android VLC media player app.
+
+While the video is being played correctly most of the time, one can easily spot
+severe issues around the 10, 27 and 46 second marks. This is consistent with
+what could be observed during measurement, where the playback system was visibly
+struggling to the naked eye. The text below the chart also points out that
+hundreds of transitions are missing, suggesting that the playback system dropped
+many frames. It would appear this playback system is simply not capable of
+keeping up with the frame rate of the test video.
+
+This example demonstrates that, even when the system under test is badly
+misbehaving, videojitter can still make sense of the data and produces reports
+that accurately reflects what went right and what went wrong.
+
 ## Artefacts caused by overly slow display/instrument
 
 <img src="videojitter_test/cases/asuswmp_240p_at_240hz/test_output/report.svg">
@@ -245,8 +264,6 @@ it is important to watch out for these artefacts while interpreting
 measurements. People making 24 FPS measurements can normally ignore these issues
 as that frame rate should be well within the limits of any reasonable display
 and instrument.
-
-TODO: pixel5vlc_23p TODO: pixel5vlc_59p
 
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228
