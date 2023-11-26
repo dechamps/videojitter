@@ -238,8 +238,9 @@ which frames are white. Videojitter uses the delayed transition to deduce this,
 as it knows what color the longer-lasting frame is supposed to be. Here the true
 delayed transition is the falling edge after the large peak, but videojitter
 thinks it's the (mistimed) rising edge before the peak. Therefore, videojitter
-incorrectly deduces that rising edges are white and falling edges are black - in
-reality it's the opposite in this particular measurement.
+incorrectly deduces that rising edges are transitions to white and falling edges
+are transitions to black - in reality it's the opposite in this particular
+measurement.
 
 These issues can be more or less pronounced depending on the frame rate and
 instrument/display speed. Here's another example where the same 240 Hz display
