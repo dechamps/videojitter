@@ -1,5 +1,6 @@
 import json
 import os
+import xml.etree.ElementTree as ET
 
 
 def prettify_json(path):
@@ -7,6 +8,12 @@ def prettify_json(path):
         contents = json.load(file)
     with open(path, "w", encoding="utf-8") as file:
         json.dump(contents, file, indent=2)
+
+
+def prettify_xml(path):
+    element_tree = ET.parse(path)
+    ET.indent(element_tree)
+    element_tree.write(path, encoding="utf-8")
 
 
 def _reset_directory(path):
@@ -100,6 +107,7 @@ class Pipeline:
 
     async def run_generate_report(self, *args):
         json_report_chart_path = self.get_write_path("report.json")
+        svg_report_chart_path = self.get_write_path("report.svg")
         await self._run_executable(
             "videojitter-generate-report",
             "--spec-file",
@@ -113,10 +121,11 @@ class Pipeline:
             "--output-chart-file",
             self.get_write_path("report.html"),
             "--output-chart-file",
-            self.get_write_path("report.svg"),
+            svg_report_chart_path,
             *args,
         )
         prettify_json(json_report_chart_path)
+        prettify_xml(svg_report_chart_path)
 
     async def _run_executable(self, executable_name, *args):
         # Prevent non-deterministic output due to version string changes.
