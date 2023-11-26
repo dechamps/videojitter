@@ -73,7 +73,7 @@ the display refresh interval in this example was 120/1.001 Hz - the frame was
 simply displayed one refresh interval too early or too late, as one would
 naturally expect.
 
-## Frequent timing errors
+## Systematic timing errors
 
 <img src="videojitter_test/cases/lg_23p/test_output/report.svg">
 
@@ -85,6 +85,12 @@ not isolated. The typical error is ±8.3 ms, which suggests that the TV is
 running at 120 Hz internally. The built-in video player seems unable to reliably
 meet individual refresh targets and is constantly "missing the mark". This is a
 surprisingly poor result for a built-in hardware video player.
+
+While it may look like the errors follow a precise periodic pattern, this is not
+quite the case - if we zoom in we see the behavior is not exactly the same each
+time:
+
+<img src="videojitter_test/cases/lg_23p/test_output/zoomed_report.svg">
 
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228

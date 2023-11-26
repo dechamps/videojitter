@@ -18,3 +18,7 @@ videojitter-analyze-recording.stderr
 videojitter-analyze-recording.stdout
 videojitter-generate-report.stderr
 videojitter-generate-report.stdout
+zoomed_report.csv
+zoomed_report.html
+zoomed_report.json
+zoomed_report.svg

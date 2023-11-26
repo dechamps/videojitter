@@ -105,9 +105,9 @@ class Pipeline:
             *args,
         )
 
-    async def run_generate_report(self, *args):
-        json_report_chart_path = self.get_write_path("report.json")
-        svg_report_chart_path = self.get_write_path("report.svg")
+    async def run_generate_report(self, *args, prefix=""):
+        json_report_chart_path = self.get_write_path(prefix + "report.json")
+        svg_report_chart_path = self.get_write_path(prefix + "report.svg")
         await self._run_executable(
             "videojitter-generate-report",
             "--spec-file",
@@ -115,11 +115,11 @@ class Pipeline:
             "--edges-csv-file",
             self.get_read_path("edges.csv"),
             "--output-csv-file",
-            self.get_write_path("report.csv"),
+            self.get_write_path(prefix + "report.csv"),
             "--output-chart-file",
             json_report_chart_path,
             "--output-chart-file",
-            self.get_write_path("report.html"),
+            self.get_write_path(prefix + "report.html"),
             "--output-chart-file",
             svg_report_chart_path,
             *args,

@@ -5,3 +5,4 @@
 
 # Used in docs
 !/test_output/report.svg
+!/test_output/zoomed_report.svg
