@@ -2,6 +2,8 @@
 
 _"You don't have to trust your eyes anymore"_
 
+<img src="videojitter_test/cases/asuswmp_23p_at_240hz/test_output/report.svg">
+
 _Brought to you by [Etienne Dechamps][] - [GitHub][]_
 
 ## What is it?
