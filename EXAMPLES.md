@@ -101,8 +101,8 @@ The above result was obtained by playing a 24/1.001 FPS video on the built-in
 Player on Windows 11. The display is being driven at 240 Hz.
 
 Aside from a couple of outliers near the 11-second mark, what is interesting in
-this example is a seemingly periodic pattern of delayed frames. Each frame is
-delayed by exactly one refresh interval, which at 240 Hz is ~4.2 ms.
+this example is a seemingly periodic pattern of delayed frames. The affected
+frames are delayed by exactly one refresh interval, which at 240 Hz is ~4.2 ms.
 
 This phenomenon can be explained by the display refresh rate (240 Hz) not being
 a perfect whole multiple of the video FPS (24/1.001 FPS). Most of the time each
