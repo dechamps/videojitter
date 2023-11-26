@@ -13,6 +13,7 @@ edges.csv
 report.csv
 report.html
 report.json
+report.svg
 videojitter-analyze-recording.stderr
 videojitter-analyze-recording.stdout
 videojitter-generate-report.stderr

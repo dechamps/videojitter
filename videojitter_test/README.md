@@ -2,8 +2,15 @@
 
 ## How to run the test suite
 
-Follow the [developer setup instructions][], then run the following from the
-root of the repo within the Python environment:
+Follow the [developer setup instructions][], then install the test-specific
+dependencies into the Python environment:
+
+```shell
+pip3 install -r test-requirements.txt
+```
+
+You can then run the test suite using the following command at the root
+directory:
 
 ```shell
 python3 -m videojitter_test

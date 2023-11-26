@@ -112,6 +112,8 @@ class Pipeline:
             json_report_chart_path,
             "--output-chart-file",
             self.get_write_path("report.html"),
+            "--output-chart-file",
+            self.get_write_path("report.svg"),
             *args,
         )
         prettify_json(json_report_chart_path)

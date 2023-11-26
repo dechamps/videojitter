@@ -1,0 +1,6 @@
+# pip-tools `pip-compile` input file for running videojitter tests.
+-c requirements.txt
+
+# Required for outputting charts directly as images. See:
+#   https://altair-viz.github.io/user_guide/saving_charts.html#vl-convert
+vl-convert-python

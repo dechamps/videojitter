@@ -14,6 +14,7 @@ recording.wav
 report.csv
 report.html
 report.json
+report.svg
 spec.json
 videojitter-analyze-recording.stderr
 videojitter-analyze-recording.stdout
