@@ -81,7 +81,7 @@ The above result was obtained by playing a 24/1.001 FPS video on the built-in
 player of an LG G1 OLED TV.
 
 Just like the previous example we observe timing errors, but this time they are
-not isolated. The typical error is ±8.3 ms, which suggests that the TV is
+not one-offs. The typical error is ±8.3 ms, which suggests that the TV is
 running at 120 Hz internally. The built-in video player seems unable to reliably
 meet individual refresh targets and is constantly "missing the mark". This is a
 surprisingly poor result for a built-in hardware video player.
