@@ -61,10 +61,10 @@ In this particular case, the delayed transition at about 6 seconds into the
 recording was likely caused by the video output clock running too fast relative
 to the playback clock, forcing the system to delay a frame to compensate.
 
-The second pair of late and early transitions at about 25 seconds was likely
-caused by the playback system "missing a beat" on a single frame (possibly due
-to a thread scheduling deadline miss), and then showing a later frame earlier to
-"catch up".
+The second pair of late and early transitions around the 25 second mark was
+likely caused by the playback system "missing a beat" on a single frame
+(possibly due to a thread scheduling deadline miss), and then showing a later
+frame earlier to "catch up".
 
 It's also worth noting the amount of time by which the transition interval
 deviated on these early and late frames. It turns out that every one of these
