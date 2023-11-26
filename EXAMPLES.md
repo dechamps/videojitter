@@ -45,7 +45,7 @@ The line is higher, which simply reflects the slower frame rate (longer
 transitions between frames). It's worth noting that, even though the display is
 running at 120 Hz, the test video is running at 24 FPS, so that's what
 videojitter sees - obviously it cannot observe individual display refreshes if
-the frame does not change.
+the frame does not change (same goes for the human eye).
 
 More importantly, one immediately spots a few _unexpected_ outliers on the chart
 (the intentionally delayed transition is also an outlier, but it's expected).
