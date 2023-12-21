@@ -205,26 +205,13 @@ You will notice that the test video is divided into 3 sections:
 3. The third section is called "cooldown" and is the same as "warmup".
 
 The warmup and cooldown sections don't have to run for their full durations and
-are not considered part of the test signal.
+are not considered part of the test signal. For more information on warmup and
+cooldown, see
+[this FAQ](FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns).
 
 Make sure that the instrument is far enough away from the display that it can
 "see" many squares of the warmup/cooldown checker pattern. Otherwise videojitter
 might mistake the pattern for the test signal itself.
-
-The reason why the warmup and cooldown patterns look this way is to ensure the
-instrument long-term average light level does not undergo a sudden shift at the
-boundaries of the test signal, which could otherwise cause distortion especially
-with AC-coupled instruments.
-
-The "warmup" section also serves as padding to prevent video player UI elements
-from interfering with the measurement when playback starts.
-
-The warmup and cooldown sections can be removed entirely using
-`videojitter-generate-video` options, which can be useful if you want to measure
-right up against the start or end of playback, so long as you're prepared to
-deal with the potential negative consequences on data quality.
-
-TODO: move the last two paragraphs elsewhere (FAQ?)
 
 ### Step 6: stop recording
 
