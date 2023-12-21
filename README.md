@@ -246,8 +246,8 @@ recording and ends 60 seconds later:
 
 <img src="img/audacity-signal.png">
 
-Zooming into the start of the test signal - the periodicity induced by the 24
-"blinks" per second from the test video is clearly visible:
+Zooming into the start of the test signal - the periodicity induced by the 12
+"blinks" per second from the 24 FPS test video is clearly visible:
 
 <img src="img/audacity-signal-start.png">
 
