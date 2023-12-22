@@ -13,7 +13,7 @@ def prettify_json(path):
 def prettify_xml(path):
     element_tree = ET.parse(path)
     ET.indent(element_tree)
-    element_tree.write(path, encoding="utf-8")
+    element_tree.write(path, encoding="utf-8", short_empty_elements=False)
 
 
 def _reset_directory(path):
