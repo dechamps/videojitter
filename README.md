@@ -202,14 +202,12 @@ You will notice that the test video is divided into 3 sections:
      halfway through the video. This repeated frame is called an _intentionally
      delayed transition_; it is part of the test video and provides a marker for
      the analyzer. For more information about the intententionally delayed
-     transition, see
-     [this FAQ](FAQ.md#what-is-the-purpose-of-the-intentionally-delayed-transition).
+     transition, see [this FAQ][intentionally-delayed-transition-faq].
 3. The third section is called "cooldown" and is the same as "warmup".
 
 The warmup and cooldown sections don't have to run for their full durations and
 are not considered part of the test signal. For more information on warmup and
-cooldown, see
-[this FAQ](FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns).
+cooldown, see [this FAQ][warmup-cooldown-faq].
 
 Make sure that the instrument is far enough away from the display that it can
 "see" many squares of the warmup/cooldown checker pattern. Otherwise videojitter
@@ -318,9 +316,13 @@ See [`src/README`][].
   https://github.com/dechamps/videojitter/discussions
 [FFmpeg]: https://ffmpeg.org/
 [GitHub]: https://github.com/dechamps/videojitter
+[intentionally-delayed-transition-faq]:
+  FAQ.md#what-is-the-purpose-of-the-intentionally-delayed-transition
 [`src/README`]: src/README.md
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [pipx]: https://pypa.github.io/pipx/
 [Python]: https://www.python.org/
 [this guide]: INSTRUMENT.md
+[warmup-cooldown-faq]:
+  FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns
