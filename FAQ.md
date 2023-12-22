@@ -93,5 +93,61 @@ Edge direction compensation can be disabled by passing the
 will likely result in the chart showing two separate "lines" as the transition
 interval changes back and forth with every frame.
 
+## What is the purpose of the "intentionally delayed transition"?
+
+If you look closely at the test video that videojitter generates, you will
+notice that there is a single frame exactly halfway through that is repeated,
+i.e. the same color is shown for two frames in a row. This is not a bug;
+videojitter duplicates that frame on purpose to create an _intentionally delayed
+transition_.
+
+This is done for two reasons:
+
+1. To determine the polarity of the recording.
+   - Intuitively, you'd expect a higher light level to translate to a higher
+     signal level in the recording, but that is not always the case; with some
+     instruments it's the opposite.
+   - For user convenience, videojitter attempts to autodetect the polarity of
+     the recording. The way this works is, videojitter looks at the recording
+     level for the repeated frame, and since it knows what color the repeated
+     frame is, it can deduce the mapping between signal level and frame color.
+   - If the autodetection succeeds, videojitter will report frame colors (i.e.
+     "black" or "white"); if it fails, the chart will only show edge direction
+     (i.e. "falling edge" or "rising edge").
+2. To break up any patterns that affect the relative timing of successive pairs
+   of transitions.
+   - The textbook example is a 3:2 "24p@60Hz" pattern, where every other frame
+     is displayed for a different amount of time.
+   - If there was no delayed transition, the pattern would _de facto_ induce a
+     systematic delay in white frames (or black frames).
+   - This is a problem because it would interact badly with [edge direction
+     compensation][]: indeed videojitter would be unable to tell whether the
+     difference in duration between black frames and white frames is due to
+     benign differences in display pixel response (which we don't care about),
+     or whether it's caused by actual differences in frame presentation timing
+     such as a 3:2 pattern (which we definitely do want to know about).
+   - The goal of the delayed transition is to invert that relationship,
+     decorrelating frame color from any frame timing pattern.
+
+During report generation, videojitter will attempt to automatically locate the
+intentionally delayed transition among the other transitions in the recording
+and annotate it accordingly. Note this autodetection relies on heuristics (it's
+basically looking for a transition that "stands out" from its neighbors around
+the timestamp where the delayed transition is supposed to be), which means it
+doesn't always work. If autodetection fails, the delayed transition will not be
+annotated on the chart and frame colors won't be shown. It's also possible for
+videojitter to [incorrectly locate the delayed transition][], which means the
+annotation will be on the wrong transition, and the frame color information may
+be inverted as well.
+
+You can omit the delayed transition from the test video (and subsequent
+analysis) by passing the `--no-delayed-transition` option to
+`videojitter-generate-spec`. Note that this will prevent videojitter from
+determining frame colors, and it will also disable [edge direction
+compensation][] by default to avoid potentially misleading results.
+
+[edge direction compensation]: #what-is-edge-direction-compensation
 [measure display pixel response]:
   https://tftcentral.co.uk/articles/response_time_testing
+[incorrectly locate the delayed transition]:
+  EXAMPLES.md#artefacts-caused-by-overly-slow-displayinstrument
