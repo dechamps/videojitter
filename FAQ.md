@@ -146,6 +146,26 @@ analysis) by passing the `--no-delayed-transition` option to
 determining frame colors, and it will also disable [edge direction
 compensation][] by default to avoid potentially misleading results.
 
+## What does "clock skew" mean?
+
+Videojitter always reports timestamps and durations based on sample time from
+the recording WAV file. In other words, the reference clock is the clock of the
+instrument.
+
+No clock is ever perfect, and the clock of the instrument does not run at the
+exact same speed as the clock that the video playback system uses to time
+frames. Therefore, a very small deviation (<0.1%) from expected frame durations
+is normal and expected. This is called _clock skew_.
+
+Large clock skews, in the order of 1% or more, are more concerning and may be
+indicative of a potential problem. For example, some video playback setups
+(hopefully rare nowadays) may speed up 24 FPS content to 25 FPS, resulting in
+the video playing ~1.04x faster than normal.
+
+videojitter will automatically calculate and report clock skew in the "fine
+print" (the text below the chart) so that any issues may be quantified and dealt
+with.
+
 [edge direction compensation]: #what-is-edge-direction-compensation
 [measure display pixel response]:
   https://tftcentral.co.uk/articles/response_time_testing
