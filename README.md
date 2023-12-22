@@ -324,7 +324,6 @@ See [`src/README`][].
 [file an issue]: https://github.com/dechamps/videojitter/issues
 [participate in discussions]:
   https://github.com/dechamps/videojitter/discussions
-[FAQ]: FAQ.md
 [FFmpeg]: https://ffmpeg.org/
 [GitHub]: https://github.com/dechamps/videojitter
 [intentionally-delayed-transition-faq]:
