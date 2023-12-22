@@ -81,11 +81,12 @@ For these reasons, videojitter will attempt to hide delays that uniformly affect
 transitions to frames of the same color. This is what "edge direction
 compensation" does.
 
-Edge direction compensation is implemented by looking at the average apparent
-frame duration for white frames, and separately for black frames. videojitter
-then uniformly applies a timing correction to all frames of the same color
-throughout the entire recording so that the difference disappears. The amount of
-correction applied is indicated in the "fine print" (the text below the chart).
+Edge direction compensation is implemented by calculating the average delay in
+rising edges (transitions to a given color) and separately for falling edges
+(transitions to the opposite color). videojitter then uniformly applies a timing
+correction to all same-direction edges throughout the entire recording so that
+the difference disappears. The amount of correction applied is indicated in the
+"fine print" (the text below the chart).
 
 Edge direction compensation can be disabled by passing the
 `--no-edge-direction-compensation` option to `videojitter-generate-report`. This
