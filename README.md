@@ -295,6 +295,10 @@ Congratulations, you just made your first videojitter measurement!
 For some hints on how to interpret typical results, take a look at the [examples
 gallery][examples].
 
+If you are getting odd or nonsensical results, or otherwise believe the
+measurement is wrong somehow, you may be interested in [this FAQ][problems-faq]
+which lists a number of potential causes.
+
 To make more measurements, just repeat the steps as necessary. You don't need to
 regenerate a spec nor a test video if their parameters haven't changed.
 
@@ -329,6 +333,7 @@ See [`src/README`][].
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [pipx]: https://pypa.github.io/pipx/
+[problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
 [this guide]: INSTRUMENT.md
 [warmup-cooldown-faq]:

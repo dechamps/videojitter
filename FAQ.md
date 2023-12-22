@@ -1,5 +1,90 @@
 # videojitter FAQ
 
+## Are there setups videojitter may struggle with?
+
+Yes. In general, the following situations make the videojitter analyzer's job
+harder and may lead to loss of precision or nonsensical results:
+
+- **Light pollution** on the instrument, e.g. attempting to measure in a bright
+  room.
+- The [warmup/cooldown pattern][] being interpreted as part of the test signal.
+  - This will usually surface as problems in the first/last few seconds of the
+    recording. The test signal may also be reported as being slightly longer
+    than expected (e.g. 65 seconds instead of 60).
+  - This is usually caused by the instrument being too close to the display,
+    such that it only sees one "square" of the checkers pattern. Move the
+    instrument away from the display so that it can see multiple squares.
+- Incorrect **instrument recording levels**.
+  - If the recording level is set too low, [signal-to-noise ratio (SNR)][] may
+    suffer.
+  - If the recording level is set too high, or the instrument is saturated by
+    excessive light levels, clipping may occur.
+- Video playback systems that make use of **"frame blending", "[motion
+  interpolation][]"** or [similar techniques][].
+  - These make it impossible to tell when original video frames begin and end,
+    and will confuse videojitter.
+  - In particular, when measuring TVs, double check that any "motion smoothness"
+    features are disabled - they are often enabled by default.
+- More generally, video playback systems that are not strictly "sample and hold"
+  may confuse videojitter.
+  - Examples of systems that are not "sample and hold" include "refresh type"
+    displays such as **CRTs** and **plasma**, and displays that make use of
+    [motion blur reduction techniques][] such as **"backlight strobing"** or
+    **"black frame insertion"** (BFI).
+  - Such displays may "blink" white frames multiple times, confusing videojitter
+    into reporting multiple transition for a single white video frame.
+- Displays that use **[PWM backlights][]** may also confuse videojitter for the
+  same reason as above.
+  - Most PWM backlights have high enough frequency that videojitter will be able
+    to "see past" them, but that is not always the case.
+  - If your display uses a PWM backlight, it's a good idea to always set the
+    backlight to 100% which should hopefully defeat PWM.
+  - When measuring a display that uses PWM, a "PWM edge" may occur around the
+    same time as a frame transition, leading to increased variance in transition
+    timestamp estimates which takes the form of visible "noise" on the resulting
+    videojitter chart.
+- **Time-varying display backlight intensity** may confuse videojitter and lead
+  to loss of precision.
+  - Examples include "**dynamic contrast**" and "**local dimming**", which lead
+    to different transition shapes depending on frame duration, and can also
+    make the [warmup/cooldown pattern][] less effective.
+  - Another example are ambient light sensors, which are sometimes enabled by
+    default on smartphones and TVs.
+  - Make sure these features are disabled while recording.
+- **Frames that are too short** in duration, such that the next transition
+  occurs before the display and/or instrument has time to settle.
+  - These make it difficult for videojitter to precisely time transitions,
+    because the shape of "truncated" transitions is different from the shape of
+    a "full" transition.
+  - Ideally your instrument should settle faster than the frame duration you are
+    trying to measure.
+  - Even if your instrument is fast enough, at high enough frame rates, the
+    display itself may be the bottleneck - consider that many LCD panels may
+    struggle to fully transition between black and white in less than a few
+    milliseconds.
+  - In general, this is unlikely to be a problem when measuring 24 FPS video,
+    because 24 FPS frames take an eternity as far as typical setups are
+    concerned. >60 FPS video is usually where things get challenging.
+  - See this [example][240hz] for a detailed discussion of how excessively slow
+    transitions may look like.
+
+In many of the cases described above, looking at the recording waveform (e.g. in
+an audio editor such as Audacity) will often provide visual hints as to what the
+problem may be. For example, the following waveform shows evidence of PWM in the
+form of a high-frequency, low-amplitude periodic signal superimposed on white
+frames only:
+
+<img src="img/pwm.png">
+
+If you think videojitter should be able to do a better job analyzing a given
+recording, feel free to [file an issue][] (include your spec and raw recording
+file) so that the problem can be looked at; it may be possible to improve
+videojitter to better handle certain scenarios. As a last resort, adjusting some
+`videojitter-analyze-recording` options such as `--min-edge-separation-seconds`,
+`--min-frequency-ratio` or `--slope-prominence-threshold` may help in some
+cases, but do file a report anyway as ideally videojitter users shouldn't have
+to touch these.
+
 ## What is the purpose of the "warmup" and "cooldown" patterns?
 
 By default, videojitter test videos include a 5-second "warmup" section and a
@@ -166,8 +251,19 @@ videojitter will automatically calculate and report clock skew in the "fine
 print" (the text below the chart) so that any issues may be quantified and dealt
 with.
 
+[240hz]: EXAMPLES.md#artefacts-caused-by-overly-slow-displayinstrument
 [edge direction compensation]: #what-is-edge-direction-compensation
+[file an issue]: https://github.com/dechamps/videojitter/issues
 [measure display pixel response]:
   https://tftcentral.co.uk/articles/response_time_testing
+[motion blur reduction techniques]:
+  https://tftcentral.co.uk/articles/motion_blur
+[motion interpolation]: https://en.wikipedia.org/wiki/Motion_interpolation
 [incorrectly locate the delayed transition]:
   EXAMPLES.md#artefacts-caused-by-overly-slow-displayinstrument
+[PWM backlights]: https://tftcentral.co.uk/articles/pulse_width_modulation
+[similar techniques]: https://github.com/mpv-player/mpv/wiki/Interpolation
+[signal-to-noise ratio (SNR)]:
+  https://en.wikipedia.org/wiki/Signal-to-noise_ratio
+[warmup/cooldown pattern]:
+  #what-is-the-purpose-of-the-warmup-and-cooldown-patterns
