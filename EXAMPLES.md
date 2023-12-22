@@ -17,10 +17,10 @@ This result, obtained by playing a 120/1.001 FPS video on the built-in player of
 an LG G1 OLED TV, it the best result a videojitter user could possibly hope for.
 
 The frame transitions form an extremely clear, sharp, straight horizontal line
-on the chart with no deviations whatsoever, except for the intentionally delayed
-transition (as expected). This means the time interval between frames (8.34 ms,
-as expected for 120/1.001 FPS) stayed exactly the same throughout the entire
-test signal with no outliers - no late nor early frames.
+on the chart with no deviations whatsoever, except for the [intentionally
+delayed transition][] (as expected). This means the time interval between frames
+(8.34 ms, as expected for 120/1.001 FPS) stayed exactly the same throughout the
+entire test signal with no outliers - no late nor early frames.
 
 This example also demonstrates the ability of both the playback and measurement
 system to handle very high FPS - much higher than typical video content - as
@@ -268,3 +268,5 @@ and instrument.
 
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228
+[intentionally delayed transition]:
+  FAQ.md#what-is-the-purpose-of-the-intentionally-delayed-transition
