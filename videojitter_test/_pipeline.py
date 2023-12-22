@@ -11,6 +11,13 @@ def prettify_json(path):
 
 
 def prettify_xml(path):
+    # Work around https://github.com/python/cpython/issues/113425 otherwise the
+    # resulting SVG does not work in e.g. VS Code, GitHub file browser. Note the simpler
+    # `write(default_namespace=)` workaround doesn't work because it triggers a
+    # "cannot use non-qualified names with default_namespace option" error, so we have
+    # to fall back to register_namespace() (which, sadly, involves mutable global
+    # state... sigh)
+    ET.register_namespace("", "http://www.w3.org/2000/svg")
     element_tree = ET.parse(path)
     ET.indent(element_tree)
     element_tree.write(path, encoding="utf-8", short_empty_elements=False)
