@@ -5,4 +5,4 @@ Downsampling recording by 24.0x (to 2000.0 Hz)
 Test signal appears to start at sample 6 (0.003 seconds) and end at sample 126323 (63.1615 seconds) in the recording.
 WARNING: test signal boundaries are very close to recording boundaries. This may mean the recording is truncated or the boundaries were not detected correctly (e.g. because the recording is corrupted or doesn't match the spec). This warning can be ignored the recording was trimmed manually (you shouldn't need to do that though - the analyzer can detect where the test signal begins and ends automatically!).
 Removing frequencies lower than 8.476804569668902 Hz from the recording
-Kept 1438 slope peaks whose prominence is above ~0.941. First edge is right after sample 21 (0.0105 seconds) and last edge is right after sample 126292 (63.146 seconds).
+Kept 1438 slope peaks whose prominence is above ~1.1. First edge is right after sample 21 (0.0105 seconds) and last edge is right after sample 126292 (63.146 seconds).

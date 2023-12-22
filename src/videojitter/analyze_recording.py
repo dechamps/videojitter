@@ -99,7 +99,7 @@ def _parse_arguments():
             " detecting edges."
         ),
         type=float,
-        default=0.6,
+        default=0.7,
     )
     argument_parser.add_argument(
         "--output-debug-files-prefix",
