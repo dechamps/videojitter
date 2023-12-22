@@ -2,7 +2,7 @@
 name = "videojitter"
 authors = [{name = "Etienne Dechamps", email = "etienne@edechamps.fr"}]
 description = "Tools for physical measurement of video frame presentation timing"
-readme = "README.md"
+readme = "pyproject-readme.md"
 keywords = ["video"]
 classifiers = [
     "Environment :: Console",
