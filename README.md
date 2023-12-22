@@ -302,6 +302,12 @@ If you ran into issues, or would like to request additional features, or for any
 other feedback, do not hesitate to [file an issue][] or [participate in
 discussions][].
 
+## Further reading
+
+- [Building your own instrument](INSTRUMENT.md)
+- [Measurement examples](EXAMPLES.md)
+- [FAQ](FAQ.md)
+
 ## Developer documentation
 
 See [`src/README`][].
@@ -314,6 +320,7 @@ See [`src/README`][].
 [file an issue]: https://github.com/dechamps/videojitter/issues
 [participate in discussions]:
   https://github.com/dechamps/videojitter/discussions
+[FAQ]: FAQ.md
 [FFmpeg]: https://ffmpeg.org/
 [GitHub]: https://github.com/dechamps/videojitter
 [intentionally-delayed-transition-faq]:
