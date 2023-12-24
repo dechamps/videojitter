@@ -118,9 +118,11 @@ typically have tons of margin there.
 ### Step 1: install videojitter
 
 1. Make sure you have [Python][] installed.
-   - On Windows, run `winget install Python.Python.3.12 --source=winget`.
+   - On Windows, run `winget install Python.Python.3.11 --source=winget`.
    - Do not use the Microsoft Store Python app as [pipx is not compatible with
      it][pipx-issue1164].
+   - Avoid Python 3.12 (and later) as it [causes issues with
+     `si-prefix`][si-prefix-issue11] (a dependency of videojitter).
 2. Make sure you have [FFmpeg][] installed.
    - On Windows, you can install it by running `winget install ffmpeg`.
    - You don't need FFmpeg if you don't need to generate a test video, e.g. you
@@ -336,6 +338,7 @@ See [`src/README`][].
 [pipx-issue1164]: https://github.com/pypa/pipx/issues/1164
 [problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
+[si-prefix-issue11]: https://github.com/cfobel/si-prefix/issues/11
 [this guide]: INSTRUMENT.md
 [warmup-cooldown-faq]:
   FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns
