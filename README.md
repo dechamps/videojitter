@@ -118,8 +118,9 @@ typically have tons of margin there.
 ### Step 1: install videojitter
 
 1. Make sure you have [Python][] installed.
-   - On Windows, you can get it from the Microsoft Store, or just run
-     `winget install python`.
+   - On Windows, run `winget install Python.Python.3.12 --source=winget`.
+   - Do not use the Microsoft Store Python app as [pipx is not compatible with
+     it][pipx-issue1164].
 2. Make sure you have [FFmpeg][] installed.
    - On Windows, you can install it by running `winget install ffmpeg`.
    - You don't need FFmpeg if you don't need to generate a test video, e.g. you
@@ -332,6 +333,7 @@ See [`src/README`][].
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [pipx]: https://pypa.github.io/pipx/
+[pipx-issue1164]: https://github.com/pypa/pipx/issues/1164
 [problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
 [this guide]: INSTRUMENT.md
