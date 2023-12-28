@@ -128,12 +128,9 @@ typically have tons of margin there.
      already have some at hand or you're only looking to analyze pre-existing
      recordings.
 3. Make sure you have [pipx][] installed.
-4. Run:
-
-   ```shell
-   pipx install videojitter
-   ```
-
+   - On Windows, run `pip install pipx` followed by `python -m pipx ensurepath`,
+     then restart your terminal.
+4. Run `pipx install videojitter`. (This may take a while.)
 5. That's it! videojitter commands should now be available.
 
 Run `pipx upgrade videojitter` to update to new versions as they become
