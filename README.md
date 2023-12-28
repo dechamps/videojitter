@@ -333,7 +333,7 @@ See [`src/README`][].
 [`src/README`]: src/README.md
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
-[pipx]: https://pypa.github.io/pipx/
+[pipx]: https://pipx.pypa.io/stable/
 [problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
 [si-prefix-issue11]: https://github.com/cfobel/si-prefix/issues/11
