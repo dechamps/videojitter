@@ -118,9 +118,8 @@ typically have tons of margin there.
 ### Step 1: install videojitter
 
 1. Make sure you have [Python][] installed.
-   - On Windows, run `winget install Python.Python.3.11 --source=winget`.
-   - Do not use the Microsoft Store Python app as [pipx is not compatible with
-     it][pipx-issue1164].
+   - On Windows, you can get it from the Microsoft Store, or just run
+     `winget install python`.
    - Avoid Python 3.12 (and later) as it [causes issues with
      `si-prefix`][si-prefix-issue11] (a dependency of videojitter).
 2. Make sure you have [FFmpeg][] installed.
@@ -335,7 +334,6 @@ See [`src/README`][].
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [pipx]: https://pypa.github.io/pipx/
-[pipx-issue1164]: https://github.com/pypa/pipx/issues/1164
 [problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
 [si-prefix-issue11]: https://github.com/cfobel/si-prefix/issues/11
