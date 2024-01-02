@@ -384,8 +384,7 @@ def _generate_chart(
                 title=alt.TitleParams(
                     fine_print,
                     fontSize=10,
-                    fontWeight="lighter",
-                    color="gray",
+                    fontWeight="normal",
                     anchor="start",
                 )
             ).mark_text(),
