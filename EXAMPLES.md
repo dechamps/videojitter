@@ -125,7 +125,7 @@ timing errors shown above. This is because what really matters is not display
 refresh rate, but the frame rate of the test video. In this example the test
 video is 24/1.001 FPS which is well within the limits of the instrument.
 
-## 3:2 "23p@60Hz" pattern
+## 3:2 "24p@60Hz" pattern
 
 <img src="videojitter_test/cases/evr_23p_at_59hz/test_output/report.svg">
 
