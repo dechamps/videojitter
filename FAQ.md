@@ -247,7 +247,9 @@ frames. Therefore, a very small deviation (<0.1%) from expected frame durations
 is normal and expected. This is called _clock skew_.
 
 Large clock skews, in the order of 1% or more, are more concerning and may be
-indicative of a potential problem. For example, some video playback setups
+indicative of a potential problem. A very slow video clock (e.g. <0.9x) may
+indicate the video player is unable to keep up with the bitrate of the video (in
+this case, audio dropouts would be expected as well). Some video playback setups
 (hopefully rare nowadays) may speed up 24 FPS content to 25 FPS, resulting in
 the video playing ~1.04x faster than normal.
 
