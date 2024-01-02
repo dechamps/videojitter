@@ -7,6 +7,10 @@ harder and may lead to loss of precision or nonsensical results:
 
 - **Light pollution** on the instrument, e.g. attempting to measure in a bright
   room.
+  - This is especially problematic if the room is illuminated by a light source
+    that exhibits high frequency flicker, such as some LED lamps. In such cases
+    videojitter may be confused into thinking your room lights are the display
+    and will end up measuring them instead!
 - The [warmup/cooldown pattern][] being interpreted as part of the test signal.
   - This will usually surface as problems in the first/last few seconds of the
     recording. The test signal may also be reported as being slightly longer
@@ -70,9 +74,9 @@ harder and may lead to loss of precision or nonsensical results:
 
 In many of the cases described above, looking at the recording waveform (e.g. in
 an audio editor such as Audacity) will often provide visual hints as to what the
-problem may be. For example, the following waveform shows evidence of PWM in the
-form of a high-frequency, low-amplitude periodic signal superimposed on white
-frames only:
+problem may be. For example, the following waveform shows evidence of display
+backlight PWM in the form of a high-frequency, low-amplitude periodic signal
+superimposed on white frames only:
 
 <img src="img/pwm.png">
 
