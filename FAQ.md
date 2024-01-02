@@ -23,8 +23,8 @@ harder and may lead to loss of precision or nonsensical results:
     suffer.
   - If the recording level is set too high, or the instrument is saturated by
     excessive light levels, clipping may occur.
-- Video playback systems that make use of **"frame blending", "[motion
-  interpolation][]"** or [similar techniques][].
+- Video playback systems that exhibit **[tearing][]** or make use of **"frame
+  blending", "[motion interpolation][]"** or [similar techniques][].
   - These make it impossible to tell when original video frames begin and end,
     and will confuse videojitter.
   - In particular, when measuring TVs, double check that any "motion smoothness"
@@ -269,5 +269,6 @@ with.
 [similar techniques]: https://github.com/mpv-player/mpv/wiki/Interpolation
 [signal-to-noise ratio (SNR)]:
   https://en.wikipedia.org/wiki/Signal-to-noise_ratio
+[tearing]: https://en.wikipedia.org/wiki/Screen_tearing
 [warmup/cooldown pattern]:
   #what-is-the-purpose-of-the-warmup-and-cooldown-patterns
