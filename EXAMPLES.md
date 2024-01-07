@@ -7,7 +7,8 @@ patterns that sometimes appear in practical measurements.
 
 All measurements shown here have been made using a cheap homemade instrument,
 specifically a Panasonic AMS3 light sensor feeding an ASUS Xonar U3 used as an
-ADC. You can [build a similar instrument for yourself][] in minutes.
+ADC (unless otherwise noted). You can [build a similar instrument for
+yourself][] in minutes.
 
 ## Perfect result
 
@@ -25,7 +26,8 @@ entire test signal with no outliers - no late nor early frames.
 This example also demonstrates the ability of both the playback and measurement
 system to handle very high FPS - much higher than typical video content - as
 well as their amazing timing accuracy, which as described in the "fine print"
-(the text below the chart) is in the order of 10 µs (yes, _microseconds_).
+(the text below the chart) is in the order of 10 µs (yes, _microseconds_). This
+indicates the recording is virtually noise-free.
 
 If you get this kind of result, your playback system is pretty much flawless as
 far as frame presentation timing is concerned.
@@ -171,6 +173,45 @@ keeping up with the frame rate of the test video.
 This example demonstrates that, even when the system under test is badly
 misbehaving, videojitter can still make sense of the data and produces reports
 that accurately reflects what went right and what went wrong.
+
+## Recording noise
+
+<img src="videojitter_test/cases/lg_119p_inst_osram_bpw34_u3f/test_output/report.svg">
+
+The above result was obtained by playing a 120/1.001 FPS video on on the
+built-in player of an LG G1 OLED TV. Importantly, the recording was made using
+an instrument with especially bad noise performance: an
+[OSRAM BPW 34](https://ams-osram.com/products/photodetectors/photodiodes/osram-dil-bpw-34)
+connected to the microphone jack of an Asus Xonar U7 with the DC bias voltage
+applied in the forward mode, instead of the more suitable reverse mode.
+
+Recording noise creates random variations in measured frame timestamps with no
+discernible discrete steps nor patterns. On the chart this manifests as points
+forming "fuzzy lines" instead of clean, neat alignments.
+
+The "standard deviation" estimate in the fine print (the text below the chart)
+makes it possible to quantify the noise. In the above example, the standard
+deviation is about 850 µs which is very high. Good recordings made with high
+performance instruments will show a standard deviation of less than 50 µs. Note
+that this metric is only meaningful if the playback system being measured is
+well-behaved (no variations in frame timestamps).
+
+In extreme cases, the noise will be so high as to make the chart unreadable.
+
+This issue can be examined further by looking at the raw waveform, where the
+noise should be visually obvious. Here is an example from the above measurement:
+
+<img src="img/lg_119p_inst_osram_bpw34_u3f-noise.png">
+
+The same noisy signal can also look like this if a lowpass filter was applied:
+
+<img src="img/lg_119p_inst_osram_bpw34_u3f-noise-lowpass.png">
+
+In theory, it is conceivable that the noise could be caused not by the
+instrument, but by the playback system under test. This would suggest extreme
+levels of random jitter in the playback display clock, which is unlikely, but
+not impossible. In that case the waveform would be expected to look "clean",
+contrary to the above.
 
 ## Artefacts caused by overly slow display/instrument
 

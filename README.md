@@ -85,8 +85,8 @@ time and write the resulting signal to a WAV file for videojitter to consume. In
 videojitter terminology, this light recording device is called the _instrument_.
 
 If you have access to a lab, you may already have hardware to do this - for
-example, you may already have a suitable light sensor, a power supply, and an
-oscilloscope that can export WAV files. In that case, great! You're good to go.
+example, you may already have a suitable photodiode and an oscilloscope that can
+export WAV files. In that case, great! You're good to go.
 
 Otherwise, you will need to obtain the hardware or build it yourself. But don't
 let that scare you! Building your own instrument is much simpler than you may
@@ -95,8 +95,27 @@ that can be assembled in minutes. Read [this guide][] to find out how.
 
 #### Requirements on the instrument
 
-The most important performance metric for the instrument is its _speed_, i.e.
-how quickly it reacts to changes in light level.
+When it comes to instrument performance, there are two aspects to consider:
+noise and speed. Other properties of the instrument, such as sampling rate, are
+usually not the bottleneck as even dirt-cheap solutions typically have tons of
+margin there.
+
+##### Noise
+
+The signal captured by the instrument is necessarily contaminated by some amount
+of random background noise. Noise makes it harder for videojitter to determine
+the precise time at which a transition occurred. This results in random
+variations in the reported transition timestamps.
+
+The best instruments will allow videojitter to produce transition timestamps
+with reported standard deviations of less than 50 microseconds. Standard
+deviations above 500 microseconds will make videojitter charts hard to read
+because noise-induced deviations will be hard to distinguish from the real ones.
+
+##### Speed
+
+Instruments do not react to light changes immediately; they have some built-in
+inertia that results in changes in the light waveform being "smeared" in time.
 
 As a rule of thumb, for good results, the instrument should be at least as fast
 as the minimum frame duration you are looking to measure. So, for example, the
@@ -105,15 +124,15 @@ as the minimum frame duration you are looking to measure. So, for example, the
 that sensor will start to show its limits around 120 frames per second or so. It
 is perfectly adequate for measuring typical 24 FPS video.
 
-Even if the instrument is too slow, videojitter will likely still be able to
-provide somewhat usable results - typically the only real problem is a loss of
-precision which gets worse around sudden frame duration changes. Note that such
-measurement artifacts can also be caused by the display itself being too slow to
-refresh - they are not necessarily the instrument's fault.
+In practice, typical photodiode-based instruments are expected to be much faster
+than even the fastest displays, making speed a non-issue. On the other hand,
+photoresistors are usually too slow to be usable.
 
-Other properties of the instrument include sampling rate and signal to noise
-ratio (SNR). These are usually not the bottleneck as even dirt-cheap instruments
-typically have tons of margin there.
+Even if the instrument is somewhat slow, videojitter will likely still be able
+to provide somewhat usable results - typically the only real problem is a loss
+of precision which gets worse around sudden frame duration changes. Note that
+such measurement artifacts can also be caused by the display itself being too
+slow to refresh - they are not necessarily the instrument's fault.
 
 ### Step 1: install videojitter
 
@@ -175,7 +194,8 @@ from the display apart from ambient light.
 Connect your instrument and point it towards the display of the video playback
 system under test. It is best to place the instrument some distance away from
 the display so that the blinking squares of the warmup/cooldown pattern (more on
-that later) can be distinguished from the actual test signal.
+that later) can be distinguished from the actual test signal. Don't place it too
+far away though, as the signal-to-noise ratio will suffer.
 
 Set up your instrument and hit the start button in whatever software you are
 using to record the data (e.g. Audacity). There is no need to precisely
@@ -227,8 +247,15 @@ waveform, you can use [Audacity][].
 
 In particular you'd want to check that the test signal is actually present - it
 should be visually obvious from the waveform where the test signal begins and
-ends. In this example the test signal starts at around 25 seconds into the
-recording and ends 60 seconds later:
+ends. Note, though, that some instruments can produce very weak signals, which
+may require you to zoom in vertically. You may be able to increase the strength
+of the signal by making the display brighter or bringing the instrument closer
+(but not so close as to get videojitter confused about the warmup/cooldown
+patterns). Increasing the gain of the instrument may or may not improve things,
+depending on whether background noise gets amplified as well.
+
+In this example the test signal starts at around 25 seconds into the recording
+and ends 60 seconds later:
 
 <img src="img/audacity-signal.png">
 

@@ -23,6 +23,16 @@ harder and may lead to loss of precision or nonsensical results:
     suffer.
   - If the recording level is set too high, or the instrument is saturated by
     excessive light levels, clipping may occur.
+- **Instrument noise**.
+  - Completely random frame time variations around frame times, with no visible
+    discrete steps nor patterns, are often caused by random background noise in
+    the recording.
+  - This takes the form of "fuzzy lines" on videojitter charts. See this
+    [example][noise].
+  - Signal-to-noise ratio can sometimes be improved by increasing display
+    brightness, moving the instrument closer to the display, or increasing
+    instrument gain.
+  - Better instruments will produce less noise.
 - Video playback systems that exhibit **[tearing][]** or make use of **"frame
   blending", "[motion interpolation][]"** or [similar techniques][].
   - These make it impossible to tell when original video frames begin and end,
@@ -61,7 +71,8 @@ harder and may lead to loss of precision or nonsensical results:
     because the shape of "truncated" transitions is different from the shape of
     a "full" transition.
   - Ideally your instrument should settle faster than the frame duration you are
-    trying to measure.
+    trying to measure. Most photodiode-based instruments should be more than
+    fast enough.
   - Even if your instrument is fast enough, at high enough frame rates, the
     display itself may be the bottleneck - consider that many LCD panels may
     struggle to fully transition between black and white in less than a few
@@ -265,6 +276,7 @@ with.
 [motion blur reduction techniques]:
   https://tftcentral.co.uk/articles/motion_blur
 [motion interpolation]: https://en.wikipedia.org/wiki/Motion_interpolation
+[noise]: EXAMPLES.md#recording-noise
 [incorrectly locate the delayed transition]:
   EXAMPLES.md#artefacts-caused-by-overly-slow-displayinstrument
 [PWM backlights]: https://tftcentral.co.uk/articles/pulse_width_modulation
