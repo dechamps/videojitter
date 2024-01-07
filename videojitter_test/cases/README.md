@@ -61,14 +61,33 @@ process.
 This section includes all test cases where a real physical display was measured
 using a real physical instrument.
 
-All recordings were made using the same instrument: a [Panasonic AMS3][] light
-sensor directly attached to an ASUS Xonar U3 ADC.
+Unless otherwise noted, all recordings were made using the same instrument: a
+[Panasonic AMS3][] light sensor directly attached to the microphone jack of an
+Asus Xonar U3 audio interface. That microphone jack exposes an unloaded DC bias
+voltage of ~1.9 V.
 
 The real test cases follow one of two naming conventions:
 
 - `<SOURCE>_<FRAME RATE>p`
   - Indicates that the source is a hardware video player playing a test video
     encoded at the specified frame rate (FPS).
+- `<SOURCE>_<FRAME RATE>p_inst_<MANUFACTURER>_<MODEL>_<ADC>`
+  - Same as above, but measured with a specific instrument.
+  - The name includes the manufacturer and model of the specific light sensor
+    used.
+  - The last part indicates which [ADC][] setup is used. The test suite
+    currently includes 3 possible ADC setups:
+    - `qa401`: the light sensor is directly connected to one of the inputs of a
+      [QuantAsylum QA401][] audio analyzer. There is no DC bias, so photodiodes
+      operate in forward (photovoltaic) mode.
+    - `u3f`: the light sensor is directly connected to the microphone jack of an
+      Asus Xonar U3. The cathode (-) of the light sensor is connected to the
+      jack sleeve, i.e. ground, such that there is a positive DC bias voltage on
+      the anode (+). This makes photodiodes operate in forward voltage mode with
+      a DC bias added on top.
+    - `u3r`: same as above, but the polarity is reversed, such that photodiodes
+      operate in reverse voltage (photoconductive) mode using the DC bias
+      voltage.
 - `<SOURCE>_<FRAME RATE>p_at_<REFRESH RATE>`
   - Indicates that the source is a PC playing a test video encoded at the
     specified frame rate (FPS) to a display configured with the specified
@@ -96,6 +115,7 @@ The test suite currently includes the following sources:
   - The test video is being played on the built-in display of a Google Pixel 5
     phone using the VLC Android app.
 
+[ADC]: https://en.wikipedia.org/wiki/Analog-to-digital_converter
 [ASUS ROG Flow X16 2023]:
   https://rog.asus.com/uk/laptops/rog-flow/rog-flow-x16-2023-series/
 [EVR]:
@@ -104,3 +124,4 @@ The test suite currently includes the following sources:
 [its README]: ../README.md
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
+[QuantAsylum QA401]: https://quantasylum.com/products/qa401-audio-analyzer

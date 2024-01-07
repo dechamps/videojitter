@@ -1,0 +1,8 @@
+analyze_recording from videojitter TESTING
+Successfully loaded spec file describing 598 transitions (of which 1 are delayed) at 119.88011988011988 FPS (4.996658333333333 seconds)
+Successfully loaded recording containing 56661 samples at 8000 Hz (7.082625 seconds)
+Downsampling recording by 4.0x (to 2000.0 Hz)
+Test signal appears to start at sample 1881 (0.9405 seconds) and end at sample 13062 (6.531 seconds) in the recording.
+WARNING: test signal boundaries are very close to recording boundaries. This may mean the recording is truncated or the boundaries were not detected correctly (e.g. because the recording is corrupted or doesn't match the spec). This warning can be ignored the recording was trimmed manually (you shouldn't need to do that though - the analyzer can detect where the test signal begins and ends automatically!).
+Removing frequencies lower than 42.3840228483445 Hz from the recording
+Kept 600 slope peaks whose prominence is above ~0.000692. First edge is right after sample 600 (0.3 seconds) and last edge is right after sample 10582 (5.291 seconds).

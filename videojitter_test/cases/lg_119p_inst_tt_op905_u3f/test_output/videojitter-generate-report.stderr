@@ -1,0 +1,4 @@
+generate_report from videojitter TESTING
+Successfully loaded spec file containing 598 frame transitions at 119.88011988011988 FPS
+Recording analysis contains 615 frame transitions, with first transition at ~4.546897 seconds and last transition at ~10.096394 seconds for a total of ~5.549498 seconds
+WARNING: unable to locate the following delayed transitions: [299] (expected to find them around [7.24957432] seconds). These delayed transitions will not be reported, and black/white color information may not be available.

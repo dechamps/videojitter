@@ -1,0 +1,4 @@
+!/test_output/*.stderr
+!/test_output/*.stdout
+!/test_output/report.csv
+!/test_output/report.json
