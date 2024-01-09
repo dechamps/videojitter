@@ -4,8 +4,8 @@ import sys
 import altair as alt
 import numpy as np
 import pandas as pd
-from si_prefix import si_format
 from scipy import stats
+from si_prefix import si_format
 from videojitter import _util, _version
 
 

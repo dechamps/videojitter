@@ -139,8 +139,6 @@ slow to refresh - they are not necessarily the instrument's fault.
 1. Make sure you have [Python][] installed.
    - On Windows, you can get it from the Microsoft Store, or just run
      `winget install python`.
-   - Avoid Python 3.12 (and later) as it [causes issues with
-     `si-prefix`][si-prefix-issue11] (a dependency of videojitter).
 2. Make sure you have [FFmpeg][] installed.
    - On Windows, you can install it by running `winget install ffmpeg`.
    - You don't need FFmpeg if you don't need to generate a test video, e.g. you

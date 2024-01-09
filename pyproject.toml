@@ -51,10 +51,11 @@ videojitter-generate-video = "videojitter.generate_video:main"
 strip-extras = true
 
 [tool.black]
+force-exclude = "src/si_prefix/"
 preview = true  # For long string line breaks
 
 [tool.pylint.main]
-ignore-paths = ["src/videojitter/_version_generated.py"]
+ignore-paths = ["src/si_prefix", "src/videojitter/_version_generated.py"]
 disable = [
     "duplicate-code",
     "missing-module-docstring",
