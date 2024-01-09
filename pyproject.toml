@@ -51,7 +51,7 @@ videojitter-generate-video = "videojitter.generate_video:main"
 strip-extras = true
 
 [tool.black]
-force-exclude = "src/si_prefix/"
+force-exclude = 'src/si_prefix/|.+\.ipynb'
 preview = true  # For long string line breaks
 
 [tool.pylint.main]
