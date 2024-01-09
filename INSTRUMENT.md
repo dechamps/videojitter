@@ -204,7 +204,7 @@ example:
 <img src="img/audacity-instrument-test.png" width="700">
 
 Note that, in many setups, the signal level will be much lower, requiring you to
-[zoom in vertically][]to find the signal.
+[zoom in vertically][] to find the signal.
 
 That's it! You now have an instrument that can be used to make videojitter
 measurements. Read the [instructions][] to find out how.
