@@ -162,7 +162,7 @@ internal amplifier.)
 
 The most straightforward way to make the connection is to use an audio jack to
 [screw terminal block][] adapter, which can be obtained for a few bucks on e.g.
-Amazon:
+[Amazon][amazon-jack]:
 
 <img src="img/audio-jack-screw-terminal.jpg" width="400">
 
@@ -291,6 +291,7 @@ don't be surprised! videojitter won't care, though.
   #appendix-polarity-dc-bias-forward-voltage-reverse-voltage-photovoltatic-mode-photoconductive-mode-oh-my
 [ADC]: https://en.wikipedia.org/wiki/Analog-to-digital_converter
 [Amazon]: https://www.amazon.com/s?k=photodiode
+[amazon-jack]: https://www.amazon.com/s?k=screw+terminal+audio+jack
 [ap-pdbc134]:
   https://www.advancedphotonix.com/wp-content/uploads/2022/04/DS-PDB-C134-1.pdf
 [assume ideal conditions]: https://www.vishay.com/docs/48454/48454.pdf
