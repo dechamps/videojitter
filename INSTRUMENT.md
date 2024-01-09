@@ -158,7 +158,7 @@ least one order of magnitude faster than the fastest of displays. (The Panasonic
 AMS302 is a notable exception with its 8.5 ms response time, likely due to its
 internal amplifier.)
 
-### Step 3: connect the light sensor to the microphone input receptacle
+### Step 3: connect the light sensor to the audio input jack receptacle
 
 The most straightforward way to make the connection is to use an audio jack to
 [screw terminal block][] adapter, which can be obtained for a few bucks on e.g.
@@ -186,16 +186,15 @@ to simply try it both ways and compare the results. For more details, see the
 ### Step 4: testing
 
 After putting all the pieces together, you can use any audio recording software
-to capture the light signal on the microphone input and save it as a WAV file
-for videojitter to consume.
+to capture the light signal on the audio input and save it as a WAV file for
+videojitter to consume.
 
 It's best to use software that allows you to visualize the waveform so that you
 can check that everything is working properly. [Audacity][] is free and
 perfectly adequate for this purpose.
 
-**Note:** if you have a stereo microphone input, you might have to record in
-stereo for the light signal to be captured, as otherwise the wrong channel may
-be used.
+**Note:** if you have a stereo input, you might have to record in stereo for the
+light signal to be captured, as otherwise the wrong channel may be used.
 
 For a quick sanity check, start a recording and then turn the lights on/off a
 few times - you should be able to observe your movements on the waveform, for
