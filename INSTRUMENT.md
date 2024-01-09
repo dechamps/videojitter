@@ -204,7 +204,7 @@ example:
 <img src="img/audacity-instrument-test.png" width="700">
 
 Note that, in many setups, the signal level will be much lower, requiring you to
-zoom in vertically to find the signal.
+[zoom in vertically][]to find the signal.
 
 That's it! You now have an instrument that can be used to make videojitter
 measurements. Read the [instructions][] to find out how.
@@ -343,3 +343,4 @@ don't be surprised! videojitter won't care, though.
 [vishay-bpw34]: https://www.vishay.com/en/product/81521/
 [vishay-bpw46]: https://www.vishay.com/en/product/81524/
 [vishay-tefd4300]: https://www.vishay.com/en/product/83471/
+[zoom in vertically]: https://manual.audacityteam.org/man/vertical_zooming.html

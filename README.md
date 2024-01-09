@@ -248,11 +248,11 @@ waveform, you can use [Audacity][].
 In particular you'd want to check that the test signal is actually present - it
 should be visually obvious from the waveform where the test signal begins and
 ends. Note, though, that some instruments can produce very weak signals, which
-may require you to zoom in vertically. You may be able to increase the strength
-of the signal by making the display brighter or bringing the instrument closer
-(but not so close as to get videojitter confused about the warmup/cooldown
-patterns). Increasing the gain of the instrument may or may not improve things,
-depending on whether background noise gets amplified as well.
+may require you to [zoom in vertically][]. You may be able to increase the
+strength of the signal by making the display brighter or bringing the instrument
+closer (but not so close as to get videojitter confused about the
+warmup/cooldown patterns). Increasing the gain of the instrument may or may not
+improve things, depending on whether background noise gets amplified as well.
 
 In this example the test signal starts at around 25 seconds into the recording
 and ends 60 seconds later:
@@ -364,3 +364,4 @@ See [`src/README`][].
 [this guide]: INSTRUMENT.md
 [warmup-cooldown-faq]:
   FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns
+[zoom in vertically]: https://manual.audacityteam.org/man/vertical_zooming.html
