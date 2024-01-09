@@ -79,10 +79,11 @@ preferred over the other - it depends on the situation. See the [appendix][] for
 details.
 
 If you don't have a suitable input, look for an audio interface that provides
-one. You can usually just search for something like "USB audio" on Amazon and
-pick the cheapest result you can find. Even dirt-cheap, no-name garbage devices
-should work just fine and their specs will still be overkill for videojitter.
-USB interfaces as cheap as $10 have been shown to work.
+one. You can usually just search for something like "USB audio" on
+[Amazon][amazon-usb] and pick the cheapest result you can find. Even dirt-cheap,
+no-name garbage devices should work just fine and their specs will still be
+overkill for videojitter. USB interfaces as cheap as $10 have been shown to
+work.
 
 If you have multiple inputs at your disposal, the best approach is to experiment
 and pick the one that provides the best results, i.e. the least [noise][] and
@@ -292,6 +293,7 @@ don't be surprised! videojitter won't care, though.
 [ADC]: https://en.wikipedia.org/wiki/Analog-to-digital_converter
 [Amazon]: https://www.amazon.com/s?k=photodiode
 [amazon-jack]: https://www.amazon.com/s?k=screw+terminal+audio+jack
+[amazon-usb]: https://www.amazon.com/s?k=usb+audio
 [ap-pdbc134]:
   https://www.advancedphotonix.com/wp-content/uploads/2022/04/DS-PDB-C134-1.pdf
 [assume ideal conditions]: https://www.vishay.com/docs/48454/48454.pdf
