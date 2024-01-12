@@ -241,9 +241,9 @@ equally well. This is the simple case.
 Things get way more interesting if you use a typical "microphone" audio input.
 This is because, somewhat shockingly, a microphone input [is also a power
 supply][]! Indeed, some types of microphones require a DC voltage to operate;
-for this reason, most microphone inputs make a small amount of DC current
-available on the input pins. The unloaded DC voltage varies, but it's typically
-between 1 and 4 volts.
+for this reason, most microphone inputs supply a small DC voltage across the
+input pins. The unloaded DC voltage varies, but it's typically between 1 and
+4 volts.
 
 <img src="img/xonar-u7-dc-voltmeter.jpg" width="700">
 
