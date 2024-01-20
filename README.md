@@ -16,9 +16,9 @@ a video playback system**. It can be used to detect and quantify issues such as:
 - **Frames being displayed too early or too late**
 - **Dropped frames**
 - **Repeated frames**
-- **Periodic patterns** such as 3:2 "24p@60Hz"
+- **Periodic patterns** such as [3:2 "24p@60Hz"][]
 - **Sudden changes** in presentation cadence
-- Video **clock jitter**
+- Video **clock jitter** (e.g. from [VRR][])
 - Video **clock skew**
 - etc.
 
@@ -340,6 +340,7 @@ discussions][].
 
 See [`src/README`][].
 
+[3:2 "24p@60Hz"]: EXAMPLES.md#32-24p60hz-pattern
 [adjust the code]: src/
 [Audacity]: https://www.audacityteam.org/
 [Etienne Dechamps]: mailto:etienne@edechamps.fr
@@ -360,6 +361,7 @@ See [`src/README`][].
 [Python]: https://www.python.org/
 [si-prefix-issue11]: https://github.com/cfobel/si-prefix/issues/11
 [this guide]: INSTRUMENT.md
+[VRR]: EXAMPLES.md#video-clock-jitter-eg-vrr
 [warmup-cooldown-faq]:
   FAQ.md#what-is-the-purpose-of-the-warmup-and-cooldown-patterns
 [zoom in vertically]: https://manual.audacityteam.org/man/vertical_zooming.html
