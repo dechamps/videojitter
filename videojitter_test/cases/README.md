@@ -92,6 +92,9 @@ The real test cases follow one of two naming conventions:
   - Indicates that the source is a PC playing a test video encoded at the
     specified frame rate (FPS) to a display configured with the specified
     refresh rate (in Hz).
+- `<SOURCE>_<FRAME RATE>p_vrr`
+  - Indicates that the source is a PC playing a test video encoded at the
+    specified frame rate (FPS) using [Variable Refresh Rate (VRR)][].
 
 For example, `asusvlc_60p_at_240hz` means that the recording is of the "asusvlc"
 source playing a 60 FPS test video at 240 Hz.
@@ -107,10 +110,14 @@ The test suite currently includes the following sources:
 - `lg`
   - The test video is being played on an LG OLED G1 TV using its built-in video
     file player.
-- `evr`, `madvr`
+- `evr`, `madvr`, `mpv`
   - Same as above, but the test video is being played by a Windows 11 PC using
-    [EVR][] or [madVR][], respectively, and then sent over to the TV using the
-    HDMI 2.1 output of an NVidia RTX 3080 Ti.
+    [EVR][], [madVR][] or [mpv][], respectively, and then sent over to the TV
+    using the HDMI 2.1 output of an NVidia RTX 3080 Ti.
+  - In the case of `mpv`:
+    - The measurements were made using a [OSRAM SFH 213][] connected to a
+      [QuantAsylum QA401][] audio analyzer.
+    - `mpv.log` contains the output of [`--log-file`][].
 - `pixel5vlc`:
   - The test video is being played on the built-in display of a Google Pixel 5
     phone using the VLC Android app.
@@ -120,8 +127,14 @@ The test suite currently includes the following sources:
   https://rog.asus.com/uk/laptops/rog-flow/rog-flow-x16-2023-series/
 [EVR]:
   https://learn.microsoft.com/en-us/windows/win32/medfound/enhanced-video-renderer
+[`--log-file`]: https://mpv.io/manual/stable/#options-log-file
 [madvr]: https://forum.doom9.org/showthread.php?t=146228
+[mpv]: https://mpv.io/
 [its README]: ../README.md
+[OSRAM SFH 213]:
+  https://ams-osram.com/products/photodetectors/photodiodes/osram-radial-t1-34-sfh-213
 [Panasonic AMS3]:
   https://industrial.panasonic.com/cdbs/www-data/pdf/ADD8000/ADD8000C6.pdf
 [QuantAsylum QA401]: https://quantasylum.com/products/qa401-audio-analyzer
+[Variable Refresh Rate (VRR)]:
+  https://en.wikipedia.org/wiki/Variable_refresh_rate

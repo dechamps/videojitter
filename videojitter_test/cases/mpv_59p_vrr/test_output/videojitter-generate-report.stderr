@@ -1,0 +1,4 @@
+generate_report from videojitter TESTING
+Successfully loaded spec file containing 3596 frame transitions at 59.94005994005994 FPS
+Recording analysis contains 3598 frame transitions, with first transition at ~7.083427 seconds and last transition at ~67.111811 seconds for a total of ~60.028384 seconds
+Deduced from delayed transitions that rising edges are transitions to white and falling edges are transitions to black

@@ -1,0 +1,7 @@
+analyze_recording from videojitter TESTING
+Successfully loaded spec file describing 3596 transitions (of which 1 are delayed) at 59.94005994005994 FPS (60.00995 seconds)
+Successfully loaded recording containing 584363 samples at 8000 Hz (73.045375 seconds)
+Downsampling recording by 4.0x (to 2000.0 Hz)
+Test signal appears to start at sample 12532 (6.266 seconds) and end at sample 133626 (66.813 seconds) in the recording.
+Removing frequencies lower than 21.19201142417225 Hz from the recording
+Kept 3598 slope peaks whose prominence is above ~0.000572. First edge is right after sample 604 (0.302 seconds) and last edge is right after sample 120592 (60.296 seconds).
