@@ -359,7 +359,6 @@ See [`src/README`][].
 [pipx]: https://pipx.pypa.io/stable/
 [problems-faq]: FAQ.md#are-there-setups-videojitter-may-struggle-with
 [Python]: https://www.python.org/
-[si-prefix-issue11]: https://github.com/cfobel/si-prefix/issues/11
 [this guide]: INSTRUMENT.md
 [VRR]: EXAMPLES.md#video-clock-jitter-eg-vrr
 [warmup-cooldown-faq]:
