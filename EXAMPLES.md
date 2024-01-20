@@ -207,11 +207,52 @@ The same noisy signal can also look like this if a lowpass filter was applied:
 
 <img src="img/lg_119p_inst_osram_bpw34_u3f-noise-lowpass.png">
 
-In theory, it is conceivable that the noise could be caused not by the
-instrument, but by the playback system under test. This would suggest extreme
-levels of random jitter in the playback display clock, which is unlikely, but
-not impossible. In that case the waveform would be expected to look "clean",
-contrary to the above.
+If the videojitter chart looks "noisy" but the waveform looks clean, it likely
+means you are not dealing with recording noise but with video clock jitter,
+which is discussed in the next section.
+
+## Video clock jitter (e.g. VRR)
+
+<img src="videojitter_test/cases/mpv_59p_vrr/test_output/report.svg">
+
+The above result was obtained by playing a 60/1.001 FPS video from a PC using
+[mpv][] to an LG G1 OLED TV, with the entire chain using [Variable Refresh Rate
+(VRR)][].
+
+Playing video from a PC using VRR is a very interesting and peculiar case. When
+using VRR, frames are sent to the display as soon as the video player presents
+them, as opposed to waiting for the next VSync.
+
+The major advantage is there cannot be any mismatch between the video frame rate
+and the display refresh rate, thus eliminating any highly noticeable "patterns"
+(such as [3:2 "24p@60Hz"][]) as well as isolated discontinuities due to
+audio/video clock skew.
+
+The disavantage is that frame presentation timing now depends on the precise
+instant at which the video player decides to present a frame. Because Windows is
+not a real time operating system, and therefore does not make strong timing
+guarantees, some amount of jitter (most likely video player thread scheduling
+jitter) is inevitable and will manifest as random variations in frame
+presentation times.
+
+videojitter is capable of measuring and characterizing this VRR jitter
+phenomenon; in fact, this is [the original reason why videojitter was created in
+the first place][], and where its name comes from.
+
+In general, jitter creates random variations in measured frame timestamps with
+no discernible discrete steps nor patterns. On the chart this manifests as
+points forming "fuzzy lines" instead of clean, neat alignments. That said, in
+principle some patterns could emerge depending on what is causing the variations
+(e.g. thread scheduling timing is not necessarily always random).
+
+A keen eye will point out that this case seems indistiguishable from the
+previous example involving recording noise. This is correct insofar as both
+cause random variations in measured frame timestamps, and so manifest in the
+same way in the resulting videojitter chart. However, it is usually possible to
+distinguish between the two cases by looking at the raw waveform. Indeed,
+recording noise causes the waveform itself to look "noisy". In contrast, in the
+case of video clock jitter, the recording will look "clean", but the resulting
+videojitter chart will not.
 
 ## Artefacts caused by overly slow display/instrument
 
@@ -307,7 +348,13 @@ measurements. People making 24 FPS measurements can normally ignore these issues
 as that frame rate should be well within the limits of any reasonable display
 and instrument.
 
+[3:2 "24p@60Hz"]: #32-24p60hz-pattern
 [build a similar instrument for yourself]: INSTRUMENT.md
 [madVR]: https://forum.doom9.org/showthread.php?t=146228
+[mpv]: https://mpv.io/
 [intentionally delayed transition]:
   FAQ.md#what-is-the-purpose-of-the-intentionally-delayed-transition
+[the original reason why videojitter was created in the first place]:
+  https://github.com/mpv-player/mpv/issues/12005#issuecomment-1655241818
+[Variable Refresh Rate (VRR)]:
+  https://en.wikipedia.org/wiki/Variable_refresh_rate

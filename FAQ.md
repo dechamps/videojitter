@@ -27,8 +27,8 @@ harder and may lead to loss of precision or nonsensical results:
   - Completely random frame time variations around frame times, with no visible
     discrete steps nor patterns, are often caused by random background noise in
     the recording.
-  - This takes the form of "fuzzy lines" on videojitter charts. See this
-    [example][noise].
+  - This takes the form of "fuzzy lines" on videojitter charts, and can be
+    confirmed by looking at the raw waveform. See this [example][noise].
   - Signal-to-noise ratio can sometimes be improved by increasing display
     brightness, moving the instrument closer to the display, or increasing
     instrument gain.
