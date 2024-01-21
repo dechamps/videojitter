@@ -172,7 +172,7 @@ keeping up with the frame rate of the test video.
 
 This example demonstrates that, even when the system under test is badly
 misbehaving, videojitter can still make sense of the data and produces reports
-that accurately reflects what went right and what went wrong.
+that accurately reflect what went right and what went wrong.
 
 ## Recording noise
 
