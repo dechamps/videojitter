@@ -218,7 +218,7 @@ You will notice that the test video is divided into 3 sections:
    - If you look closely you might also notice a single repeated frame exactly
      halfway through the video. This repeated frame is called an _intentionally
      delayed transition_; it is part of the test video and provides a marker for
-     the analyzer. For more information about the intententionally delayed
+     the analyzer. For more information about the intentionally delayed
      transition, see [this FAQ][intentionally-delayed-transition-faq].
 3. The third section is called "cooldown" and is the same as "warmup".
 
