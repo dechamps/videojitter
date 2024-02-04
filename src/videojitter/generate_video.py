@@ -71,6 +71,14 @@ def _parse_arguments():
         ),
         default="5",
     )
+    argument_parser.add_argument(
+        "--fastest-encoding",
+        help=(
+            "Enables fastest encoding speed (about 1.5x faster) at the expense of"
+            " generated file size (about 8x bigger)."
+        ),
+        action="store_true",
+    )
     return argument_parser.parse_args()
 
 
@@ -125,8 +133,9 @@ def main():
         args.output_file,
         **{
             "shortest": None,
-            "profile:v": "baseline",
-            "preset": "ultrafast",
+            "profile:v": "baseline" if args.fastest_encoding else "main",
+            "preset": "ultrafast" if args.fastest_encoding else "superfast",
+            "x264-params": "" if args.fastest_encoding else "bframes=0",
             # Make the video behave like typical HD video for compatibility and to
             # ensure the video players behave similarly to a "real" video.
             "pix_fmt": "yuv420p",
